@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen am Abfahrtsdisplay. Neueste Version oben.
 Versionierung nach Semantic Versioning (`MAJOR.MINOR.PATCH`): PATCH =
 Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
+## [Unveröffentlicht]
+### Behoben
+- Haltestellenliste wurde auf GitHub nicht als durchsuchbare Tabelle
+  angezeigt (Datei zu groß, Semikolon als Trennzeichen). Neu:
+  `haltestellen/Haltestellen_Suche_s26.csv` mit Name, Ort und Globaler ID,
+  nach Name sortiert, durch Komma getrennt (466 KB). Die Originaldatei des
+  MVV bleibt für Excel erhalten.
+
 ## [1.1.0] – 29.09.2026
 ### Neu
 - Haltestellenliste des MVV (`haltestellen/`, CC BY 4.0) mit den globalen

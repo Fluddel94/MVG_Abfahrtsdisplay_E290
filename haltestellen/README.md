@@ -1,21 +1,25 @@
 # Haltestellenliste (globale IDs)
 
-`MVV_Haltestellen_Report_s26.csv` enthält alle rund 11.000 Haltestellen im
-MVV-Gebiet (München und Umland) mit ihrer **Globalen ID** – das ist der Wert
-für `STATION_GLOBAL_ID` in `config.h`.
+Alle rund 11.000 Haltestellen im MVV-Gebiet (München und Umland) mit ihrer
+**Globalen ID** – das ist der Wert für `STATION_GLOBAL_ID` in `config.h`.
+
+| Datei | Inhalt | Geeignet für |
+|---|---|---|
+| [`Haltestellen_Suche_s26.csv`](Haltestellen_Suche_s26.csv) | Name, Ort, Globale ID – nach Name sortiert, durch Komma getrennt | Suche direkt im Browser auf GitHub |
+| [`MVV_Haltestellen_Report_s26.csv`](MVV_Haltestellen_Report_s26.csv) | Originaldatei des MVV (alle Spalten inkl. Koordinaten, durch Semikolon getrennt) | Herunterladen und per Doppelklick in Excel öffnen |
 
 ## Station suchen
 
-- **Im Browser (GitHub):** die CSV-Datei anklicken und mit Strg+F nach dem
-  Stationsnamen suchen.
-- **In Excel:** Datei herunterladen und per Doppelklick öffnen, dann mit
-  Strg+F suchen.
+- **Im Browser:** [`Haltestellen_Suche_s26.csv`](Haltestellen_Suche_s26.csv)
+  anklicken und oben im Suchfeld „Search this file…“ den Stationsnamen
+  eingeben.
+- **In Excel:** `MVV_Haltestellen_Report_s26.csv` herunterladen, per
+  Doppelklick öffnen und mit Strg+F suchen.
 
-Die Spalten sind: `HstNummer; Name ohne Ort; Ort; Globale ID; WGS84 X; WGS84 Y`.
-Beispiel:
+Beispiel (Suchliste):
 
 ```
-2;Marienplatz;München;de:09162:2;48,1364359;11,577658
+Marienplatz,München,de:09162:2
 ```
 
 Der Name steht **ohne Ort** – bei gleichnamigen Haltestellen (z.B.
@@ -37,8 +41,12 @@ Liste mit Abfahrten zurück, stimmt sie.
   [MVV OpenData](https://www.mvv-muenchen.de/fahrplanauskunft/fuer-entwickler/opendata/index.html),
   abgerufen am 29.09.2026.
 - **Lizenz:** [Creative Commons Namensnennung 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
-- **Änderung:** Inhalt unverändert; am Dateianfang wurde eine
-  UTF-8-Kennung (BOM) ergänzt, damit Excel die Umlaute richtig anzeigt.
+- **Änderungen:** `MVV_Haltestellen_Report_s26.csv`: Inhalt unverändert,
+  am Dateianfang wurde eine UTF-8-Kennung (BOM) ergänzt, damit Excel die
+  Umlaute richtig anzeigt. `Haltestellen_Suche_s26.csv`: aus der
+  Originaldatei abgeleitet – nur die Spalten Name, Ort und Globale ID, nach
+  Name sortiert, Komma statt Semikolon (GitHub zeigt CSV-Dateien nur mit
+  Komma und bis 512 KB als durchsuchbare Tabelle an).
 - Der MVV übernimmt keine Gewähr für Richtigkeit, Aktualität und
   Vollständigkeit der Daten. Die Liste wird jährlich aktualisiert.
 

@@ -118,11 +118,12 @@ Fehlerbildschirm mit der vermuteten Ursache.
 
 Die `globalId` hat das Format `de:09162:2`. So findest du sie:
 
-1. Die Haltestellenliste des MVV öffnen:
-   [`haltestellen/MVV_Haltestellen_Report_s26.csv`](haltestellen/MVV_Haltestellen_Report_s26.csv)
-   – direkt auf GitHub oder heruntergeladen in Excel.
-2. Mit Strg+F nach dem Stationsnamen suchen. Bei gleichnamigen Haltestellen
-   auf die Spalte *Ort* achten.
+1. Die Haltestellenliste öffnen:
+   [`haltestellen/Haltestellen_Suche_s26.csv`](haltestellen/Haltestellen_Suche_s26.csv)
+   – auf GitHub wird sie als Tabelle mit Suchfeld angezeigt. Für Excel gibt
+   es die Originaldatei des MVV im selben Ordner.
+2. Im Suchfeld („Search this file…“) den Stationsnamen eingeben. Bei
+   gleichnamigen Haltestellen auf die Spalte *Ort* achten.
 3. Den Wert aus der Spalte *Globale ID* als `STATION_GLOBAL_ID` in
    `config.h` eintragen.
 4. Optional prüfen: `https://www.mvg.de/api/bgw-pt/v3/departures?globalId=<ID>`
