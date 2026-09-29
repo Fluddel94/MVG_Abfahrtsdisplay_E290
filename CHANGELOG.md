@@ -4,7 +4,7 @@ Alle nennenswerten Änderungen am Abfahrtsdisplay. Neueste Version oben.
 Versionierung nach Semantic Versioning (`MAJOR.MINOR.PATCH`): PATCH =
 Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
-## [Unveröffentlicht]
+## [1.1.0] – 29.09.2026
 ### Neu
 - Haltestellenliste des MVV (`haltestellen/`, CC BY 4.0) mit den globalen
   IDs aller rund 11.000 Haltestellen in München und Umland. „Station finden“

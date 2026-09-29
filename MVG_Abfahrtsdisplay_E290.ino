@@ -1,6 +1,6 @@
-// Version: 1.0.0
-// Letzte Änderung: 29.09.2026 16:01
-#define FW_VERSION "1.0.0"
+// Version: 1.1.0
+// Letzte Änderung: 29.09.2026 20:25
+#define FW_VERSION "1.1.0"
 
 // ===== BLOCK 01: KONFIGURATION START =====
 #pragma region Block 1 - Konfiguration
