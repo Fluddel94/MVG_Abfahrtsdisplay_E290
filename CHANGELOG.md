@@ -10,7 +10,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   angezeigt (Datei zu groß, Semikolon als Trennzeichen). Neu:
   `haltestellen/Haltestellen_Suche_s26.csv` mit Name, Ort und Globaler ID,
   nach Name sortiert, durch Komma getrennt (466 KB). Die Originaldatei des
-  MVV bleibt für Excel erhalten.
+  MVV bleibt für Excel erhalten. Der Hinweis in `config.h` (Schritt 1)
+  verweist jetzt auf die Suchliste.
 
 ## [1.1.0] – 29.09.2026
 ### Neu

@@ -16,8 +16,9 @@
 // SCHRITT 1: STATION
 // ------------------------------------------------------------
 // globalId der Haltestelle, Format "de:09162:2". Nachschlagen in der
-// Haltestellenliste haltestellen/MVV_Haltestellen_Report_s26.csv (Spalte
-// "Globale ID", siehe README Abschnitt "Station finden").
+// Haltestellenliste haltestellen/Haltestellen_Suche_s26.csv (auf GitHub
+// durchsuchbar, Spalte "Globale ID", siehe README Abschnitt "Station finden").
+
 #define STATION_GLOBAL_ID "de:09162:2"   // Marienplatz
 
 // ------------------------------------------------------------
