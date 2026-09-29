@@ -118,19 +118,21 @@ Fehlerbildschirm mit der vermuteten Ursache.
 
 Die `globalId` hat das Format `de:09162:2`. So findest du sie:
 
-1. Im Browser aufrufen (Stationsname anpassen):
-   `https://www.mvg.de/api/bgw-pt/v3/locations?query=Marienplatz`
-2. In der Antwort beim passenden Eintrag mit `"type":"STATION"` den Wert
-   `globalId` ablesen.
-3. Prüfen: `https://www.mvg.de/api/bgw-pt/v3/departures?globalId=<ID>` –
-   kommt eine Liste mit Abfahrten zurück, stimmt die ID.
+1. Die Haltestellenliste des MVV öffnen:
+   [`haltestellen/MVV_Haltestellen_Report_s26.csv`](haltestellen/MVV_Haltestellen_Report_s26.csv)
+   – direkt auf GitHub oder heruntergeladen in Excel.
+2. Mit Strg+F nach dem Stationsnamen suchen. Bei gleichnamigen Haltestellen
+   auf die Spalte *Ort* achten.
+3. Den Wert aus der Spalte *Globale ID* als `STATION_GLOBAL_ID` in
+   `config.h` eintragen.
+4. Optional prüfen: `https://www.mvg.de/api/bgw-pt/v3/departures?globalId=<ID>`
+   im Browser aufrufen – kommt eine Liste mit Abfahrten zurück, stimmt die ID.
 
-Hinweis: Auch der Suchaufruf gehört zur inoffiziellen API und kann sich
-ändern.
+Mehr zur Liste (Spalten, Quelle, Lizenz): [`haltestellen/README.md`](haltestellen/README.md).
 
 ### Richtungen prüfen
 
-Nur nötig bei `FEATURE_DIRECTION_VIEW 1`. In der Abfahrtsliste aus Schritt 3
+Nur nötig bei `FEATURE_DIRECTION_VIEW 1`. In der Abfahrtsliste aus Schritt 4
 bei einigen Einträgen `lineId` (enthält `:H:` oder `:R:`) mit `destination`
 vergleichen. Fährt `:H:` Richtung Zentrum, gilt `ZENTRUM_IS_H 1`, sonst 0.
 Eine feste Regel gibt es nicht – das hängt von Linie und Station ab.
@@ -202,14 +204,17 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `src/wifi_diag.h/.cpp` | Ursache von WLAN-Abbrüchen für den Fehlerbildschirm |
 | `src/extras.h/.cpp` | Andockstellen für eigene Erweiterungen (standardmäßig ohne Funktion) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | Display-Schriften mit Umlauten |
+| `haltestellen/` | Haltestellenliste des MVV mit globalen IDs (eigene Lizenz, siehe dort) |
 | `gehaeuse/` | 3D-Druck-Gehäuse (eigene Lizenz, siehe dort) |
 
 ## Technische Hinweise (für Änderungen am Code)
 
-- **MVG-API:** Richtungscodes (`:H:`/`:R:`), Meldungstypen (`INCIDENT`,
-  `EARLY_TERMINATION`, `INFO`) und Verkehrsmittel-Werte (`SBAHN`, `UBAHN`,
-  `TRAM`, `BUS`, `REGIONAL_BUS`, `BAHN`) sind durch Beobachtung ermittelt,
-  nicht dokumentiert. Neue fahrtrelevante Meldungstypen in `mvg_api.cpp`
+- **MVG-API:** Richtungscodes (`:H:`/`:R:`), Meldungstypen und
+  Verkehrsmittel-Werte (`SBAHN`, `UBAHN`, `TRAM`, `BUS`, `REGIONAL_BUS`,
+  `BAHN`) sind durch Beobachtung ermittelt, nicht dokumentiert.
+  Meldungstypen: `INCIDENT` (Störung) und `EARLY_TERMINATION` (vorzeitiges
+  Fahrtende) lösen ein Warndreieck aus, `INFO` (z.B. Tarifhinweise) wird
+  bewusst ignoriert. Neue fahrtrelevante Meldungstypen in `mvg_api.cpp`
   ergänzen.
 - **Verkehrsmittel-Filter:** `downloadDepartures()` hängt
   `&transportTypes=…` an die URL. Ohne diesen Parameter liefert die API nur
@@ -267,6 +272,9 @@ entfernt, das Gehäuse steht geneigt auf dem Tisch. Der Remix steht ebenfalls un
   gekennzeichnet. Tram-, Nacht-Tram-, Bus- und Zug-Symbole sind eigene
   Pixelgrafiken. Die Liniensymbole können Marken der jeweiligen Inhaber
   (MVV, MVG, DB) sein.
+- **Haltestellenliste** `haltestellen/`: Münchner Verkehrs- und
+  Tarifverbund GmbH (MVV), CC BY 4.0, Details in
+  [`haltestellen/README.md`](haltestellen/README.md).
 - **Gehäuse:** CC BY 4.0, siehe [Gehäuse](#gehäuse).
 - Verwendete Libraries (nicht in diesem Repository enthalten) stehen unter
   ihren eigenen Lizenzen.

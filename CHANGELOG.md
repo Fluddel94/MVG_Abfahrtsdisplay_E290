@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen am Abfahrtsdisplay. Neueste Version oben.
 Versionierung nach Semantic Versioning (`MAJOR.MINOR.PATCH`): PATCH =
 Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
+## [Unveröffentlicht]
+### Neu
+- Haltestellenliste des MVV (`haltestellen/`, CC BY 4.0) mit den globalen
+  IDs aller rund 11.000 Haltestellen in München und Umland. „Station finden“
+  im README und der Hinweis in `config.h` verweisen jetzt darauf statt auf
+  die Suche über die API.
+### Behoben
+- Tastendrücke gingen verloren, wenn sie in ein Display-Update oder einen
+  API-Abruf fielen (die Anzeige reagierte erst beim zweiten Druck). Die
+  Tasten werden jetzt per Interrupt erfasst; ein Druck während eines
+  Updates wird danach ausgeführt. Gedrückt halten der BOOT-Taste löst nicht
+  mehr wiederholt aus. Neue Konstanten `BUTTON_EDGE_STABLE_MS` und
+  `BUTTON_LATCH_MAX_AGE_MS` in `config.h`.
+- README: missverständlicher Hinweis zu den Meldungstypen präzisiert – nur
+  `INCIDENT` und `EARLY_TERMINATION` lösen ein Warndreieck aus, `INFO` nicht.
+
 ## [1.0.0] – 28.09.2026
 Erste öffentliche Version.
 

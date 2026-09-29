@@ -15,9 +15,9 @@
 // ------------------------------------------------------------
 // SCHRITT 1: STATION
 // ------------------------------------------------------------
-// globalId der MVG-Haltestelle, Format "de:09162:2". Finden und pruefen
-// im Browser (siehe README, Abschnitt "Station finden"):
-// https://www.mvg.de/api/bgw-pt/v3/departures?globalId=<ID>
+// globalId der Haltestelle, Format "de:09162:2". Nachschlagen in der
+// Haltestellenliste haltestellen/MVV_Haltestellen_Report_s26.csv (Spalte
+// "Globale ID", siehe README Abschnitt "Station finden").
 #define STATION_GLOBAL_ID "de:09162:2"   // Marienplatz
 
 // ------------------------------------------------------------
@@ -114,7 +114,9 @@
 // --- Zeitsteuerung ---
 #define UPDATE_TARGET_SECOND 1
 #define FULL_REFRESH_EVERY 10
-#define BUTTON_DEBOUNCE_MS 500UL
+#define BUTTON_DEBOUNCE_MS 500UL       // Mindestabstand zwischen zwei gezaehlten Druecken
+#define BUTTON_EDGE_STABLE_MS 30UL     // Entprellung: Taste vorher so lange stabil
+#define BUTTON_LATCH_MAX_AGE_MS 15000UL // aeltere gemerkte Druecke verwerfen
 #define ERROR_RETRY_INTERVAL_MS 10000UL
 // WLAN-Fehlerbildschirm erst, wenn so lange keine Verbindung besteht
 // (beim Start und im Betrieb) - kurze Aussetzer bleiben unsichtbar
