@@ -1,0 +1,13 @@
+# Zugangsdaten - niemals hochladen
+secrets.h
+
+# Build-Ausgaben und Editor-Dateien
+build/
+*.bin
+*.elf
+.vscode/
+
+# Betriebssystem
+Thumbs.db
+desktop.ini
+.DS_Store
