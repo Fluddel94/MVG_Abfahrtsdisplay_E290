@@ -27,9 +27,10 @@ void displayShowDepartures(const Departure departures[], int found,
 void displayShowWifiError(const char* ssid, const char* reason, const char* hint);
 void displayShowApiError();
 
-// QR-Code + Zugangsdaten fuer ein WLAN (z.B. Gast-WLAN)
-// (nur vorhanden, wenn FEATURE_WIFI_QR in config.h auf 1 steht)
-void displayShowWifiQr(const char* qrWlanSsid, const char* qrWlanPassword);
+// QR-Code + Zugangsdaten fuer ein WLAN (z.B. Gast-WLAN). title,
+// qrWlanSsid und qrWlanPassword in UTF-8.
+void displayShowWifiQr(const char* title, const char* qrWlanSsid,
+                       const char* qrWlanPassword);
 
 // System-Log (Momentaufnahme beim Aufruf)
 void displayShowLog(const char* firmwareVersion, uint64_t wifiConnectedSince,

@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include "../config.h"
+#include "settings.h"
 #include "mvg_api.h"
 #include "text_utils.h"   // utf8ToLatin1(): Umlaute fuer die Display-Schriften
 
@@ -64,29 +65,21 @@ static String splitTrainDestination(const String& a, const String& b) {
   return a + "/" + b;
 }
 
-// Wert fuer den API-Parameter "transportTypes" aus den SHOW_*-Schaltern
-// (config.h). Ohne diesen Parameter liefert die API (beobachtet, nicht
-// dokumentiert) nur SBAHN, UBAHN, TRAM und BUS - Regionalbusse
-// (REGIONAL_BUS) und Regionalzuege (BAHN) fehlen dann. Die Werte sind
-// empirisch ermittelt. Das fuehrende Komma wird per "+ 1" uebersprungen;
-// mindestens ein Schalter ist 1 (#error in config.h).
-static const char* const TRANSPORT_TYPES_PARAM = (""
-#if SHOW_SBAHN
-  ",SBAHN"
-#endif
-#if SHOW_UBAHN
-  ",UBAHN"
-#endif
-#if SHOW_TRAM
-  ",TRAM"
-#endif
-#if SHOW_BUS
-  ",BUS,REGIONAL_BUS"
-#endif
-#if SHOW_BAHN
-  ",BAHN"
-#endif
-  ) + 1;
+// Wert fuer den API-Parameter "transportTypes" aus den Verkehrsmittel-
+// Einstellungen (appSettings). Ohne diesen Parameter liefert die API
+// (beobachtet, nicht dokumentiert) nur SBAHN, UBAHN, TRAM und BUS -
+// Regionalbusse (REGIONAL_BUS) und Regionalzuege (BAHN) fehlen dann. Die
+// Werte sind empirisch ermittelt. Mindestens ein Verkehrsmittel ist immer
+// eingeschaltet (settings.cpp prueft das).
+static String transportTypesParam() {
+  String types;
+  if (appSettings.showSbahn) types += ",SBAHN";
+  if (appSettings.showUbahn) types += ",UBAHN";
+  if (appSettings.showTram) types += ",TRAM";
+  if (appSettings.showBus) types += ",BUS,REGIONAL_BUS";
+  if (appSettings.showBahn) types += ",BAHN";
+  return types.substring(1);   // fuehrendes Komma weglassen
+}
 
 bool fetchStationName(const char* globalId, String& nameOut) {
   HTTPClient http;
@@ -132,7 +125,7 @@ bool downloadDepartures(const char* globalId, String& payloadOut) {
   url += globalId;
   url += "&limit=20";
   url += "&transportTypes=";
-  url += TRANSPORT_TYPES_PARAM;
+  url += transportTypesParam();
 
   http.begin(url);
   int httpCode = http.GET();

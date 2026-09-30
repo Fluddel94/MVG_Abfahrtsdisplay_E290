@@ -50,8 +50,8 @@ Aktuelle Version: siehe `FW_VERSION` in `MVG_Abfahrtsdisplay_E290.ino`,
   automatischem Neuversuch. Klappt die WLAN-Verbindung länger als 20 s
   nicht, zeigt das Display die vermutete Ursache (z.B. „Passwort falsch?“
   oder „Netz nicht gefunden“).
-- **Optional:** WLAN-QR-Code (z.B. für ein Gast-WLAN) und Firmware-Update
-  per WLAN (OTA), siehe [Zusatzfunktionen](#zusatzfunktionen).
+- **Optional:** WLAN-QR-Code (z.B. für ein Gast-WLAN), siehe
+  [Zusatzfunktionen](#zusatzfunktionen).
 
 ## Bedienung
 
@@ -83,9 +83,9 @@ Aktuelle Version: siehe `FW_VERSION` in `MVG_Abfahrtsdisplay_E290.ino`,
    | heltec-eink-modules | Display-Treiber inkl. Grafikfunktionen und Schriften (getestet mit 4.6.0) |
    | ArduinoJson | Version 7 |
 
-   Mehr ist nicht nötig: WLAN, HTTPS, OTA und der QR-Generator stecken im
-   ESP32-Boardpaket, die Grafikfunktionen (abgeleitet von Adafruit GFX) in
-   heltec-eink-modules.
+   Mehr ist nicht nötig: WLAN, HTTPS, der Einstellungsspeicher und der
+   QR-Generator stecken im ESP32-Boardpaket, die Grafikfunktionen
+   (abgeleitet von Adafruit GFX) in heltec-eink-modules.
 3. **Board auswählen:** *Werkzeuge → Board → esp32 →* **Heltec Vision Master E290**.
 
 ### 2. Projekt herunterladen
@@ -145,8 +145,8 @@ Eine feste Regel gibt es nicht – das hängt von Linie und Station ab.
 
 ## Zusatzfunktionen
 
-Beide sind standardmäßig **aus** und werden in `config.h` im Abschnitt
-„ZUSATZFUNKTIONEN“ eingeschaltet.
+Standardmäßig **aus**, eingeschaltet wird in `config.h` im Abschnitt
+„ZUSATZFUNKTIONEN“.
 
 ### WLAN-QR-Code (`FEATURE_WIFI_QR`)
 
@@ -160,19 +160,6 @@ Display steht – also nur für ein WLAN verwenden, das du teilen möchtest.
 Die Arduino-Library „QRCode“ von Richard Moore darf **nicht** installiert
 sein: Ihre `qrcode.h` heißt genauso wie die des Boardpakets und würde
 stattdessen eingebunden.
-
-### Firmware-Update per WLAN (`FEATURE_OTA`)
-
-Nach dem ersten Hochladen per USB erscheint das Board in der Arduino-IDE als
-Netzwerk-Port (Name: `OTA_HOSTNAME`), Updates gehen dann ohne Kabel.
-
-- Passwort in `secrets.h` (`otaPassword`) – stark und einzigartig wählen.
-- Das Partitionsschema muss OTA unterstützen (zwei App-Partitionen, z.B.
-  der Standard). Ändern lässt es sich nur per USB.
-- PC und Board müssen im selben Netz sein. Für das Board keine
-  Portfreigabe/UPnP im Router einrichten.
-- Wird eine Firmware mit `FEATURE_OTA 0` per OTA aufgespielt, geht das
-  nächste Update nur noch per USB.
 
 ## Einschränkungen
 
@@ -198,8 +185,10 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | Datei | Inhalt |
 |---|---|
 | `MVG_Abfahrtsdisplay_E290.ino` | Ablaufsteuerung: `setup()`, `loop()`, Tasten-Aktionen, WLAN-Fehleranzeige |
-| `config.h` | **Geräte-Einstellungen** und gemeinsame Konstanten |
-| `secrets_example.h` | Vorlage für `secrets.h` (Zugangsdaten) |
+| `config.h` | Standardwerte der **Geräte-Einstellungen** und gemeinsame Konstanten |
+| `secrets_example.h` | Vorlage für `secrets.h` (optional: WLAN-Vorbelegung) |
+| `partitions.csv` | Partitionsschema – nie ändern, sonst gehen die gespeicherten Einstellungen bei Updates verloren |
+| `src/settings.h/.cpp` | Einstellungen im Gerätespeicher (NVS), Standardwerte aus `config.h` |
 | `src/mvg_api.h/.cpp` | Abruf und Auswertung der MVG-API |
 | `src/display.h/.cpp` | Alles, was gezeichnet wird |
 | `src/line_icons.h` | Liniensymbole und Generator für Bus-/Zug-Symbole |
@@ -226,9 +215,10 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `&transportTypes=…` an die URL. Ohne diesen Parameter liefert die API nur
   S-Bahn, U-Bahn, Tram und Stadtbus (beobachtet).
 - **API-Abrufe:** Abfahrten werden nur in `attemptUpdate()` (.ino, Abschnitt
-  Update-Steuerung) abgerufen – beim Minuten-Update, beim Start, nach WLAN-Wiederkehr, bei
-  Rückkehr aus QR/Log in einer neuen Minute und alle 10 s während einer
-  Störung. Umschalten und Blättern zeichnen aus einem Zwischenspeicher.
+  Update-Steuerung) abgerufen – beim Minuten-Update, beim Start, nach
+  WLAN-Wiederkehr, bei Rückkehr aus QR/Log in einer neuen Minute und alle
+  10 s während einer Störung. Umschalten und Blättern zeichnen aus einem
+  Zwischenspeicher.
 - **Flügelzüge:** Die API liefert geteilte Züge als getrennte Fahrten.
   `mvg_api.cpp` fasst Einträge mit gleicher Linie, Richtung, geplanter Zeit,
   gleichem Gleis und gleichem Ausfall-Status zusammen (nicht bei Bussen oder

@@ -21,7 +21,7 @@ struct Departure {
 enum DirectionFilter {
   DIR_FILTER_H,    // nur lineId mit ":H:"
   DIR_FILTER_R,    // nur lineId mit ":R:"
-  DIR_FILTER_ALL   // alle Richtungen gemischt (FEATURE_DIRECTION_VIEW 0)
+  DIR_FILTER_ALL   // alle Richtungen gemischt (gemischte Anzeige)
 };
 
 // Ruft den Stationsnamen ab. Bei Erfolg: true, Name (Latin-1 fuer die Anzeige) in
@@ -29,8 +29,9 @@ enum DirectionFilter {
 bool fetchStationName(const char* globalId, String& nameOut);
 
 // Laedt die aktuellen Abfahrten der Station als JSON-Rohdaten (ein
-// HTTPS-Abruf). Die Verkehrsmittel werden gemaess SHOW_* (config.h) schon
-// per API-Parameter gefiltert. true bei Erfolg (HTTP 200), sonst false.
+// HTTPS-Abruf). Die Verkehrsmittel werden gemaess den Einstellungen
+// (appSettings, settings.h) schon per API-Parameter gefiltert. true bei
+// Erfolg (HTTP 200), sonst false.
 bool downloadDepartures(const char* globalId, String& payloadOut);
 
 // Wertet heruntergeladene Rohdaten aus: filtert nach Richtung (oder alle),

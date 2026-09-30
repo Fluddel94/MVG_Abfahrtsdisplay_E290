@@ -3,14 +3,12 @@
 // heltec-eink-modules wird nur hier eingebunden.
 
 #include <Arduino.h>
-#include "../config.h"   // zuerst, damit FEATURE_WIFI_QR unten bekannt ist
+#include "../config.h"
 #include <WiFi.h>
 #include <time.h>
-#if FEATURE_WIFI_QR
 // QR-Generator aus dem ESP32-Core (ESP-IDF-Komponente esp_qrcode) - keine
-// zusaetzliche Library noetig. Nur einbinden, wenn der WLAN-QR aktiv ist.
+// zusaetzliche Library noetig
 #include <qrcode.h>
-#endif
 #include <heltec-eink-modules.h>
 #include <Fonts/FreeSansBold12pt7b.h>   // Uhrzeit und Titel Startbildschirm, 7-Bit
 // Eigene 8-Bit-Schriften (Latin-1) fuer echte Umlaute, ASCII pixelgleich zu
@@ -61,7 +59,7 @@ static_assert(COL_ICON + LINE_ICON_MAX_WIDTH < COL_DEST,
 
 // --- Header ---
 #define HEADER_CLOCK_GAP 6          // Mindestabstand Header-Text -> Uhr-Box
-#define PAGE2_HINT "(2/2)"          // Seitenhinweis bei FEATURE_DIRECTION_VIEW 0
+#define PAGE2_HINT "(2/2)"          // Seitenhinweis bei gemischter Anzeige
 #define HEADER_HINT_SPACE 6         // Breite des Leerzeichens vor dem Seitenhinweis
 
 // --- Startbildschirm ---
@@ -443,7 +441,6 @@ void displayShowApiError() {
   display.update();
 }
 
-#if FEATURE_WIFI_QR
 // Zeichnet den QR-Code. Wird von esp_qrcode_generate() WAEHREND der
 // Erzeugung aufgerufen - die QR-Daten sind nur innerhalb dieses Callbacks
 // gueltig. Die gezeichnete Kantenlaenge landet in qrDrawnSize (0 = Fehler).
@@ -481,7 +478,8 @@ static String escapeWifiQr(const char* text) {
   return out;
 }
 
-void displayShowWifiQr(const char* qrWlanSsid, const char* qrWlanPassword) {
+void displayShowWifiQr(const char* title, const char* qrWlanSsid,
+                       const char* qrWlanPassword) {
   display.fastmodeOff();
   display.clearMemory();
   display.setTextColor(BLACK);
@@ -515,7 +513,7 @@ void displayShowWifiQr(const char* qrWlanSsid, const char* qrWlanPassword) {
 
   display.setFont(&FreeSansBold9pt8b);
   display.setCursor(textX, 20);
-  display.print(fitText(QR_SCREEN_TITLE, maxTextWidth));   // config.h
+  display.print(fitText(utf8ToLatin1(String(title)), maxTextWidth));
 
   display.setFont(&FreeSans9pt8b);
 
@@ -531,7 +529,6 @@ void displayShowWifiQr(const char* qrWlanSsid, const char* qrWlanPassword) {
 
   display.update();
 }
-#endif // FEATURE_WIFI_QR
 
 void displayShowLog(const char* firmwareVersion, uint64_t wifiConnectedSince,
                     int wifiDisconnects, int apiFails) {

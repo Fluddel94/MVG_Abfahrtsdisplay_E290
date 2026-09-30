@@ -1,0 +1,13 @@
+# Partitionsschema des Abfahrtsdisplays - NIE AENDERN.
+# Inhalt identisch mit default_8MB.csv des ESP32-Boardpakets (Standard des
+# Boards "Heltec Vision Master E290"). Liegt diese Datei im Sketch-Ordner,
+# nimmt die Arduino-IDE sie statt des Boardpakets. So bleibt das Schema
+# gleich, auch wenn sich das Boardpaket aendert - sonst gingen die im NVS
+# gespeicherten Einstellungen bei einem Update verloren.
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     0x9000,  0x5000,
+otadata,  data, ota,     0xe000,  0x2000,
+app0,     app,  ota_0,   0x10000, 0x330000,
+app1,     app,  ota_1,   0x340000,0x330000,
+spiffs,   data, spiffs,  0x670000,0x180000,
+coredump, data, coredump,0x7F0000,0x10000,

@@ -1,18 +1,15 @@
 // Version: 1.2.0
-// Letzte Änderung: 30.09.2026 16:42
+// Letzte Änderung: 30.09.2026 16:54
 #define FW_VERSION "1.2.0"
 
 // ------------------------------------------------------------
 // Konfiguration
 // ------------------------------------------------------------
-// Zugangsdaten (WLAN, optional QR-WLAN und OTA) liegen in secrets.h
-// (Vorlage mit Platzhaltern: secrets_example.h).
-// Geraeteeinstellungen (Station, Richtungen, Verkehrsmittel, Zusatz-
-// funktionen) liegen in config.h - dort der Reihe nach durchgehen.
-#if !__has_include("secrets.h")
-#error "secrets.h fehlt: secrets_example.h kopieren, in secrets.h umbenennen und WLAN-Daten eintragen (siehe README)"
-#endif
-#include "secrets.h"
+// Die Geraete-Einstellungen (WLAN, Station, Anzeige, Verkehrsmittel,
+// WLAN-QR) liest src/settings beim Start aus dem Geraetespeicher (NVS).
+// Fehlt dort ein Wert, gilt der Standardwert aus config.h bzw. aus
+// secrets.h (optional, Vorlage: secrets_example.h). Im Code immer
+// appSettings verwenden, nicht die Werte aus config.h/secrets.h direkt.
 
 // ------------------------------------------------------------
 // Uebersicht
@@ -25,9 +22,13 @@
 //
 // Dateien (Hauptordner = alles, was pro Geraet angepasst wird):
 //   dieses .ino    Ablaufsteuerung (setup/loop, Tasten-Aktionen, WLAN-Fehler)
-//   config.h       Geraete-Einstellungen + gemeinsame Konstanten
-//   secrets.h      Zugangsdaten (nie teilen; Vorlage: secrets_example.h)
+//   config.h       Standardwerte der Einstellungen + gemeinsame Konstanten
+//   secrets.h      optional: WLAN-Vorbelegung (nie teilen; Vorlage:
+//                  secrets_example.h)
+//   partitions.csv Partitionsschema (nie aendern, sonst gehen die
+//                  gespeicherten Einstellungen bei Updates verloren)
 // Programmcode in src/ (Arduino-IDE kompiliert nur einen Ordner namens src):
+//   settings       Einstellungen: NVS mit Standardwerten aus config.h
 //   mvg_api        Abruf/Auswertung der MVG-API
 //   display        alles, was gezeichnet wird
 //   line_icons.h   Liniensymbole (S/U/Tram als Bitmap, Bus generiert)
@@ -53,9 +54,7 @@
 #include <HTTPClient.h>
 #include <time.h>
 #include "config.h"
-#if FEATURE_OTA
-#include <ArduinoOTA.h>
-#endif
+#include "src/settings.h"
 #include "src/mvg_api.h"
 #include "src/display.h"
 #include "src/buttons.h"
@@ -77,26 +76,24 @@ bool logModeActive = false;
 int updateCounter = 0;
 int lastUpdateMinute = -1;
 
-// Angezeigte Richtung: true = Zentrum, false = Auswaerts.
-// Start und Auto-Reset jeweils auf DEFAULT_VIEW_ZENTRUM (config.h)
-// (nur bei FEATURE_DIRECTION_VIEW 1)
-bool showZentrum = DEFAULT_VIEW_ZENTRUM;
-// Seite 2 (Abfahrt 5-8) aktiv - nur bei FEATURE_DIRECTION_VIEW 0
+// Angezeigte Richtung: true = Zentrum, false = Auswaerts (nur bei
+// getrennter Anzeige). Start und Auto-Reset jeweils auf die Standardansicht
+// (appSettings.defaultViewZentrum, gesetzt in setup()).
+bool showZentrum = true;
+// Seite 2 (Abfahrt 5-8) aktiv - nur bei gemischter Anzeige
 bool showPage2 = false;
 String stationName = "Bahnhof";
 
 // Zwischenspeicher der zuletzt abgerufenen Abfahrten. Umschalten, Blaettern
 // und Auto-Reset zeichnen nur daraus neu - abgerufen wird nur beim
 // Minuten-Update (plus Start, WLAN-Wiederkehr und Retries bei Stoerung).
-#if FEATURE_DIRECTION_VIEW
+// Getrennte Anzeige: je Richtung ein Speicher. Gemischte Anzeige: cacheAll.
 Departure cacheZentrum[MAX_DEPARTURES_SHOWN];
 Departure cacheAuswaerts[MAX_DEPARTURES_SHOWN];
 int cacheZentrumCount = 0;
 int cacheAuswaertsCount = 0;
-#else
 Departure cacheAll[MAX_DEPARTURES_SHOWN * 2];   // Seite 1 + Seite 2
 int cacheAllCount = 0;
-#endif
 
 // Statistik fuer den Log-Screen (API-Stoerungen: siehe stats.cpp)
 // wifiConnectedSince als 64-Bit-Wert (Quelle: uptimeMs()), damit die
@@ -125,6 +122,10 @@ void setup() {
   Serial.print("Abfahrtsdisplay Firmware v");
   Serial.println(firmwareVersionText());
 
+  settingsLoad();
+  settingsPrint();
+  showZentrum = appSettings.defaultViewZentrum;
+
   extrasBegin();
   buttonsInit();
   displayInit();
@@ -134,10 +135,10 @@ void setup() {
   splashStart = millis();
 
   Serial.print("Verbinde mit ");
-  Serial.println(ssid);
+  Serial.println(appSettings.wifiSsid);
 
   wifiDiagInit();   // vor WiFi.begin(): merkt sich die Gruende von Abbruechen
-  WiFi.begin(ssid, password);
+  WiFi.begin(appSettings.wifiSsid.c_str(), appSettings.wifiPassword.c_str());
 
   // Klappt die Anmeldung nicht innerhalb von WIFI_ERROR_SCREEN_DELAY_MS,
   // erscheint der Fehlerbildschirm mit der vermuteten Ursache (fruehestens
@@ -166,26 +167,6 @@ void setup() {
 
   wifiConnectedSince = uptimeMs();
 
-#if FEATURE_OTA
-  ArduinoOTA.setHostname(OTA_HOSTNAME);
-  ArduinoOTA.setPassword(otaPassword);
-
-  ArduinoOTA.onStart([]() {
-    Serial.println("OTA-Update gestartet...");
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("OTA-Update abgeschlossen!");
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.print("OTA-Fehler [");
-    Serial.print(error);
-    Serial.println("]");
-  });
-
-  ArduinoOTA.begin();
-  Serial.println("OTA bereit.");
-#endif
-
   configTzTime(TIMEZONE_INFO, "de.pool.ntp.org", "time.google.com");
 
   Serial.print("Warte auf Zeitabgleich");
@@ -199,7 +180,7 @@ void setup() {
   Serial.println();
 
   // Bei Fehler bleibt der Fallback "Bahnhof" stehen
-  fetchStationName(STATION_GLOBAL_ID, stationName);
+  fetchStationName(appSettings.stationId.c_str(), stationName);
 
   extrasSetup(firmwareVersionText().c_str());
 
@@ -214,9 +195,6 @@ void setup() {
 // Loop
 // ------------------------------------------------------------
 void loop() {
-#if FEATURE_OTA
-  ArduinoOTA.handle();
-#endif
   extrasLoop();
   checkApiFailWindow();
 
@@ -290,11 +268,8 @@ void loop() {
   handleBootButton(triggerBootAction);
 
   // --- Auto-Reset: zurueck zur Standardansicht (Richtung bzw. Seite 1) ---
-#if FEATURE_DIRECTION_VIEW
-  const unsigned long viewResetMs = DIRECTION_AUTO_RESET_MS;
-#else
-  const unsigned long viewResetMs = PAGE_AUTO_RESET_MS;
-#endif
+  const unsigned long viewResetMs =
+      appSettings.directionView ? DIRECTION_AUTO_RESET_MS : PAGE_AUTO_RESET_MS;
   if (autoResetPending && millis() - autoResetStart >= viewResetMs) {
     resetViewToDefault();
     autoResetPending = false;
@@ -358,15 +333,15 @@ void attemptUpdate(bool preferFullRefresh) {
 // Setzt currentState (STATE_NORMAL bzw. STATE_API_ERROR). true bei Erfolg.
 bool fetchDepartures() {
   String payload;
-  bool success = downloadDepartures(STATION_GLOBAL_ID, payload);
+  bool success = downloadDepartures(appSettings.stationId.c_str(), payload);
 
-  if (success) {
-#if FEATURE_DIRECTION_VIEW
+  if (success && appSettings.directionView) {
     // Beide Richtungen aus denselben Rohdaten, damit das Umschalten ohne
-    // neuen Abruf auskommt. ZENTRUM_IS_H legt fest, welcher API-Marker
+    // neuen Abruf auskommt. zentrumIsH legt fest, welcher API-Marker
     // (":H:"/":R:") Richtung Zentrum faehrt.
-    DirectionFilter zentrumFilter = ZENTRUM_IS_H ? DIR_FILTER_H : DIR_FILTER_R;
-    DirectionFilter auswaertsFilter = ZENTRUM_IS_H ? DIR_FILTER_R : DIR_FILTER_H;
+    bool zentrumIsH = appSettings.zentrumIsH;
+    DirectionFilter zentrumFilter = zentrumIsH ? DIR_FILTER_H : DIR_FILTER_R;
+    DirectionFilter auswaertsFilter = zentrumIsH ? DIR_FILTER_R : DIR_FILTER_H;
     int countZ = parseDepartures(payload, zentrumFilter, cacheZentrum, MAX_DEPARTURES_SHOWN);
     int countA = parseDepartures(payload, auswaertsFilter, cacheAuswaerts, MAX_DEPARTURES_SHOWN);
     success = (countZ >= 0 && countA >= 0);
@@ -374,14 +349,13 @@ bool fetchDepartures() {
       cacheZentrumCount = countZ;
       cacheAuswaertsCount = countA;
     }
-#else
+  } else if (success) {
     // Alle Richtungen gemischt: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
     int count = parseDepartures(payload, DIR_FILTER_ALL, cacheAll, MAX_DEPARTURES_SHOWN * 2);
     success = (count >= 0);
     if (success) {
       cacheAllCount = count;
     }
-#endif
   }
 
   if (!success) {
@@ -402,22 +376,23 @@ bool fetchDepartures() {
 // Zeichnet die aktuelle Ansicht (Richtung bzw. Seite) aus dem
 // Zwischenspeicher - ohne Netzwerkzugriff.
 void redrawFromCache(bool fullRefresh) {
-#if FEATURE_DIRECTION_VIEW
-  if (showZentrum) {
-    displayShowDepartures(cacheZentrum, cacheZentrumCount, stationName,
-                          true, true, false, fullRefresh);
-  } else {
-    displayShowDepartures(cacheAuswaerts, cacheAuswaertsCount, stationName,
-                          true, false, false, fullRefresh);
+  if (appSettings.directionView) {
+    if (showZentrum) {
+      displayShowDepartures(cacheZentrum, cacheZentrumCount, stationName,
+                            true, true, false, fullRefresh);
+    } else {
+      displayShowDepartures(cacheAuswaerts, cacheAuswaertsCount, stationName,
+                            true, false, false, fullRefresh);
+    }
+    return;
   }
-#else
+
   int offset = showPage2 ? MAX_DEPARTURES_SHOWN : 0;
   int pageCount = cacheAllCount - offset;
   if (pageCount < 0) pageCount = 0;
   if (pageCount > MAX_DEPARTURES_SHOWN) pageCount = MAX_DEPARTURES_SHOWN;
   displayShowDepartures(cacheAll + offset, pageCount, stationName,
                         false, false, showPage2, fullRefresh);
-#endif
 }
 
 // Nach Umschalten/Blaettern/Auto-Reset: neu zeichnen ohne Abruf. Bei einer
@@ -451,18 +426,19 @@ void returnToDepartures() {
 // Werden von handleBootButton()/handleQrButton() (buttons.cpp) aufgerufen
 
 void triggerBootAction() {
-#if FEATURE_DIRECTION_VIEW
-  // Richtung umschalten (Zentrum <-> Auswaerts)
-  showZentrum = !showZentrum;
-  Serial.print("Richtung umgeschaltet: ");
-  Serial.println(showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS);
-  bool leftDefaultView = (showZentrum != (bool)DEFAULT_VIEW_ZENTRUM);
-#else
-  // Blaettern: Seite 1 <-> Seite 2 (Abfahrt 5-8)
-  showPage2 = !showPage2;
-  Serial.println(showPage2 ? "Seite 2 (Abfahrt 5-8)" : "Seite 1");
-  bool leftDefaultView = showPage2;
-#endif
+  bool leftDefaultView;
+  if (appSettings.directionView) {
+    // Richtung umschalten (Zentrum <-> Auswaerts)
+    showZentrum = !showZentrum;
+    Serial.print("Richtung umgeschaltet: ");
+    Serial.println(showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS);
+    leftDefaultView = (showZentrum != appSettings.defaultViewZentrum);
+  } else {
+    // Blaettern: Seite 1 <-> Seite 2 (Abfahrt 5-8)
+    showPage2 = !showPage2;
+    Serial.println(showPage2 ? "Seite 2 (Abfahrt 5-8)" : "Seite 1");
+    leftDefaultView = showPage2;
+  }
 
   // Weicht die Ansicht von der Standardansicht ab, laeuft der Auto-Reset
   if (leftDefaultView) {
@@ -478,18 +454,20 @@ void triggerBootAction() {
 
 // Zurueck zur Standardansicht (vom Auto-Reset in der Loop aufgerufen)
 void resetViewToDefault() {
-#if FEATURE_DIRECTION_VIEW
-  showZentrum = DEFAULT_VIEW_ZENTRUM;
-  Serial.print("Auto-Reset ausgeloest: zurueck zu ");
-  Serial.println(showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS);
-#else
-  showPage2 = false;
-  Serial.println("Auto-Reset ausgeloest: zurueck zu Seite 1");
-#endif
+  if (appSettings.directionView) {
+    showZentrum = appSettings.defaultViewZentrum;
+    Serial.print("Auto-Reset ausgeloest: zurueck zu ");
+    Serial.println(showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS);
+  } else {
+    showPage2 = false;
+    Serial.println("Auto-Reset ausgeloest: zurueck zu Seite 1");
+  }
 }
 
 void triggerQrAction() {
-#if FEATURE_WIFI_QR
+  // WLAN-QR ausgeschaltet: kurzer Druck auf die QR-Taste ohne Funktion
+  if (!appSettings.wifiQr) return;
+
   if (qrModeActive) {
     Serial.println("QR-Anzeige manuell beendet");
     qrModeActive = false;
@@ -498,12 +476,9 @@ void triggerQrAction() {
     Serial.println("WLAN-QR-Code wird angezeigt (60s)");
     qrModeActive = true;
     qrModeStart = millis();
-    displayShowWifiQr(qrWlanSsid, qrWlanPassword);
+    displayShowWifiQr(appSettings.qrTitle.c_str(), appSettings.qrSsid.c_str(),
+                      appSettings.qrPassword.c_str());
   }
-#else
-  // WLAN-QR deaktiviert (FEATURE_WIFI_QR = 0 in config.h):
-  // kurzer Druck auf die QR-Taste hat keine Funktion
-#endif
 }
 
 void triggerLogAction() {
@@ -538,7 +513,7 @@ void showWifiErrorIfChanged() {
   Serial.print(wifiDiagLastReason());
   Serial.println(")");
 
-  displayShowWifiError(ssid, reason, wifiDiagHintText());
+  displayShowWifiError(appSettings.wifiSsid.c_str(), reason, wifiDiagHintText());
 }
 
 // ------------------------------------------------------------
@@ -571,9 +546,6 @@ bool splashShowing() {
 // Abfahrten bzw. den API-Fehlerbildschirm zeichnen
 void finishSplash() {
   while (splashShowing()) {
-#if FEATURE_OTA
-    ArduinoOTA.handle();
-#endif
     extrasLoop();
     extrasStatus(currentState != STATE_NORMAL);
     delay(20);

@@ -1,15 +1,18 @@
 // config.h
-// Zentrale Konfiguration. Oben: geraetespezifische Einstellungen (Schritt
-// 1-3 plus optionale Zusatzfunktionen). Darunter: Konstanten, die fuer alle
-// Geraete gleich sind, und eine Pruefung der Einstellungen.
-// Zugangsdaten gehoeren NICHT hierher, sondern in secrets.h.
+// Zentrale Konfiguration. Oben: Standardwerte der Geraete-Einstellungen
+// (Schritt 1-3 plus optionale Zusatzfunktionen). Darunter: Konstanten, die
+// fuer alle Geraete gleich sind, und eine Pruefung der Standardwerte.
+// Zugangsdaten gehoeren NICHT hierher, sondern (optional) in secrets.h.
 // Layout-Konstanten (Pixelpositionen) liegen direkt in src/display.cpp.
 #pragma once
 
 // ============================================================
-// GERAETESPEZIFISCHE EINSTELLUNGEN
-// Schritt 1-3 der Reihe nach durchgehen. Die WLAN-Zugangsdaten stehen in
-// secrets.h, nicht hier.
+// STANDARDWERTE DER GERAETE-EINSTELLUNGEN
+// Die Einstellungen werden im Geraet gespeichert (NVS, siehe
+// src/settings.cpp). Die Werte hier gelten nur, solange dort noch nichts
+// gespeichert ist - gespeicherte Werte haben immer Vorrang.
+// Schritt 1-3 der Reihe nach durchgehen. WLAN-Zugangsdaten stehen nicht
+// hier, sondern (optional) in secrets.h.
 // ============================================================
 
 // ------------------------------------------------------------
@@ -67,26 +70,15 @@
 // --- WLAN-QR-Code ---
 // 1 = kurzer Druck auf die QR-Taste zeigt 60 s lang einen QR-Code zum
 //     Verbinden mit einem WLAN (z.B. Gast-WLAN) plus SSID/Passwort.
-//     Zugangsdaten in secrets.h (qrWlanSsid, qrWlanPassword).
+//     Zugangsdaten (Standardwerte) in secrets.h (qrWlanSsid,
+//     qrWlanPassword).
 // 0 = aus: kurzer Druck ohne Funktion. Der Log-Screen (langer Druck)
 //     bleibt verfuegbar.
 #define FEATURE_WIFI_QR 0
 
 // Ueberschrift neben dem QR-Code. Passt bis ca. 13 Zeichen in Fettschrift.
-// Umlaute als Latin-1-Escape schreiben (siehe LABEL_AUSWAERTS unten).
+// Normaler Text, Umlaute direkt schreiben (UTF-8, z.B. "Gäste-WLAN").
 #define QR_SCREEN_TITLE "WLAN"
-
-// --- Firmware-Update per WLAN (ArduinoOTA) ---
-// 1 = an: das Board erscheint in der Arduino-IDE als Netzwerk-Port
-//     (Passwort in secrets.h: otaPassword). Das erste Hochladen muss
-//     trotzdem per USB erfolgen.
-// 0 = aus: Updates nur per USB.
-// ACHTUNG: Wird eine Firmware mit 0 per OTA aufgespielt, geht das naechste
-// Update nur noch per USB.
-#define FEATURE_OTA 0
-
-// Name des Netzwerk-Ports (pro Geraet eindeutig; nur bei FEATURE_OTA 1)
-#define OTA_HOSTNAME "Abfahrtsdisplay"
 
 // ============================================================
 // AB HIER NICHTS AENDERN - gemeinsame Konstanten fuer alle Geraete
@@ -106,7 +98,8 @@
 
 // --- Richtungsnamen im Header ---
 // Kurzform, falls die Langform nicht vor die Uhr passt (siehe display.cpp).
-// Umlaute als Latin-1-Escape (\xE4 = ae), passend zu den Display-Schriften.
+// Umlaute als Latin-1-Escape (\xE4 = ae), passend zu den Display-Schriften
+// (feste Texte im Code; Texte aus den Einstellungen sind dagegen UTF-8).
 #define LABEL_ZENTRUM "Zentrum"
 #define LABEL_ZENTRUM_SHORT "Ztr."
 #define LABEL_AUSWAERTS "Ausw\xE4rts"
@@ -142,7 +135,7 @@
 #define TIMEZONE_INFO "CET-1CEST,M3.5.0,M10.5.0/3"
 
 // ============================================================
-// PRUEFUNG DER EINSTELLUNGEN (Fehler schon beim Kompilieren)
+// PRUEFUNG DER STANDARDWERTE (Fehler schon beim Kompilieren)
 // ============================================================
 #if !(SHOW_SBAHN || SHOW_UBAHN || SHOW_TRAM || SHOW_BUS || SHOW_BAHN)
 #error "config.h Schritt 3: mindestens ein Verkehrsmittel (SHOW_...) muss 1 sein"

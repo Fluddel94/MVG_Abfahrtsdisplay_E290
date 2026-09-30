@@ -6,6 +6,23 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Geändert
+- Die Geräte-Einstellungen (WLAN, Station, Anzeige, Verkehrsmittel,
+  WLAN-QR) werden beim Start aus dem Gerätespeicher (NVS) gelesen. Solange
+  dort nichts gespeichert ist, gelten wie bisher die Werte aus `config.h`
+  und `secrets.h`. Grundlage für die Einrichtung ohne Arduino IDE.
+- `secrets.h` ist nur noch optional (Vorbelegung für WLAN und WLAN-QR).
+- `QR_SCREEN_TITLE` in `config.h` wird jetzt als normaler Text geschrieben,
+  Umlaute direkt (bisher als Latin-1-Escape).
+- Das Partitionsschema liegt als `partitions.csv` im Sketch-Ordner
+  (identisch mit dem bisherigen Standard `default_8MB`), damit gespeicherte
+  Einstellungen auch künftige Updates überstehen.
+
+### Entfernt
+- Firmware-Update per WLAN über die Arduino IDE (`FEATURE_OTA`,
+  `OTA_HOSTNAME`, `otaPassword` in `secrets.h`). Ersatz folgt als
+  Firmware-Upload im Einstellungsportal.
+
 ### Intern
 - Quelltext: Blockmarker und `#pragma region` in der .ino entfernt, die
   Abschnitte haben jetzt normale Überschriften (keine Funktionsänderung).
