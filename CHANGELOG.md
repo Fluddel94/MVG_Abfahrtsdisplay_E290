@@ -5,6 +5,8 @@ Versionierung nach Semantic Versioning (`MAJOR.MINOR.PATCH`): PATCH =
 Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
+
+## [1.2.0] – 30.09.2026
 ### Neu
 - Startbildschirm: Nach dem Einschalten erscheinen etwa 5 Sekunden lang
   Projektname und Firmware-Version. WLAN, Uhrzeit und erster Abruf laufen
