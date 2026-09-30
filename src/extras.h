@@ -1,11 +1,21 @@
 // extras.h
-// Andockstellen fuer optionale Erweiterungen (z.B. eine Status-LED in einer
-// eigenen Variante des Projekts).
+// Andockstellen fuer eigene Zusatzfunktionen.
 //
-// Im Projekt selbst tun diese Funktionen nichts (leere Standardfassungen in
-// extras.cpp, als "weak" markiert). Eine Erweiterung legt eine eigene .cpp
-// in src/ an und definiert dieselben Funktionen neu - der Linker nimmt dann
-// deren Fassung. Am uebrigen Code muss dafuer nichts geaendert werden.
+// Was das ist: feste Stellen im Programmablauf (Start, Hauptschleife,
+// Fehlerzustand usw.), an denen eine eigene Variante des Projekts zusaetzlichen
+// Code ausfuehren kann - z.B. eine Status-LED ansteuern oder einen Zusatz an
+// die Versionsnummer haengen. So bleibt der gemeinsame Code unveraendert und
+// Updates lassen sich ohne Konflikte uebernehmen. Der Autor nutzt das selbst
+// fuer eine private Variante mit Zusatzfunktionen fuer den Eigengebrauch.
+//
+// Was das NICHT ist: keine Fernsteuerung und keine Datenuebertragung. In
+// dieser Version tun alle Funktionen nichts (leere Standardfassungen in
+// extras.cpp, als "weak" markiert). Aktiv wird eine Erweiterung nur, wenn
+// jemand eigenen Code in src/ ablegt und die Firmware selbst kompiliert -
+// nicht nachtraeglich und nicht von aussen.
+//
+// Eigene Erweiterung: eine eigene .cpp in src/ anlegen und dieselben
+// Funktionen dort neu definieren - der Linker nimmt dann deren Fassung.
 #pragma once
 
 // Ganz am Anfang von setup(), vor dem WLAN-Aufbau (z.B. Pins einrichten)

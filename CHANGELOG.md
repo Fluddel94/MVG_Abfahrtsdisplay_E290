@@ -7,10 +7,12 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 ## [Unveröffentlicht]
 
 ### Intern
-- Beschreibung der Andockstellen (`src/extras.h`, `README_TECHNIK.md`)
-  neutral formuliert; Hinweis ergänzt, dass die veröffentlichte Firmware
-  außer den Abfahrtsabfragen keine Daten nach außen sendet. Keine
-  Änderung an der Firmware.
+- Andockstellen für eigene Zusatzfunktionen (`src/extras.h`,
+  `README_TECHNIK.md`) ausführlicher erklärt: wofür sie gedacht sind (z.B.
+  Status-LED in einer eigenen Variante), dass sie in dieser Version leer
+  sind, die Firmware außer den Abfahrtsabfragen keine Daten nach außen
+  sendet und Erweiterungen nur durch selbst kompilierten Code aktiv
+  werden. Keine Änderung an der Firmware.
 
 ## [2.0.0] – 30.09.2026
 

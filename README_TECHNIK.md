@@ -149,7 +149,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `src/time_utils.h/.cpp` | Laufzeit, Zeitformate |
 | `src/text_utils.h/.cpp` | Umwandlung UTF-8 → Latin-1 für echte Umlaute |
 | `src/wifi_diag.h/.cpp` | Ursache von WLAN-Abbrüchen für den Fehlerbildschirm |
-| `src/extras.h/.cpp` | Andockstellen für eigene Erweiterungen (standardmäßig ohne Funktion) |
+| `src/extras.h/.cpp` | Andockstellen für eigene Zusatzfunktionen – in dieser Version leer, ohne Funktion (siehe [Technische Hinweise](#technische-hinweise-für-änderungen-am-code)) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | Display-Schriften mit Umlauten |
 | `docs/` | Web-Installer (GitHub Pages): Seite, `manifest.json`, Firmware in `docs/firmware/` |
 | `werkzeuge/` | Skript, das die exportierte Firmware für den Web-Installer bereitstellt |
@@ -200,13 +200,23 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   Verbindungsabbruch aus. Ein falsches Passwort meldet der ESP32 meist nur
   als Zeitüberschreitung beim Anmelden – das kann auch bei sehr schwachem
   Empfang auftreten, daher „Passwort falsch?“ mit Fragezeichen.
-- **Eigene Erweiterungen:** `src/extras.h` bietet Andockstellen in
-  `setup()` und `loop()` (z.B. für eine Status-LED). Die Standardfassungen
-  in `extras.cpp` sind leer und als `weak` markiert – die veröffentlichte
-  Firmware sendet außer den Abfahrtsabfragen an die MVG keine Daten nach
-  außen. Für eine Erweiterung eine eigene `.cpp` in `src/`
-  anlegen und dieselben Funktionen dort neu definieren – der übrige Code
-  bleibt unverändert, Updates lassen sich so ohne Konflikte übernehmen.
+- **Eigene Zusatzfunktionen (Andockstellen):** `src/extras.h` enthält
+  feste Stellen im Programmablauf – beim Start, in der Hauptschleife, bei
+  Fehlern, nach einem WLAN-Wechsel –, an denen eine eigene Variante des
+  Projekts zusätzlichen Code ausführen kann, z.B. eine Status-LED
+  ansteuern oder einen Zusatz an die Versionsnummer hängen. Der gemeinsame
+  Code bleibt dabei unverändert, Updates lassen sich ohne Konflikte
+  übernehmen. Der Autor nutzt das selbst für eine private Variante mit
+  Zusatzfunktionen für den Eigengebrauch.
+  - **In dieser Version tun die Andockstellen nichts:** Die
+    Standardfassungen in `extras.cpp` sind leer (als `weak` markiert).
+    Die veröffentlichte Firmware sendet außer den Abfahrtsabfragen an die
+    MVG keine Daten nach außen und lässt sich nicht fernsteuern.
+  - **Aktiv wird eine Erweiterung nur**, wenn jemand eigenen Code in `src/`
+    ablegt und die Firmware selbst kompiliert – nicht nachträglich und
+    nicht von außen.
+  - **So geht's:** eine eigene `.cpp` in `src/` anlegen und dieselben
+    Funktionen dort neu definieren; der Linker nimmt dann deren Fassung.
 - **`#include <HTTPClient.h>` im .ino nicht entfernen:** Ist die Library
   ArduinoHttpClient installiert, bindet die IDE unter Windows sonst deren
   `HttpClient.h` ein (Groß-/Kleinschreibung).
