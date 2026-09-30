@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MVG Abfahrtsdisplay – Web-Installer</title>
+<!--
+  Web-Installer für MVG_Abfahrtsdisplay_E290 (GitHub Pages, Ordner docs/).
+  Spielt die Firmware per ESP Web Tools auf (manifest.json, vier Teile ohne
+  merged .bin, damit ein Update die Einstellungen im NVS nicht löscht).
+  Firmware-Teile in firmware/ erzeugt werkzeuge/firmware_fuer_installer.ps1.
+-->
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+  :root {
+    --bg: #f4f4f1; --card: #ffffff; --text: #1a1a1a; --muted: #5c5c5c;
+    --line: #dcdcd6; --accent: #0065bd; --accent-text: #ffffff;
+    --warn-bg: #fff4d6; --warn-line: #e3b341;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --card: #202020; --text: #ececec; --muted: #a8a8a8;
+      --line: #383838; --accent: #3d9bff; --accent-text: #0d0d0d;
+      --warn-bg: #3a3014; --warn-line: #a88423;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; }
+  header { margin-bottom: 24px; }
+  .board {
+    display: inline-block; font: 600 13px/1 ui-monospace, Consolas, monospace;
+    letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 8px;
+  }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 0 0 12px; }
+  p { margin: 0 0 12px; }
+  .lead { color: var(--muted); font-size: 17px; margin: 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 20px 22px; margin-bottom: 16px;
+  }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 15px;
+  }
+  .install { text-align: center; padding: 28px 22px; }
+  .install button {
+    font-family: inherit; font-size: 18px; font-weight: 600; line-height: 1;
+    color: var(--accent-text);
+    background: var(--accent); border: 0; border-radius: 8px;
+    padding: 15px 34px; cursor: pointer;
+  }
+  .install button:hover { filter: brightness(1.08); }
+  .version { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+  .hint { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+  esp-web-install-button:not(:defined) [slot="unsupported"],
+  esp-web-install-button:not(:defined) [slot="not-allowed"] { display: none; }
+  .error { color: #b3261e; font-weight: 600; }
+  ul, ol { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  li:last-child { margin-bottom: 0; }
+  .en { font-family: ui-monospace, Consolas, monospace; font-size: 14px;
+        background: var(--bg); border: 1px solid var(--line);
+        border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+  details { border-top: 1px solid var(--line); padding: 12px 0 0; margin-top: 12px; }
+  details:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  summary { font-weight: 600; cursor: pointer; }
+  details > :not(summary) { margin-top: 10px; }
+  footer { color: var(--muted); font-size: 14px; margin-top: 28px; }
+  footer p { margin-bottom: 8px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="board">Heltec Vision Master E290</div>
+    <h1>MVG Abfahrtsdisplay – Web-Installer</h1>
+    <p class="lead">Firmware direkt aus dem Browser aufspielen und das WLAN
+      einrichten – ohne Arduino IDE.</p>
+  </header>
+
+  <!-- VORABVERSION: diesen Hinweis beim Release 2.0.0 entfernen -->
+  <div class="notice"><strong>Vorabversion:</strong> Diese Seite gehört zur
+    Entwicklung von Version 2.0 und dient zum Testen. Für den Alltag bitte
+    noch die Anleitung in der README verwenden.</div>
+
+  <section class="card">
+    <h2>Das brauchst du</h2>
+    <ul>
+      <li>USB-C-Kabel, das Daten überträgt (reine Ladekabel funktionieren nicht)</li>
+      <li>PC oder Mac mit <strong>Chrome</strong> oder <strong>Edge</strong>
+        (nicht Firefox, Safari oder Handy)</li>
+      <li>WLAN mit 2,4 GHz und dessen Passwort</li>
+    </ul>
+  </section>
+
+  <section class="card install">
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate">Installieren</button>
+      <p slot="unsupported" class="error">Dieser Browser kann nicht auf USB-Geräte
+        zugreifen. Bitte Chrome oder Edge am PC oder Mac verwenden.</p>
+      <p slot="not-allowed" class="error">Der Installer funktioniert nur über
+        eine sichere Verbindung (https).</p>
+    </esp-web-install-button>
+    <p class="version" id="version">Firmware-Version wird geladen …</p>
+    <p class="hint">Der Installer-Dialog ist englisch – die Schritte unten
+      zeigen, was wo zu klicken ist.</p>
+  </section>
+
+  <section class="card">
+    <h2>So geht’s</h2>
+    <details open>
+      <summary>Erste Einrichtung</summary>
+      <ol>
+        <li>Display per USB anstecken und oben auf <strong>Installieren</strong> klicken.</li>
+        <li>Im Browser-Fenster das Gerät wählen (meist
+          <span class="en">USB JTAG/serial debug unit</span>) und
+          <span class="en">Connect</span> klicken.</li>
+        <li><span class="en">Install MVG Abfahrtsdisplay</span> wählen,
+          <span class="en">Erase device</span> anhaken und bestätigen. Das
+          Aufspielen dauert etwa eine Minute.</li>
+        <li><span class="en">Connect to Wi-Fi</span>: WLAN wählen, Passwort
+          eingeben.</li>
+        <li><span class="en">Visit device</span> öffnet die Einstellungen des
+          Displays. Dort die Station suchen, auswählen und speichern – fertig.</li>
+      </ol>
+      <p class="hint">Solange keine Station gespeichert ist, zeigt das Display
+        einen QR-Code und die Adresse der Einstellungen.</p>
+    </details>
+    <details>
+      <summary>Update auf eine neue Version</summary>
+      <ol>
+        <li>Display per USB anstecken, <strong>Installieren</strong> klicken,
+          Gerät wählen.</li>
+        <li><span class="en">Update MVG Abfahrtsdisplay</span> klicken.
+          Station, WLAN und alle Einstellungen bleiben erhalten.</li>
+      </ol>
+      <p class="hint">Alternativ ohne Kabel: Firmware-Datei im
+        Einstellungsportal hochladen (siehe README).</p>
+    </details>
+    <details>
+      <summary>WLAN ändern</summary>
+      <p>Display per USB anstecken, <strong>Installieren</strong> klicken,
+        Gerät wählen und <span class="en">Change Wi-Fi</span> wählen. Die
+        übrigen Einstellungen bleiben erhalten.</p>
+    </details>
+    <details>
+      <summary>Das Display wird nicht gefunden</summary>
+      <ul>
+        <li>Anderes USB-Kabel oder einen anderen USB-Anschluss probieren.</li>
+        <li>Notlösung: die Taste <strong>BOOT</strong> gedrückt halten, während
+          du das Kabel einsteckst, dann erneut <strong>Installieren</strong>.
+          Nach dem Aufspielen das Kabel einmal ab- und wieder anstecken, dann
+          <strong>Installieren</strong> → <span class="en">Connect to Wi-Fi</span>.</li>
+      </ul>
+    </details>
+  </section>
+
+  <footer>
+    <p>Anleitung, Bedienung und Hilfe:
+      <a href="https://github.com/Fluddel94/MVG_Abfahrtsdisplay_E290#readme">README auf GitHub</a></p>
+    <p>Die Abfahrten stammen aus der inoffiziellen, nicht dokumentierten
+      MVG-Schnittstelle. Sie kann sich jederzeit ändern oder abgeschaltet
+      werden. Kein offizielles Angebot der MVG.</p>
+    <p>Lizenz: GPL-3.0-or-later · Installer: ESP Web Tools</p>
+  </footer>
+</main>
+<script>
+  fetch("manifest.json")
+    .then(r => r.json())
+    .then(m => { document.getElementById("version").textContent = "Firmware-Version " + m.version; })
+    .catch(() => { document.getElementById("version").textContent = ""; });
+</script>
+</body>
+</html>

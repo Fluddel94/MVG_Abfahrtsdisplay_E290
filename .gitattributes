@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Windows-Stapeldateien mit CRLF
+*.bat text eol=crlf
+
+# Firmware-Dateien nie als Text behandeln
+*.bin binary

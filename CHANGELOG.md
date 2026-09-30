@@ -7,6 +7,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 ## [Unveröffentlicht]
 
 ### Neu
+- Web-Installer (`docs/`, über GitHub Pages): Firmware ohne Arduino IDE
+  per USB aus Chrome oder Edge aufspielen (ESP Web Tools), danach WLAN
+  verbinden und die Einstellungen öffnen. Ein Update über den Installer
+  behält alle Einstellungen (Firmware in vier Teilen statt merged .bin).
 - Firmware-Update im Einstellungsportal: Firmware-Datei (.bin) auswählen
   und hochladen, mit Fortschrittsanzeige. Das Display zeigt „Firmware-Update
   läuft“ und startet danach neu, alle Einstellungen bleiben erhalten.
@@ -64,6 +68,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   im Einstellungsportal.
 
 ### Intern
+- `werkzeuge/firmware_fuer_installer.ps1`: übernimmt den IDE-Export nach
+  `docs/firmware/`, setzt die Version im Manifest und bricht ab, wenn die
+  Firmware mit secrets.h gebaut wurde. `.gitignore`: `secrets.h*` (auch
+  umbenannte Zugangsdaten), Ausnahme für `docs/firmware/*.bin`.
 - Neue Andockstelle `extrasWifiChanged()` in `src/extras.h` (neue WLAN-Daten
   gespeichert).
 - Quelltext: Blockmarker und `#pragma region` in der .ino entfernt, die

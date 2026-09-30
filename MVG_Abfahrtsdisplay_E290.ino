@@ -1,5 +1,5 @@
 // Version: 1.2.0
-// Letzte Änderung: 30.09.2026 20:32
+// Letzte Änderung: 30.09.2026 21:05
 #define FW_VERSION "1.2.0"
 
 // ------------------------------------------------------------
@@ -27,6 +27,8 @@
 //                  secrets_example.h)
 //   partitions.csv Partitionsschema (nie aendern, sonst gehen die
 //                  gespeicherten Einstellungen bei Updates verloren)
+// Web-Installer (fertige Firmware, GitHub Pages): docs/, Firmware dorthin
+//   mit werkzeuge/firmware_fuer_installer.ps1 (Export ohne secrets.h)
 // Programmcode in src/ (Arduino-IDE kompiliert nur einen Ordner namens src):
 //   settings       Einstellungen: NVS mit Standardwerten aus config.h
 //   improv_serial  WLAN-Einrichtung per USB aus dem Browser (Improv)

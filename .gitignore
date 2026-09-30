@@ -1,11 +1,14 @@
-# Zugangsdaten - niemals hochladen
-secrets.h
+# Zugangsdaten - niemals hochladen (auch umbenannt, z.B. secrets.h.aus)
+secrets.h*
 
 # Build-Ausgaben und Editor-Dateien
 build/
 *.bin
 *.elf
 .vscode/
+
+# Ausnahme: Firmware fuer den Web-Installer (GitHub Pages, docs/)
+!docs/firmware/*.bin
 
 # Betriebssystem
 Thumbs.db
