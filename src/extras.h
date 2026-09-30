@@ -1,6 +1,6 @@
 // extras.h
-// Andockstellen fuer optionale Erweiterungen (z.B. Fernueberwachung oder
-// Status-LED in einer eigenen Variante des Projekts).
+// Andockstellen fuer optionale Erweiterungen (z.B. eine Status-LED in einer
+// eigenen Variante des Projekts).
 //
 // Im Projekt selbst tun diese Funktionen nichts (leere Standardfassungen in
 // extras.cpp, als "weak" markiert). Eine Erweiterung legt eine eigene .cpp

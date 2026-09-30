@@ -6,6 +6,12 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Intern
+- Beschreibung der Andockstellen (`src/extras.h`, `README_TECHNIK.md`)
+  neutral formuliert; Hinweis ergänzt, dass die veröffentlichte Firmware
+  außer den Abfahrtsabfragen keine Daten nach außen sendet. Keine
+  Änderung an der Firmware.
+
 ## [2.0.0] – 30.09.2026
 
 Einrichtung ohne Arduino IDE: Firmware über den Web-Installer im Browser

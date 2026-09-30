@@ -201,9 +201,10 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   als Zeitüberschreitung beim Anmelden – das kann auch bei sehr schwachem
   Empfang auftreten, daher „Passwort falsch?“ mit Fragezeichen.
 - **Eigene Erweiterungen:** `src/extras.h` bietet Andockstellen in
-  `setup()` und `loop()` (z.B. für eine Status-LED oder eine
-  Fernüberwachung). Die Standardfassungen in `extras.cpp` sind leer und als
-  `weak` markiert. Für eine Erweiterung eine eigene `.cpp` in `src/`
+  `setup()` und `loop()` (z.B. für eine Status-LED). Die Standardfassungen
+  in `extras.cpp` sind leer und als `weak` markiert – die veröffentlichte
+  Firmware sendet außer den Abfahrtsabfragen an die MVG keine Daten nach
+  außen. Für eine Erweiterung eine eigene `.cpp` in `src/`
   anlegen und dieselben Funktionen dort neu definieren – der übrige Code
   bleibt unverändert, Updates lassen sich so ohne Konflikte übernehmen.
 - **`#include <HTTPClient.h>` im .ino nicht entfernen:** Ist die Library
