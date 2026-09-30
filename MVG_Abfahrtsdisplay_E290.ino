@@ -1,5 +1,5 @@
 // Version: 1.2.0
-// Letzte Änderung: 30.09.2026 20:20
+// Letzte Änderung: 30.09.2026 20:32
 #define FW_VERSION "1.2.0"
 
 // ------------------------------------------------------------
@@ -30,7 +30,8 @@
 // Programmcode in src/ (Arduino-IDE kompiliert nur einen Ordner namens src):
 //   settings       Einstellungen: NVS mit Standardwerten aus config.h
 //   improv_serial  WLAN-Einrichtung per USB aus dem Browser (Improv)
-//   portal         Einstellungsportal im Heimnetz (Webseite, auf Abruf)
+//   portal         Einstellungsportal im Heimnetz (Webseite, auf Abruf,
+//                  inkl. Firmware-Upload)
 //   mvg_api        Abruf/Auswertung der MVG-API
 //   display        alles, was gezeichnet wird
 //   line_icons.h   Liniensymbole (S/U/Tram als Bitmap, Bus generiert)
@@ -106,6 +107,8 @@ int wifiDisconnectCount = 0;
 bool setupScreenShown = false;
 // Neue WLAN-Daten per Improv waehrend setup(): Portal danach oeffnen
 bool portalRequested = false;
+// Screen "Firmware-Update laeuft" wird gerade angezeigt
+bool updateScreenShown = false;
 
 // WLAN-Fehlerbildschirm: seit wann keine Verbindung besteht und welche
 // Ursache zuletzt angezeigt wurde (nullptr = noch kein Fehlerbildschirm)
@@ -230,6 +233,23 @@ void setup() {
 // Loop
 // ------------------------------------------------------------
 void loop() {
+  // Firmware-Upload im Portal: nur den Update-Screen zeigen, keine Abrufe
+  // und Display-Updates. portalLoop() startet nach Erfolg neu; bei einem
+  // Fehler wird die Anzeige danach neu aufgebaut.
+  if (portalUpdateRunning()) {
+    if (!updateScreenShown) {
+      displayShowUpdate();
+      updateScreenShown = true;
+    }
+    portalLoop();
+    delay(50);
+    return;
+  }
+  if (updateScreenShown) {
+    updateScreenShown = false;
+    applyNewSettings();
+  }
+
   if (improvLoop()) portalOpen();   // neue WLAN-Daten: Portal fuer "Geraet oeffnen"
   extrasLoop();
   checkApiFailWindow();

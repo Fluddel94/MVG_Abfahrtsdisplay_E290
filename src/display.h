@@ -40,6 +40,9 @@ void displayShowWifiQr(const char* title, const char* qrWlanSsid,
 void displayShowLog(const char* firmwareVersion, const char* portalAddress,
                     const char* portalUntil, int wifiDisconnects, int apiFails);
 
+// Firmware-Upload im Portal laeuft
+void displayShowUpdate();
+
 // Ersteinrichtung (noch keine Station): QR-Code mit der Portal-Adresse plus
 // Adresse im Klartext (ohne "http://")
 void displayShowPortalSetup(const char* url, const char* address);

@@ -3,13 +3,15 @@
 //
 // Seiten: "/" Formular, "/speichern" (POST), "/werkseinstellungen" (POST),
 // "/suche?q=" Stationssuche (JSON), "/richtungen?id=" Linien je
-// Richtungskennung (JSON). Die aktuellen Werte bekommt die Seite als
+// Richtungskennung (JSON), "/update" (POST) Firmware-Upload. Die aktuellen Werte bekommt die Seite als
 // JSON-Objekt S, das Formular fuellt sich per JavaScript.
 
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
+#include <Update.h>
+#include <esp_app_format.h>   // ESP_CHIP_ID_ESP32S3
 #include <time.h>
 #include "../config.h"
 #include "settings.h"
@@ -19,6 +21,12 @@
 // Link zur Anleitung (Hilfe zu den Einstellungen)
 #define PORTAL_HELP_URL "https://github.com/Fluddel94/MVG_Abfahrtsdisplay_E290#readme"
 #define PORTAL_TASK_STACK 8192
+
+// Kennung dieser Firmware: Hochgeladene Dateien muessen diesen Text
+// enthalten (er steht durch den Vergleich selbst in jeder Firmware ab
+// 2.0.0). Das erste Zeichen darf im Text nicht noch einmal vorkommen (siehe
+// scanMarker()). Nie aendern - sonst lehnen aeltere Geraete neue Firmware ab.
+static const char FIRMWARE_MARKER[] = "MVG_Abfahrtsdisplay_E290/firmware";
 
 // ------------------------------------------------------------
 // Seite (HTML, CSS, JavaScript)
@@ -89,6 +97,11 @@ table{border-collapse:collapse;width:100%;font-size:.9em}td,th{border-bottom:1px
 <span class="hint">&Auml;ndern: im Web-Installer &bdquo;WLAN &auml;ndern&ldquo;.</span></p>
 <p>Firmware <span id="version"></span> &middot; IP <span id="ip"></span></p>
 <p id="closes" class="hint"></p>
+<p><b>Firmware aktualisieren</b><br><span class="hint">Firmware-Datei (.bin) aus dem Release auf GitHub. Die Einstellungen bleiben erhalten.</span></p>
+<p><input type="file" id="fw" accept=".bin"></p>
+<p><button type="button" id="fwBtn" onclick="upload()">Hochladen</button></p>
+<progress id="fwBar" max="100" value="0" style="width:100%;display:none"></progress>
+<p id="fwMsg"></p>
 <form method="post" action="/werkseinstellungen" onsubmit="return confirm('Alle Einstellungen inkl. WLAN löschen und neu starten?')">
 <button class="danger" type="submit">Werkseinstellungen</button></form>
 </section></main>
@@ -125,6 +138,17 @@ function dirs(){
   l.forEach(d=>{h+='<tr><td>'+esc(d.d)+'</td><td>'+esc(d.l)+'</td><td>'+esc(d.z)+'</td></tr>';});
   $('dirList').innerHTML=h+'</table><p>F&auml;hrt H Richtung Innenstadt, &bdquo;H&ldquo; w&auml;hlen, sonst &bdquo;R&ldquo;.</p>';
  }).catch(()=>{$('dirList').textContent='Abruf fehlgeschlagen.';});}
+function upload(){
+ const f=$('fw').files[0]; if(!f){alert('Bitte eine .bin-Datei wählen.');return;}
+ if(f.size>S.fwMax){alert('Die Datei ist zu groß. Bitte die Firmware-Datei nehmen, nicht das Gesamtabbild (merged).');return;}
+ if(!confirm('Firmware „'+f.name+'“ aufspielen? Das Display startet danach neu.'))return;
+ const fd=new FormData();fd.append('firmware',f,f.name);
+ const x=new XMLHttpRequest();x.open('POST','/update');
+ x.upload.onprogress=e=>{if(e.lengthComputable)$('fwBar').value=e.loaded*100/e.total;};
+ x.onload=()=>{if(x.status==200){$('fwBar').value=100;$('fwMsg').textContent='Erfolgreich. Das Display startet neu, die Einstellungen bleiben erhalten. Diese Seite ist danach wieder über den System-Log erreichbar.';}
+  else{$('fwMsg').textContent='Fehler: '+x.responseText+' Die bisherige Firmware läuft weiter.';$('fwBtn').disabled=false;}};
+ x.onerror=()=>{$('fwMsg').textContent='Verbindung abgebrochen. Die bisherige Firmware läuft weiter.';$('fwBtn').disabled=false;};
+ $('fwBtn').disabled=true;$('fwBar').style.display='';$('fwBar').value=0;$('fwMsg').textContent='Lade hoch ...';x.send(fd);}
 $('help').href=S.help;$('station').value=S.station;
 $('dirView').value=S.dirView?'1':'0';$('zentrum').value=S.zentrumIsH?'H':'R';$('defView').value=S.defZentrum?'Z':'A';
 ['sbahn','ubahn','tram','bus','bahn','qrOn'].forEach(i=>$(i).checked=S[i]);
@@ -147,6 +171,14 @@ static String firmwareVersionCopy;
 static volatile bool pendingSave = false;
 static volatile bool pendingReset = false;
 static DeviceSettings pendingSettings;
+
+// Firmware-Upload (Portal-Task), Neustart danach in portalLoop()
+static volatile bool updateRunning = false;
+static volatile bool pendingRestart = false;
+static String updateError;       // "" = bisher kein Fehler
+static bool updateHeaderChecked = false;
+static bool markerFound = false;
+static size_t markerPos = 0;
 
 // ------------------------------------------------------------
 // Hilfsfunktionen
@@ -210,6 +242,7 @@ static void handleRoot() {
   doc["ip"] = WiFi.localIP().toString();
   doc["closes"] = portalClosingTime();
   doc["help"] = PORTAL_HELP_URL;
+  doc["fwMax"] = ESP.getFreeSketchSpace();   // Groesse des freien Programmbereichs
 
   String json;
   serializeJson(doc, json);
@@ -302,6 +335,112 @@ static void handleDirections() {
 }
 
 // ------------------------------------------------------------
+// Firmware-Upload
+// ------------------------------------------------------------
+
+// Sucht FIRMWARE_MARKER im Datenstrom (auch ueber Blockgrenzen hinweg).
+// Einfache Zustandssuche - korrekt, weil das erste Zeichen des Markers im
+// Rest nicht noch einmal vorkommt.
+static void scanMarker(const uint8_t* data, size_t length) {
+  const size_t markerLength = sizeof(FIRMWARE_MARKER) - 1;
+  for (size_t i = 0; i < length && !markerFound; i++) {
+    char c = (char)data[i];
+    if (c == FIRMWARE_MARKER[markerPos]) {
+      markerPos++;
+      if (markerPos == markerLength) markerFound = true;
+    } else {
+      markerPos = (c == FIRMWARE_MARKER[0]) ? 1 : 0;
+    }
+  }
+}
+
+// Fehler merken und das halb geschriebene Update verwerfen (die bisherige
+// Firmware bleibt aktiv)
+static void failUpdate(const char* message) {
+  if (updateError.length() == 0) updateError = message;
+  Update.abort();
+}
+
+// Prueft den Kopf der Datei: ESP32-Programm (0xE9) fuer den ESP32-S3.
+// Bootloader, Partitionstabelle oder Firmware fuer andere Chips fallen hier
+// bzw. spaetestens an der fehlenden Kennung durch.
+static bool checkImageHeader(const uint8_t* data, size_t length) {
+  if (length < 16 || data[0] != 0xE9) return false;
+  uint16_t chipId = data[12] | (data[13] << 8);
+  return chipId == ESP_CHIP_ID_ESP32S3;
+}
+
+// Wird fuer jeden empfangenen Block der Datei aufgerufen
+static void handleUpdateUpload() {
+  HTTPUpload& upload = server->upload();
+
+  if (upload.status == UPLOAD_FILE_START) {
+    openStart = millis();   // Portal waehrend des Uploads nicht schliessen
+    updateError = "";
+    updateHeaderChecked = false;
+    markerFound = false;
+    markerPos = 0;
+    updateRunning = true;
+    Serial.print("Portal: Firmware-Upload ");
+    Serial.println(upload.filename);
+    // Groesse unbekannt: begrenzt auf den freien Programmbereich
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+      failUpdate("Update konnte nicht gestartet werden.");
+    }
+
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (updateError.length() > 0) return;
+    openStart = millis();
+    if (!updateHeaderChecked) {
+      updateHeaderChecked = true;
+      if (!checkImageHeader(upload.buf, upload.currentSize)) {
+        failUpdate("Das ist keine Firmware für dieses Board (ESP32-S3).");
+        return;
+      }
+    }
+    scanMarker(upload.buf, upload.currentSize);
+    if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+      failUpdate(Update.getError() == UPDATE_ERROR_SPACE
+                     ? "Die Datei ist zu groß."
+                     : "Schreiben fehlgeschlagen.");
+    }
+
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (updateError.length() > 0) return;
+    if (!updateHeaderChecked) {
+      failUpdate("Die Datei ist leer.");
+    } else if (!markerFound) {
+      failUpdate("Das ist keine Firmware für das Abfahrtsdisplay.");
+    } else if (!Update.end(true)) {
+      failUpdate("Die Datei ist beschädigt oder unvollständig.");
+    } else {
+      Serial.print("Portal: Firmware geschrieben, ");
+      Serial.print(upload.totalSize);
+      Serial.println(" Bytes");
+    }
+
+  } else if (upload.status == UPLOAD_FILE_ABORTED) {
+    failUpdate("Upload abgebrochen.");
+    updateRunning = false;
+    Serial.println("Portal: Firmware-Upload abgebrochen");
+  }
+}
+
+// Nach dem Upload: Ergebnis an den Browser, bei Erfolg Neustart
+static void handleUpdateDone() {
+  if (updateError.length() > 0 || !updateHeaderChecked) {
+    String message = updateError.length() > 0 ? updateError : String("Keine Datei empfangen.");
+    Serial.print("Portal: Firmware-Update fehlgeschlagen: ");
+    Serial.println(message);
+    updateRunning = false;
+    server->send(400, "text/plain; charset=utf-8", message);
+    return;
+  }
+  server->send(200, "text/plain; charset=utf-8", "ok");
+  pendingRestart = true;
+}
+
+// ------------------------------------------------------------
 // Task
 // ------------------------------------------------------------
 static void portalTask(void* param) {
@@ -335,6 +474,7 @@ void portalOpen() {
   server->on("/werkseinstellungen", HTTP_POST, handleFactoryReset);
   server->on("/suche", HTTP_GET, handleSearch);
   server->on("/richtungen", HTTP_GET, handleDirections);
+  server->on("/update", HTTP_POST, handleUpdateDone, handleUpdateUpload);
   server->onNotFound([]() {
     server->sendHeader("Location", "/");
     server->send(302, "text/plain", "");
@@ -367,7 +507,16 @@ String portalClosingTime() {
   return String(buf);
 }
 
+bool portalUpdateRunning() {
+  return updateRunning;
+}
+
 bool portalLoop() {
+  if (pendingRestart) {
+    Serial.println("Portal: Firmware-Update fertig, Neustart");
+    delay(1000);   // Antwort noch ausliefern
+    ESP.restart();
+  }
   if (pendingReset) {
     Serial.println("Portal: Werkseinstellungen, Neustart");
     settingsFactoryReset();

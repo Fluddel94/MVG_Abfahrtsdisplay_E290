@@ -7,6 +7,12 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 ## [Unveröffentlicht]
 
 ### Neu
+- Firmware-Update im Einstellungsportal: Firmware-Datei (.bin) auswählen
+  und hochladen, mit Fortschrittsanzeige. Das Display zeigt „Firmware-Update
+  läuft“ und startet danach neu, alle Einstellungen bleiben erhalten.
+  Geprüft wird vorher, ob die Datei eine Firmware für dieses Display
+  (ESP32-S3, Kennung des Projekts) ist; bei Fehler oder Abbruch läuft die
+  bisherige Firmware weiter.
 - Einstellungsportal: Webseite im Heimnetz zum Ändern aller Einstellungen
   (Station, Anzeige, Verkehrsmittel, WLAN-QR, Werkseinstellungen), ohne
   Neustart wirksam. Öffnet zusammen mit dem System-Log für 30 Minuten
@@ -54,8 +60,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ### Entfernt
 - Firmware-Update per WLAN über die Arduino IDE (`FEATURE_OTA`,
-  `OTA_HOSTNAME`, `otaPassword` in `secrets.h`). Ersatz folgt als
-  Firmware-Upload im Einstellungsportal.
+  `OTA_HOSTNAME`, `otaPassword` in `secrets.h`). Ersatz: Firmware-Upload
+  im Einstellungsportal.
 
 ### Intern
 - Neue Andockstelle `extrasWifiChanged()` in `src/extras.h` (neue WLAN-Daten

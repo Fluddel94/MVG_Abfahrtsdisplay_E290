@@ -640,3 +640,24 @@ void displayShowPortalSetup(const char* url, const char* address) {
 
   display.update();
 }
+
+// Firmware-Upload im Portal laeuft (bleibt bis zum Neustart stehen)
+void displayShowUpdate() {
+  display.fastmodeOff();
+  display.clearMemory();
+  display.setTextColor(BLACK);
+
+  display.setFont(&FreeSansBold9pt8b);
+  display.setCursor(5, 30);
+  display.print("Firmware-Update l\xE4" "uft");
+
+  display.setFont(&FreeSans9pt8b);
+  display.setCursor(5, 58);
+  display.print("Bitte nicht vom Strom trennen.");
+  display.setCursor(5, 84);
+  display.print("Danach startet das Display");
+  display.setCursor(5, 102);
+  display.print("von selbst neu.");
+
+  display.update();
+}
