@@ -1,5 +1,5 @@
 // Version: 1.2.0
-// Letzte Änderung: 30.09.2026 21:05
+// Letzte Änderung: 30.09.2026 22:22
 #define FW_VERSION "1.2.0"
 
 // ------------------------------------------------------------
@@ -17,6 +17,7 @@
 // E-Ink-Abfahrtsdisplay - Heltec Vision Master E290 (MVG, Muenchen)
 //
 // Funktionen, Einrichtung, Bedienung und wichtige Hinweise: README.md
+// Selbst kompilieren, Aufbau, technische Hinweise: README_TECHNIK.md
 // Aenderungen je Version: CHANGELOG.md
 // Lizenz: GPL-3.0-or-later (siehe LICENSE)
 //

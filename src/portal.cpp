@@ -19,7 +19,7 @@
 #include "portal.h"
 
 // Link zur Anleitung (Hilfe zu den Einstellungen)
-#define PORTAL_HELP_URL "https://github.com/Fluddel94/MVG_Abfahrtsdisplay_E290#readme"
+#define PORTAL_HELP_URL "https://github.com/Fluddel94/MVG_Abfahrtsdisplay_E290#einstellungsportal"
 #define PORTAL_TASK_STACK 8192
 
 // Kennung dieser Firmware: Hochgeladene Dateien muessen diesen Text
@@ -94,7 +94,7 @@ table{border-collapse:collapse;width:100%;font-size:.9em}td,th{border-bottom:1px
 </form>
 <section><h2>Ger&auml;t</h2>
 <p>WLAN: <b id="wifi"></b> (Signal <span id="rssi"></span> dBm)<br>
-<span class="hint">&Auml;ndern: im Web-Installer &bdquo;WLAN &auml;ndern&ldquo;.</span></p>
+<span class="hint">&Auml;ndern: im Web-Installer &bdquo;Change Wi-Fi&ldquo;.</span></p>
 <p>Firmware <span id="version"></span> &middot; IP <span id="ip"></span></p>
 <p id="closes" class="hint"></p>
 <p><b>Firmware aktualisieren</b><br><span class="hint">Firmware-Datei (.bin) aus dem Release auf GitHub. Die Einstellungen bleiben erhalten.</span></p>
