@@ -8,6 +8,9 @@
 // Display initialisieren (einmalig in setup())
 void displayInit();
 
+// Startbildschirm mit Projektname und Firmware-Version
+void displayShowSplash(const char* firmwareVersion);
+
 // Abfahrtsansicht zeichnen.
 // showDirection = true: Header "Station -> Zentrum/Auswaerts" (showZentrum
 //   waehlt die Richtung, ggf. Kurzform); false: Header nur Stationsname,

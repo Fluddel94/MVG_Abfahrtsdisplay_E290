@@ -1,5 +1,5 @@
 // Version: 1.1.0
-// Letzte Änderung: 29.09.2026 20:25
+// Letzte Änderung: 30.09.2026 14:38
 #define FW_VERSION "1.1.0"
 
 // ===== BLOCK 01: KONFIGURATION START =====
@@ -37,6 +37,7 @@
 //   text_utils     UTF-8 -> Latin-1 fuer echte Umlaute auf dem Display
 //   wifi_diag      Ursache von WLAN-Abbruechen fuer den Fehlerbildschirm
 //   extras         Andockstellen fuer optionale Erweiterungen (Block 10)
+// Startbildschirm: Block 11
 #pragma endregion
 // ===== BLOCK 02: UEBERSICHT ENDE =====
 
@@ -109,6 +110,9 @@ int wifiDisconnectCount = 0;
 unsigned long wifiLostSince = 0;
 const char* wifiErrorShownReason = nullptr;
 
+// Startbildschirm: Zeitpunkt der Anzeige (Block 11)
+unsigned long splashStart = 0;
+
 enum SystemState { STATE_NORMAL, STATE_WIFI_ERROR, STATE_API_ERROR };
 SystemState currentState = STATE_NORMAL;
 #pragma endregion
@@ -127,6 +131,10 @@ void setup() {
   buttonsInit();
   displayInit();
 
+  // Startbildschirm - alles Folgende laeuft im Hintergrund weiter
+  displayShowSplash(firmwareVersionText().c_str());
+  splashStart = millis();
+
   Serial.print("Verbinde mit ");
   Serial.println(ssid);
 
@@ -134,7 +142,8 @@ void setup() {
   WiFi.begin(ssid, password);
 
   // Klappt die Anmeldung nicht innerhalb von WIFI_ERROR_SCREEN_DELAY_MS,
-  // erscheint der Fehlerbildschirm mit der vermuteten Ursache. Neuer
+  // erscheint der Fehlerbildschirm mit der vermuteten Ursache (fruehestens
+  // nach dem Startbildschirm). Neuer
   // Versuch alle ERROR_RETRY_INTERVAL_MS - nach einem Anmeldefehler
   // (z.B. falsches Passwort) versucht es der ESP32 sonst nicht erneut.
   unsigned long wifiStart = millis();
@@ -143,7 +152,7 @@ void setup() {
     extrasStatus(true);
     delay(300);
     Serial.print(".");
-    if (millis() - wifiStart >= WIFI_ERROR_SCREEN_DELAY_MS) {
+    if (millis() - wifiStart >= WIFI_ERROR_SCREEN_DELAY_MS && !splashShowing()) {
       showWifiErrorIfChanged();
     }
     if (millis() - lastWifiRetry >= ERROR_RETRY_INTERVAL_MS) {
@@ -196,8 +205,11 @@ void setup() {
 
   extrasSetup(firmwareVersionText().c_str());
 
-  attemptUpdate(true);
+  // Erste Abfahrten schon waehrend des Startbildschirms laden, gezeichnet
+  // wird erst danach (Abfahrten oder API-Fehlerbildschirm)
+  fetchDepartures();
   lastUpdateMinute = timeinfo.tm_min;
+  finishSplash();
 }
 #pragma endregion
 // ===== BLOCK 05: SETUP ENDE =====
@@ -331,10 +343,24 @@ void loop() {
 
 // ===== BLOCK 07: UPDATE-STEUERUNG START =====
 #pragma region Block 7 - Update-Steuerung
-// Einziger Ort, an dem Abfahrten von der MVG-API abgerufen werden. Laedt die
-// Rohdaten einmal, wertet sie fuer alle Ansichten aus (Zwischenspeicher) und
-// zeichnet dann die aktuelle Ansicht.
+// Einziger Ort, an dem Abfahrten von der MVG-API abgerufen werden
+// (fetchDepartures). Laedt die Rohdaten einmal, wertet sie fuer alle
+// Ansichten aus (Zwischenspeicher) und zeichnet dann die aktuelle Ansicht.
 void attemptUpdate(bool preferFullRefresh) {
+  bool wasApiError = (currentState == STATE_API_ERROR);
+
+  if (!fetchDepartures()) {
+    // Fehlerbildschirm nur beim Wechsel normal -> Fehler, nicht bei jedem
+    // Retry waehrend einer laufenden Stoerung
+    if (!wasApiError) displayShowApiError();
+    return;
+  }
+  redrawFromCache(preferFullRefresh);
+}
+
+// Laedt die Abfahrten und fuellt den Zwischenspeicher, ohne zu zeichnen.
+// Setzt currentState (STATE_NORMAL bzw. STATE_API_ERROR). true bei Erfolg.
+bool fetchDepartures() {
   String payload;
   bool success = downloadDepartures(STATION_GLOBAL_ID, payload);
 
@@ -368,14 +394,13 @@ void attemptUpdate(bool preferFullRefresh) {
     if (currentState != STATE_API_ERROR) {
       recordApiFail();
       currentState = STATE_API_ERROR;
-      displayShowApiError();
       lastErrorRetry = millis();
     }
-    return;
+    return false;
   }
 
   currentState = STATE_NORMAL;
-  redrawFromCache(preferFullRefresh);
+  return true;
 }
 
 // Zeichnet die aktuelle Ansicht (Richtung bzw. Seite) aus dem
@@ -536,3 +561,38 @@ String firmwareVersionText() {
 }
 #pragma endregion
 // ===== BLOCK 10: ERWEITERUNGEN ENDE =====
+
+// ===== BLOCK 11: STARTBILDSCHIRM START =====
+#pragma region Block 11 - Startbildschirm
+// Der Startbildschirm (displayShowSplash) erscheint direkt nach displayInit()
+// und bleibt mindestens SPLASH_DURATION_MS stehen. WLAN, Uhrzeit,
+// Stationsname und erster Abruf laufen in der Zeit weiter; gezeichnet wird
+// erst danach. Dauert der WLAN-Aufbau laenger, bleibt er bis zur
+// Verbindung bzw. bis zum WLAN-Fehlerbildschirm stehen.
+
+// true, solange der Startbildschirm noch stehen bleiben soll
+bool splashShowing() {
+  return millis() - splashStart < SPLASH_DURATION_MS;
+}
+
+// Ende von setup(): Restzeit des Startbildschirms abwarten, dann die
+// Abfahrten bzw. den API-Fehlerbildschirm zeichnen
+void finishSplash() {
+  while (splashShowing()) {
+#if FEATURE_OTA
+    ArduinoOTA.handle();
+#endif
+    extrasLoop();
+    extrasStatus(currentState != STATE_NORMAL);
+    delay(20);
+  }
+  Serial.println("Startbildschirm beendet");
+
+  if (currentState == STATE_API_ERROR) {
+    displayShowApiError();
+  } else {
+    redrawFromCache(true);
+  }
+}
+#pragma endregion
+// ===== BLOCK 11: STARTBILDSCHIRM ENDE =====

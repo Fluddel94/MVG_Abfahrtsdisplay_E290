@@ -5,6 +5,12 @@ Versionierung nach Semantic Versioning (`MAJOR.MINOR.PATCH`): PATCH =
 Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
+### Neu
+- Startbildschirm: Nach dem Einschalten erscheinen etwa 5 Sekunden lang
+  Projektname und Firmware-Version. WLAN, Uhrzeit und erster Abruf laufen
+  im Hintergrund weiter, danach folgen direkt die Abfahrten bzw. ein
+  Fehlerbildschirm. Dauer über `SPLASH_DURATION_MS` in `config.h`.
+
 ### Behoben
 - Fahrten mit „Fährt nur bis …“, die diese Haltestelle gar nicht mehr
   erreichen (in der API an dieser Station als ausgefallen markiert), wurden

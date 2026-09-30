@@ -12,7 +12,7 @@
 #include <qrcode.h>
 #endif
 #include <heltec-eink-modules.h>
-#include <Fonts/FreeSansBold12pt7b.h>   // nur Uhrzeit (Ziffern), bleibt 7-Bit
+#include <Fonts/FreeSansBold12pt7b.h>   // Uhrzeit und Titel Startbildschirm, 7-Bit
 // Eigene 8-Bit-Schriften (Latin-1) fuer echte Umlaute, ASCII pixelgleich zu
 // den Originalen. Texte vorher mit utf8ToLatin1() umwandeln (text_utils.h).
 #include "FreeSansBold9pt8b.h"
@@ -64,6 +64,11 @@ static_assert(COL_ICON + LINE_ICON_MAX_WIDTH < COL_DEST,
 #define PAGE2_HINT "(2/2)"          // Seitenhinweis bei FEATURE_DIRECTION_VIEW 0
 #define HEADER_HINT_SPACE 6         // Breite des Leerzeichens vor dem Seitenhinweis
 
+// --- Startbildschirm ---
+#define SPLASH_TITLE    "MVG Abfahrtsdisplay"   // 7-Bit-Schrift: keine Umlaute
+#define SPLASH_SUBTITLE "Heltec Vision Master E290"
+#define SPLASH_BAR_HEIGHT 38   // schwarzer Titelbalken oben
+
 // --- Warndreieck ---
 #define WARNING_ICON_WIDTH 13
 #define WARNING_ICON_GAP 6
@@ -102,6 +107,15 @@ static String fitText(String text, int maxWidth) {
 // ============================================================
 // Grafik-Elemente
 // ============================================================
+
+// Zeichnet einen Text waagerecht zentriert (aktuell gesetzte Schrift)
+static void printCentered(const String& text, int yBaseline) {
+  int16_t bx, by;
+  uint16_t bw, bh;
+  display.getTextBounds(text, 0, 0, &bx, &by, &bw, &bh);
+  display.setCursor((display.width() - bw) / 2 - bx, yBaseline);
+  display.print(text);
+}
 
 // Zeichnet ein kleines Warndreieck mit Ausrufezeichen.
 // x = horizontale Mitte des Dreiecks, yBaseline = untere Kante (Textgrundlinie)
@@ -330,6 +344,30 @@ static void drawContent(const Departure departures[], int found,
 
 void displayInit() {
   display.landscape();
+}
+
+// Startbildschirm: Projektname, Board, Firmware-Version (inkl. Zusatz einer
+// Erweiterung). Bleibt stehen, bis das .ino den ersten richtigen Bildschirm
+// zeichnet (siehe SPLASH_DURATION_MS in config.h).
+void displayShowSplash(const char* firmwareVersion) {
+  display.fastmodeOff();
+  display.clearMemory();
+  display.setTextColor(BLACK);
+
+  // Titel weiss auf schwarzem Balken
+  display.fillRect(0, 0, display.width(), SPLASH_BAR_HEIGHT, BLACK);
+  display.setTextColor(WHITE);
+  display.setFont(&FreeSansBold12pt7b);
+  printCentered(SPLASH_TITLE, 27);
+  display.setTextColor(BLACK);
+
+  display.setFont(&FreeSans9pt8b);
+  printCentered(SPLASH_SUBTITLE, 66);
+
+  display.setFont(&FreeSansBold9pt8b);
+  printCentered("Version " + String(firmwareVersion), 96);
+
+  display.update();
 }
 
 void displayShowDepartures(const Departure departures[], int found,

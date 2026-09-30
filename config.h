@@ -119,6 +119,9 @@
 #define BUTTON_EDGE_STABLE_MS 30UL     // Entprellung: Taste vorher so lange stabil
 #define BUTTON_LATCH_MAX_AGE_MS 15000UL // aeltere gemerkte Druecke verwerfen
 #define ERROR_RETRY_INTERVAL_MS 10000UL
+// Startbildschirm (Projektname + Version) mindestens so lange zeigen.
+// WLAN, Uhrzeit und erster Abruf laufen im Hintergrund weiter.
+#define SPLASH_DURATION_MS 5000UL
 // WLAN-Fehlerbildschirm erst, wenn so lange keine Verbindung besteht
 // (beim Start und im Betrieb) - kurze Aussetzer bleiben unsichtbar
 #define WIFI_ERROR_SCREEN_DELAY_MS 20000UL

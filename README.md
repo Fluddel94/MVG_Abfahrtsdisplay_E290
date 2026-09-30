@@ -42,6 +42,8 @@ Aktuelle Version: siehe `FW_VERSION` in `MVG_Abfahrtsdisplay_E290.ino`,
   Zugteile. Fällt nur ein Zugteil aus, bleibt er als eigene Zeile sichtbar.
   Doppelt gelieferte gleiche Fahrten erscheinen nur einmal.
 - **Echte Umlaute** auf dem Display.
+- **Startbildschirm:** Projektname und Firmware-Version für etwa 5 Sekunden
+  nach dem Einschalten, währenddessen startet alles im Hintergrund.
 - **System-Log** (Taste 3 s halten): Firmware-Version, Startzeitpunkt,
   WLAN-Laufzeit und -Signal, WLAN-Abbrüche, API-Störungen der letzten 24 h.
 - **Fehleranzeige:** eigene Bildschirme bei WLAN- oder API-Ausfall mit
