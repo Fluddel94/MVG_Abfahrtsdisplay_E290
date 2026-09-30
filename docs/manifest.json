@@ -1,6 +1,6 @@
 {
   "name": "MVG Abfahrtsdisplay",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "new_install_prompt_erase": true,
   "builds": [
     {

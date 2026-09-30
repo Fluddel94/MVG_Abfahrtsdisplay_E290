@@ -6,6 +6,21 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.0.0] – 30.09.2026
+
+Einrichtung ohne Arduino IDE: Firmware über den Web-Installer im Browser
+aufspielen, WLAN per USB eintragen, alles Weitere im Einstellungsportal.
+
+### Umstieg von 1.x
+- Die Einstellungen liegen jetzt im Gerät (Einstellungsspeicher) und
+  bleiben bei Updates erhalten. `config.h` und `secrets.h` liefern nur
+  noch Standardwerte für ein Gerät ohne gespeicherte Einstellungen.
+- Umstieg am einfachsten über den Web-Installer: einmal mit „Erase device“
+  installieren und neu einrichten (WLAN, Station im Portal).
+- Wer weiter per Arduino IDE aufspielt: Boardpaket esp32 3.3.12, Anleitung
+  in `README_TECHNIK.md`. Arduino-OTA gibt es nicht mehr – Updates über
+  den Web-Installer oder den Firmware-Upload im Portal.
+
 ### Neu
 - Web-Installer (`docs/`, über GitHub Pages): Firmware ohne Arduino IDE
   per USB aus Chrome, Edge oder Firefox (ab 151) aufspielen (ESP Web
