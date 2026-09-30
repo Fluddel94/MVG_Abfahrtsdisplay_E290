@@ -11,4 +11,5 @@ __attribute__((weak)) void extrasSetup(const char* firmwareVersion) { (void)firm
 __attribute__((weak)) void extrasLoop() {}
 __attribute__((weak)) void extrasStatus(bool hasError) { (void)hasError; }
 __attribute__((weak)) bool extrasHandlesWifiReconnect() { return false; }
+__attribute__((weak)) void extrasWifiChanged() {}
 __attribute__((weak)) const char* extrasVersionSuffix() { return ""; }

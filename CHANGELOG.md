@@ -6,7 +6,18 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Neu
+- WLAN-Einrichtung per USB aus dem Browser (Improv Serial): WLAN-Name und
+  Passwort lassen sich ohne Arduino IDE setzen und ändern, das Gerät meldet
+  Name und Version und liefert eine Liste der sichtbaren Netze. Neue Daten
+  werden erst gespeichert, wenn die Verbindung klappt – sonst bleibt das
+  bisherige WLAN. Funktioniert auch, während der WLAN-Fehlerbildschirm
+  angezeigt wird.
+
 ### Geändert
+- WLAN-Fehlerbildschirm: Hinweis „Passwort prüfen (Web-Installer)“ statt
+  „secrets.h prüfen“. Ohne WLAN-Daten erscheint „Keine WLAN-Daten –
+  Einrichten per Web-Installer“.
 - Die Geräte-Einstellungen (WLAN, Station, Anzeige, Verkehrsmittel,
   WLAN-QR) werden beim Start aus dem Gerätespeicher (NVS) gelesen. Solange
   dort nichts gespeichert ist, gelten wie bisher die Werte aus `config.h`
@@ -24,6 +35,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   Firmware-Upload im Einstellungsportal.
 
 ### Intern
+- Neue Andockstelle `extrasWifiChanged()` in `src/extras.h` (neue WLAN-Daten
+  gespeichert).
 - Quelltext: Blockmarker und `#pragma region` in der .ino entfernt, die
   Abschnitte haben jetzt normale Überschriften (keine Funktionsänderung).
 

@@ -189,6 +189,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `secrets_example.h` | Vorlage für `secrets.h` (optional: WLAN-Vorbelegung) |
 | `partitions.csv` | Partitionsschema – nie ändern, sonst gehen die gespeicherten Einstellungen bei Updates verloren |
 | `src/settings.h/.cpp` | Einstellungen im Gerätespeicher (NVS), Standardwerte aus `config.h` |
+| `src/improv_serial.h/.cpp` | WLAN-Einrichtung per USB aus dem Browser (Improv Serial) |
 | `src/mvg_api.h/.cpp` | Abruf und Auswertung der MVG-API |
 | `src/display.h/.cpp` | Alles, was gezeichnet wird |
 | `src/line_icons.h` | Liniensymbole und Generator für Bus-/Zug-Symbole |

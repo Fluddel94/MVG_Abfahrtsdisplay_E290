@@ -389,7 +389,8 @@ void displayShowDepartures(const Departure departures[], int found,
 
 // WLAN-Fehlerbildschirm: Netzname, vermutete Ursache und ggf. ein Hinweis
 // (Texte aus wifi_diag.cpp, bereits Latin-1). hint "" = keine Hinweiszeile.
-void displayShowWifiError(const char* ssid, const char* reason, const char* hint) {
+void displayShowWifiError(const char* ssid, const char* reason, const char* hint,
+                          bool retrying) {
   display.fastmodeOff();
   display.clearMemory();
 
@@ -415,7 +416,7 @@ void displayShowWifiError(const char* ssid, const char* reason, const char* hint
   }
 
   display.setCursor(5, 118);
-  display.print("Automatischer Neuversuch...");
+  display.print(retrying ? "Automatischer Neuversuch..." : "Warte auf Einrichtung...");
 
   display.update();
 }

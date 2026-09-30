@@ -1,5 +1,5 @@
 // Version: 1.2.0
-// Letzte Änderung: 30.09.2026 16:54
+// Letzte Änderung: 30.09.2026 17:34
 #define FW_VERSION "1.2.0"
 
 // ------------------------------------------------------------
@@ -29,6 +29,7 @@
 //                  gespeicherten Einstellungen bei Updates verloren)
 // Programmcode in src/ (Arduino-IDE kompiliert nur einen Ordner namens src):
 //   settings       Einstellungen: NVS mit Standardwerten aus config.h
+//   improv_serial  WLAN-Einrichtung per USB aus dem Browser (Improv)
 //   mvg_api        Abruf/Auswertung der MVG-API
 //   display        alles, was gezeichnet wird
 //   line_icons.h   Liniensymbole (S/U/Tram als Bitmap, Bus generiert)
@@ -55,6 +56,7 @@
 #include <time.h>
 #include "config.h"
 #include "src/settings.h"
+#include "src/improv_serial.h"
 #include "src/mvg_api.h"
 #include "src/display.h"
 #include "src/buttons.h"
@@ -126,6 +128,10 @@ void setup() {
   settingsPrint();
   showZentrum = appSettings.defaultViewZentrum;
 
+  // Frueh starten, damit der Web-Installer das Geraet schon waehrend des
+  // Startbildschirms erkennt
+  improvBegin(firmwareVersionText().c_str());
+
   extrasBegin();
   buttonsInit();
   displayInit();
@@ -134,31 +140,44 @@ void setup() {
   displayShowSplash(firmwareVersionText().c_str());
   splashStart = millis();
 
-  Serial.print("Verbinde mit ");
-  Serial.println(appSettings.wifiSsid);
-
+  // WLAN-Daten nur aus appSettings, nicht zusaetzlich im WLAN-Speicher des
+  // ESP32 ablegen (Werkseinstellungen loeschen sonst nicht alles)
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
   wifiDiagInit();   // vor WiFi.begin(): merkt sich die Gruende von Abbruechen
-  WiFi.begin(appSettings.wifiSsid.c_str(), appSettings.wifiPassword.c_str());
+  if (settingsHasWifi()) {
+    Serial.print("Verbinde mit ");
+    Serial.println(appSettings.wifiSsid);
+    WiFi.begin(appSettings.wifiSsid.c_str(), appSettings.wifiPassword.c_str());
+  } else {
+    Serial.println("Keine WLAN-Daten - Einrichtung per Web-Installer (WLAN verbinden)");
+  }
 
   // Klappt die Anmeldung nicht innerhalb von WIFI_ERROR_SCREEN_DELAY_MS,
   // erscheint der Fehlerbildschirm mit der vermuteten Ursache (fruehestens
-  // nach dem Startbildschirm). Neuer
+  // nach dem Startbildschirm; ohne WLAN-Daten sofort danach). Neuer
   // Versuch alle ERROR_RETRY_INTERVAL_MS - nach einem Anmeldefehler
   // (z.B. falsches Passwort) versucht es der ESP32 sonst nicht erneut.
+  // Neue WLAN-Daten per Improv verbinden das Board direkt, die Schleife
+  // endet dann von selbst.
   unsigned long wifiStart = millis();
   unsigned long lastWifiRetry = millis();
   while (WiFi.status() != WL_CONNECTED) {
+    improvLoop();
     extrasStatus(true);
     delay(300);
     Serial.print(".");
-    if (millis() - wifiStart >= WIFI_ERROR_SCREEN_DELAY_MS && !splashShowing()) {
+    bool errorDue = !settingsHasWifi() || millis() - wifiStart >= WIFI_ERROR_SCREEN_DELAY_MS;
+    if (errorDue && !splashShowing()) {
       showWifiErrorIfChanged();
     }
-    if (millis() - lastWifiRetry >= ERROR_RETRY_INTERVAL_MS) {
+    if (settingsHasWifi() && !improvBusy() &&
+        millis() - lastWifiRetry >= ERROR_RETRY_INTERVAL_MS) {
       WiFi.reconnect();
       lastWifiRetry = millis();
     }
   }
+  improvLoop();
 
   Serial.println("");
   Serial.println("WLAN verbunden!");
@@ -195,6 +214,7 @@ void setup() {
 // Loop
 // ------------------------------------------------------------
 void loop() {
+  improvLoop();
   extrasLoop();
   checkApiFailWindow();
 
@@ -216,7 +236,8 @@ void loop() {
 
     // Neu verbinden alle ERROR_RETRY_INTERVAL_MS - ausser eine Erweiterung
     // uebernimmt das selbst (extrasHandlesWifiReconnect(), siehe extras.h)
-    if (!extrasHandlesWifiReconnect() &&
+    // oder Improv benutzt gerade das WLAN
+    if (!extrasHandlesWifiReconnect() && !improvBusy() && settingsHasWifi() &&
         millis() - lastErrorRetry >= ERROR_RETRY_INTERVAL_MS) {
       Serial.println("Versuche WLAN-Reconnect...");
       WiFi.reconnect();
@@ -502,7 +523,12 @@ void triggerLogAction() {
 // damit das E-Ink-Display nicht bei jedem Loop-Durchlauf neu zeichnet.
 // Aufruf aus setup() (Erstverbindung) und loop() (Abbruch im Betrieb).
 void showWifiErrorIfChanged() {
-  const char* reason = wifiDiagReasonText();
+  // Ohne WLAN-Daten feste Texte, sonst die vermutete Ursache (wifi_diag)
+  static const char* const NO_WIFI_REASON = "Keine WLAN-Daten";
+  static const char* const NO_WIFI_HINT = "Einrichten per Web-Installer";
+  bool hasWifi = settingsHasWifi();
+  const char* reason = hasWifi ? wifiDiagReasonText() : NO_WIFI_REASON;
+  const char* hint = hasWifi ? wifiDiagHintText() : NO_WIFI_HINT;
   if (reason == wifiErrorShownReason) return;
   wifiErrorShownReason = reason;
 
@@ -513,7 +539,7 @@ void showWifiErrorIfChanged() {
   Serial.print(wifiDiagLastReason());
   Serial.println(")");
 
-  displayShowWifiError(appSettings.wifiSsid.c_str(), reason, wifiDiagHintText());
+  displayShowWifiError(hasWifi ? appSettings.wifiSsid.c_str() : "-", reason, hint, hasWifi);
 }
 
 // ------------------------------------------------------------
@@ -546,6 +572,7 @@ bool splashShowing() {
 // Abfahrten bzw. den API-Fehlerbildschirm zeichnen
 void finishSplash() {
   while (splashShowing()) {
+    improvLoop();
     extrasLoop();
     extrasStatus(currentState != STATE_NORMAL);
     delay(20);

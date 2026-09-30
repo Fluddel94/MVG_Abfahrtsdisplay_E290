@@ -50,7 +50,7 @@ const char* wifiDiagHintText() {
   int r = lastReason;
   // "\xFC" "fen": getrennt, sonst waere "f" Teil der Escape-Sequenz
   if (isNotFound(r)) return "Name und 2,4 GHz pr\xFC" "fen";
-  if (isAuthProblem(r)) return "secrets.h pr\xFC" "fen";
+  if (isAuthProblem(r)) return "Passwort pr\xFC" "fen (Web-Installer)";
   return "";
 }
 

@@ -23,8 +23,10 @@ void displayShowDepartures(const Departure departures[], int found,
 
 // Fehlerbildschirme
 // WLAN-Fehler mit vermuteter Ursache und optionalem Hinweis ("" = keiner),
-// Texte siehe wifi_diag.h
-void displayShowWifiError(const char* ssid, const char* reason, const char* hint);
+// Texte siehe wifi_diag.h. retrying = true: unterste Zeile "Automatischer
+// Neuversuch...", false: "Warte auf Einrichtung..." (keine WLAN-Daten).
+void displayShowWifiError(const char* ssid, const char* reason, const char* hint,
+                          bool retrying);
 void displayShowApiError();
 
 // QR-Code + Zugangsdaten fuer ein WLAN (z.B. Gast-WLAN). title,

@@ -27,6 +27,11 @@ void extrasStatus(bool hasError);
 // selbst wieder her; loop() ruft dann kein eigenes WiFi.reconnect() auf
 bool extrasHandlesWifiReconnect();
 
+// Neue WLAN-Daten wurden gespeichert (z.B. per Web-Installer), das Board ist
+// bereits mit dem neuen WLAN verbunden. Fuer Erweiterungen, die sich die
+// WLAN-Daten beim Start merken (z.B. fuer einen eigenen Reconnect).
+void extrasWifiChanged();
+
 // Zusatz zur Versionsnummer, z.B. "-variante" (Standard: "").
 // Erscheint im seriellen Monitor und im System-Log.
 const char* extrasVersionSuffix();
