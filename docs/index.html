@@ -94,8 +94,8 @@
     <h2>Das brauchst du</h2>
     <ul>
       <li>USB-C-Kabel, das Daten überträgt (reine Ladekabel funktionieren nicht)</li>
-      <li>PC oder Mac mit <strong>Chrome</strong> oder <strong>Edge</strong>
-        (nicht Firefox, Safari oder Handy)</li>
+      <li>PC oder Mac mit <strong>Chrome</strong>, <strong>Edge</strong> oder
+        <strong>Firefox</strong> (ab Version 151) – nicht Safari, nicht am Handy</li>
       <li>WLAN mit 2,4 GHz und dessen Passwort</li>
     </ul>
   </section>
@@ -104,7 +104,8 @@
     <esp-web-install-button manifest="manifest.json">
       <button slot="activate">Installieren</button>
       <p slot="unsupported" class="error">Dieser Browser kann nicht auf USB-Geräte
-        zugreifen. Bitte Chrome oder Edge am PC oder Mac verwenden.</p>
+        zugreifen. Bitte Chrome, Edge oder Firefox (ab Version 151) am PC oder Mac
+        verwenden.</p>
       <p slot="not-allowed" class="error">Der Installer funktioniert nur über
         eine sichere Verbindung (https).</p>
     </esp-web-install-button>
@@ -118,7 +119,8 @@
     <details open>
       <summary>Erste Einrichtung</summary>
       <ol>
-        <li>Display per USB anstecken und oben auf <strong>Installieren</strong> klicken.</li>
+        <li>Display per USB anstecken und oben auf <strong>Installieren</strong> klicken.
+          Firefox fragt vorher, ob die Seite auf serielle Geräte zugreifen darf – erlauben.</li>
         <li>Im Browser-Fenster das Gerät wählen (meist
           <span class="en">USB JTAG/serial debug unit</span>) und
           <span class="en">Connect</span> klicken.</li>

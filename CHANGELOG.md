@@ -8,9 +8,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ### Neu
 - Web-Installer (`docs/`, über GitHub Pages): Firmware ohne Arduino IDE
-  per USB aus Chrome oder Edge aufspielen (ESP Web Tools), danach WLAN
-  verbinden und die Einstellungen öffnen. Ein Update über den Installer
-  behält alle Einstellungen (Firmware in vier Teilen statt merged .bin).
+  per USB aus Chrome, Edge oder Firefox (ab 151) aufspielen (ESP Web
+  Tools), danach WLAN verbinden und die Einstellungen öffnen. Ein Update
+  über den Installer behält alle Einstellungen (Firmware in vier Teilen
+  statt merged .bin).
 - Firmware-Update im Einstellungsportal: Firmware-Datei (.bin) auswählen
   und hochladen, mit Fortschrittsanzeige. Das Display zeigt „Firmware-Update
   läuft“ und startet danach neu, alle Einstellungen bleiben erhalten.
