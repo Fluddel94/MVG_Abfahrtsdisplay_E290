@@ -1,9 +1,10 @@
 // Version: 1.2.0
-// Letzte Änderung: 30.09.2026 14:51
+// Letzte Änderung: 30.09.2026 16:42
 #define FW_VERSION "1.2.0"
 
-// ===== BLOCK 01: KONFIGURATION START =====
-#pragma region Block 1 - Konfiguration
+// ------------------------------------------------------------
+// Konfiguration
+// ------------------------------------------------------------
 // Zugangsdaten (WLAN, optional QR-WLAN und OTA) liegen in secrets.h
 // (Vorlage mit Platzhaltern: secrets_example.h).
 // Geraeteeinstellungen (Station, Richtungen, Verkehrsmittel, Zusatz-
@@ -12,11 +13,10 @@
 #error "secrets.h fehlt: secrets_example.h kopieren, in secrets.h umbenennen und WLAN-Daten eintragen (siehe README)"
 #endif
 #include "secrets.h"
-#pragma endregion
-// ===== BLOCK 01: KONFIGURATION ENDE =====
 
-// ===== BLOCK 02: UEBERSICHT START =====
-#pragma region Block 2 - Uebersicht
+// ------------------------------------------------------------
+// Uebersicht
+// ------------------------------------------------------------
 // E-Ink-Abfahrtsdisplay - Heltec Vision Master E290 (MVG, Muenchen)
 //
 // Funktionen, Einrichtung, Bedienung und wichtige Hinweise: README.md
@@ -36,13 +36,13 @@
 //   time_utils     Laufzeit, Zeitformate
 //   text_utils     UTF-8 -> Latin-1 fuer echte Umlaute auf dem Display
 //   wifi_diag      Ursache von WLAN-Abbruechen fuer den Fehlerbildschirm
-//   extras         Andockstellen fuer optionale Erweiterungen (Block 10)
-// Startbildschirm: Block 11
-#pragma endregion
-// ===== BLOCK 02: UEBERSICHT ENDE =====
+//   extras         Andockstellen fuer optionale Erweiterungen (Abschnitt
+//                  Erweiterungen)
+// Startbildschirm: Abschnitt Startbildschirm am Dateiende
 
-// ===== BLOCK 03: INCLUDES START =====
-#pragma region Block 3 - Includes
+// ------------------------------------------------------------
+// Includes
+// ------------------------------------------------------------
 #include "WiFi.h"
 // HTTPClient.h wird nur in mvg_api.cpp gebraucht, MUSS aber hier im .ino
 // stehen: Die Arduino-IDE sucht Libraries in der Reihenfolge der Dateien.
@@ -63,11 +63,10 @@
 #include "src/time_utils.h"
 #include "src/wifi_diag.h"
 #include "src/extras.h"
-#pragma endregion
-// ===== BLOCK 03: INCLUDES ENDE =====
 
-// ===== BLOCK 04: GLOBALE ZUSTANDSVARIABLEN START =====
-#pragma region Block 4 - Globale Zustandsvariablen
+// ------------------------------------------------------------
+// Globale Zustandsvariablen
+// ------------------------------------------------------------
 unsigned long lastErrorRetry = 0;
 unsigned long autoResetStart = 0;
 unsigned long qrModeStart = 0;
@@ -110,16 +109,15 @@ int wifiDisconnectCount = 0;
 unsigned long wifiLostSince = 0;
 const char* wifiErrorShownReason = nullptr;
 
-// Startbildschirm: Zeitpunkt der Anzeige (Block 11)
+// Startbildschirm: Zeitpunkt der Anzeige (Abschnitt Startbildschirm)
 unsigned long splashStart = 0;
 
 enum SystemState { STATE_NORMAL, STATE_WIFI_ERROR, STATE_API_ERROR };
 SystemState currentState = STATE_NORMAL;
-#pragma endregion
-// ===== BLOCK 04: GLOBALE ZUSTANDSVARIABLEN ENDE =====
 
-// ===== BLOCK 05: SETUP START =====
-#pragma region Block 5 - Setup
+// ------------------------------------------------------------
+// Setup
+// ------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -211,11 +209,10 @@ void setup() {
   lastUpdateMinute = timeinfo.tm_min;
   finishSplash();
 }
-#pragma endregion
-// ===== BLOCK 05: SETUP ENDE =====
 
-// ===== BLOCK 06: LOOP START =====
-#pragma region Block 6 - Loop
+// ------------------------------------------------------------
+// Loop
+// ------------------------------------------------------------
 void loop() {
 #if FEATURE_OTA
   ArduinoOTA.handle();
@@ -240,7 +237,7 @@ void loop() {
     }
 
     // Neu verbinden alle ERROR_RETRY_INTERVAL_MS - ausser eine Erweiterung
-    // uebernimmt das selbst (extrasHandlesWifiReconnect(), Block 10)
+    // uebernimmt das selbst (extrasHandlesWifiReconnect(), siehe extras.h)
     if (!extrasHandlesWifiReconnect() &&
         millis() - lastErrorRetry >= ERROR_RETRY_INTERVAL_MS) {
       Serial.println("Versuche WLAN-Reconnect...");
@@ -338,11 +335,10 @@ void loop() {
     attemptUpdate(doFullRefresh);
   }
 }
-#pragma endregion
-// ===== BLOCK 06: LOOP ENDE =====
 
-// ===== BLOCK 07: UPDATE-STEUERUNG START =====
-#pragma region Block 7 - Update-Steuerung
+// ------------------------------------------------------------
+// Update-Steuerung
+// ------------------------------------------------------------
 // Einziger Ort, an dem Abfahrten von der MVG-API abgerufen werden
 // (fetchDepartures). Laedt die Rohdaten einmal, wertet sie fuer alle
 // Ansichten aus (Zwischenspeicher) und zeichnet dann die aktuelle Ansicht.
@@ -448,11 +444,10 @@ void returnToDepartures() {
   }
   updateCounter = 0;
 }
-#pragma endregion
-// ===== BLOCK 07: UPDATE-STEUERUNG ENDE =====
 
-// ===== BLOCK 08: TASTEN-AKTIONEN START =====
-#pragma region Block 8 - Tasten-Aktionen
+// ------------------------------------------------------------
+// Tasten-Aktionen
+// ------------------------------------------------------------
 // Werden von handleBootButton()/handleQrButton() (buttons.cpp) aufgerufen
 
 void triggerBootAction() {
@@ -523,11 +518,10 @@ void triggerLogAction() {
     displayShowLog(firmwareVersionText().c_str(), wifiConnectedSince, wifiDisconnectCount, getApiFailCount());
   }
 }
-#pragma endregion
-// ===== BLOCK 08: TASTEN-AKTIONEN ENDE =====
 
-// ===== BLOCK 09: WLAN-FEHLERANZEIGE START =====
-#pragma region Block 9 - WLAN-Fehleranzeige
+// ------------------------------------------------------------
+// WLAN-Fehleranzeige
+// ------------------------------------------------------------
 // Zeichnet den WLAN-Fehlerbildschirm, wenn sich die vermutete Ursache
 // (wifi_diag.cpp) seit der letzten Anzeige geaendert hat - sonst nichts,
 // damit das E-Ink-Display nicht bei jedem Loop-Durchlauf neu zeichnet.
@@ -546,11 +540,10 @@ void showWifiErrorIfChanged() {
 
   displayShowWifiError(ssid, reason, wifiDiagHintText());
 }
-#pragma endregion
-// ===== BLOCK 09: WLAN-FEHLERANZEIGE ENDE =====
 
-// ===== BLOCK 10: ERWEITERUNGEN START =====
-#pragma region Block 10 - Erweiterungen
+// ------------------------------------------------------------
+// Erweiterungen
+// ------------------------------------------------------------
 // Optionale Erweiterungen docken ueber src/extras.h an (extrasBegin,
 // extrasSetup, extrasLoop, extrasStatus, extrasHandlesWifiReconnect,
 // extrasVersionSuffix). Ohne Erweiterung sind das leere Funktionen.
@@ -559,11 +552,10 @@ void showWifiErrorIfChanged() {
 String firmwareVersionText() {
   return String(FW_VERSION) + extrasVersionSuffix();
 }
-#pragma endregion
-// ===== BLOCK 10: ERWEITERUNGEN ENDE =====
 
-// ===== BLOCK 11: STARTBILDSCHIRM START =====
-#pragma region Block 11 - Startbildschirm
+// ------------------------------------------------------------
+// Startbildschirm
+// ------------------------------------------------------------
 // Der Startbildschirm (displayShowSplash) erscheint direkt nach displayInit()
 // und bleibt mindestens SPLASH_DURATION_MS stehen. WLAN, Uhrzeit,
 // Stationsname und erster Abruf laufen in der Zeit weiter; gezeichnet wird
@@ -594,5 +586,3 @@ void finishSplash() {
     redrawFromCache(true);
   }
 }
-#pragma endregion
-// ===== BLOCK 11: STARTBILDSCHIRM ENDE =====

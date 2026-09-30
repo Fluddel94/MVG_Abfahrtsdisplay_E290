@@ -225,8 +225,8 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 - **Verkehrsmittel-Filter:** `downloadDepartures()` hängt
   `&transportTypes=…` an die URL. Ohne diesen Parameter liefert die API nur
   S-Bahn, U-Bahn, Tram und Stadtbus (beobachtet).
-- **API-Abrufe:** Abfahrten werden nur in `attemptUpdate()` (.ino, Block 07)
-  abgerufen – beim Minuten-Update, beim Start, nach WLAN-Wiederkehr, bei
+- **API-Abrufe:** Abfahrten werden nur in `attemptUpdate()` (.ino, Abschnitt
+  Update-Steuerung) abgerufen – beim Minuten-Update, beim Start, nach WLAN-Wiederkehr, bei
   Rückkehr aus QR/Log in einer neuen Minute und alle 10 s während einer
   Störung. Umschalten und Blättern zeichnen aus einem Zwischenspeicher.
 - **Flügelzüge:** Die API liefert geteilte Züge als getrennte Fahrten.

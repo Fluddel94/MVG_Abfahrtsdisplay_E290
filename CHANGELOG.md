@@ -6,6 +6,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Intern
+- Quelltext: Blockmarker und `#pragma region` in der .ino entfernt, die
+  Abschnitte haben jetzt normale Überschriften (keine Funktionsänderung).
+
 ## [1.2.0] – 30.09.2026
 ### Neu
 - Startbildschirm: Nach dem Einschalten erscheinen etwa 5 Sekunden lang
