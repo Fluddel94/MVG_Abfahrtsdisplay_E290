@@ -34,6 +34,12 @@ void displayShowApiError();
 void displayShowWifiQr(const char* title, const char* qrWlanSsid,
                        const char* qrWlanPassword);
 
-// System-Log (Momentaufnahme beim Aufruf)
-void displayShowLog(const char* firmwareVersion, uint64_t wifiConnectedSince,
-                    int wifiDisconnects, int apiFails);
+// System-Log (Momentaufnahme beim Aufruf). portalAddress: Adresse des
+// Einstellungsportals ohne "http://", portalUntil: Uhrzeit "HH:MM", zu der
+// es schliesst ("" = unbekannt).
+void displayShowLog(const char* firmwareVersion, const char* portalAddress,
+                    const char* portalUntil, int wifiDisconnects, int apiFails);
+
+// Ersteinrichtung (noch keine Station): QR-Code mit der Portal-Adresse plus
+// Adresse im Klartext (ohne "http://")
+void displayShowPortalSetup(const char* url, const char* address);

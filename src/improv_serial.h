@@ -15,7 +15,8 @@ void improvBegin(const char* firmwareVersion);
 
 // Regelmaessig aus setup()-Warteschleifen und loop() aufrufen: speichert
 // erfolgreich getestete neue WLAN-Daten und meldet sie an Erweiterungen.
-void improvLoop();
+// true = neue WLAN-Daten wurden gerade uebernommen (dann Portal oeffnen).
+bool improvLoop();
 
 // true, solange Improv das WLAN benutzt (Verbindungsversuch oder Netzsuche).
 // Dann kein eigenes WiFi.reconnect() aufrufen.

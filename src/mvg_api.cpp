@@ -81,6 +81,129 @@ static String transportTypesParam() {
   return types.substring(1);   // fuehrendes Komma weglassen
 }
 
+// Prozent-Kodierung fuer einen URL-Parameter (UTF-8 bleibt byteweise erhalten)
+static String urlEncode(const String& text) {
+  static const char HEX_DIGITS[] = "0123456789ABCDEF";
+  String out;
+  for (unsigned int i = 0; i < text.length(); i++) {
+    uint8_t c = (uint8_t)text[i];
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+      out += (char)c;
+    } else {
+      out += '%';
+      out += HEX_DIGITS[c >> 4];
+      out += HEX_DIGITS[c & 0x0F];
+    }
+  }
+  return out;
+}
+
+// Anzeigenamen der Verkehrsmittel fuer die Trefferliste der Suche
+static const char* transportTypeName(const char* type) {
+  if (strcmp(type, "SBAHN") == 0) return "S-Bahn";
+  if (strcmp(type, "UBAHN") == 0) return "U-Bahn";
+  if (strcmp(type, "TRAM") == 0) return "Tram";
+  if (strcmp(type, "BUS") == 0) return "Bus";
+  if (strcmp(type, "REGIONAL_BUS") == 0) return "Regionalbus";
+  if (strcmp(type, "BAHN") == 0) return "Regionalzug";
+  return type;
+}
+
+bool searchStations(const String& query, String& jsonOut) {
+  HTTPClient http;
+  http.setConnectTimeout(HTTP_TIMEOUT_MS);
+  http.setTimeout(HTTP_TIMEOUT_MS);
+
+  // Antwort (beobachtet): Array mit type STATION/ADDRESS/POI, name, place,
+  // globalId, transportTypes
+  String url = "https://www.mvg.de/api/bgw-pt/v3/locations?query=";
+  url += urlEncode(query);
+  http.begin(url);
+  int httpCode = http.GET();
+  if (httpCode != 200) {
+    Serial.print("Stationssuche fehlgeschlagen, HTTP-Code: ");
+    Serial.println(httpCode);
+    http.end();
+    return false;
+  }
+  String payload = http.getString();
+  http.end();
+
+  JsonDocument filter;
+  filter[0]["type"] = true;
+  filter[0]["name"] = true;
+  filter[0]["place"] = true;
+  filter[0]["globalId"] = true;
+  filter[0]["transportTypes"] = true;
+  filter[0]["tariffZones"] = true;
+  filter[0]["latitude"] = true;
+  filter[0]["longitude"] = true;
+  JsonDocument doc;
+  if (deserializeJson(doc, payload, DeserializationOption::Filter(filter))) return false;
+
+  JsonDocument out;
+  JsonArray list = out.to<JsonArray>();
+  for (JsonObject loc : doc.as<JsonArray>()) {
+    const char* type = loc["type"];
+    const char* id = loc["globalId"];
+    if (type == nullptr || id == nullptr || strcmp(type, "STATION") != 0) continue;
+    String types;
+    JsonArray typeList = loc["transportTypes"];
+    for (const char* t : typeList) {
+      if (types.length()) types += ", ";
+      types += transportTypeName(t);
+    }
+    JsonObject entry = list.add<JsonObject>();
+    entry["n"] = loc["name"] | "";
+    entry["p"] = loc["place"] | "";
+    entry["id"] = id;
+    entry["t"] = types;
+    entry["z"] = loc["tariffZones"] | "";
+    if (loc["latitude"].is<float>() && loc["longitude"].is<float>()) {
+      entry["lat"] = loc["latitude"];
+      entry["lon"] = loc["longitude"];
+    }
+    if (list.size() >= 15) break;
+  }
+  serializeJson(out, jsonOut);
+  return true;
+}
+
+bool listDirections(const char* globalId, String& jsonOut) {
+  String payload;
+  if (!downloadDepartures(globalId, payload)) return false;
+
+  JsonDocument filter;
+  filter[0]["lineId"] = true;
+  filter[0]["label"] = true;
+  filter[0]["destination"] = true;
+  JsonDocument doc;
+  if (deserializeJson(doc, payload, DeserializationOption::Filter(filter))) return false;
+
+  JsonDocument out;
+  JsonArray list = out.to<JsonArray>();
+  for (JsonObject dep : doc.as<JsonArray>()) {
+    String lineId = dep["lineId"] | "";
+    const char* dir = lineId.indexOf(":H:") != -1 ? "H" : (lineId.indexOf(":R:") != -1 ? "R" : "?");
+    const char* line = dep["label"] | "";
+    const char* dest = dep["destination"] | "";
+    bool known = false;
+    for (JsonObject e : list) {
+      if (strcmp(e["d"], dir) == 0 && strcmp(e["l"], line) == 0 && strcmp(e["z"], dest) == 0) {
+        known = true;
+        break;
+      }
+    }
+    if (known) continue;
+    JsonObject entry = list.add<JsonObject>();
+    entry["d"] = dir;
+    entry["l"] = line;
+    entry["z"] = dest;
+  }
+  serializeJson(out, jsonOut);
+  return true;
+}
+
 bool fetchStationName(const char* globalId, String& nameOut) {
   HTTPClient http;
   http.setConnectTimeout(HTTP_TIMEOUT_MS);

@@ -18,11 +18,13 @@
 // ------------------------------------------------------------
 // SCHRITT 1: STATION
 // ------------------------------------------------------------
-// globalId der Haltestelle, Format "de:09162:2". Nachschlagen in der
-// Haltestellenliste haltestellen/Haltestellen_Suche_s26.csv (auf GitHub
-// durchsuchbar, Spalte "Globale ID", siehe README Abschnitt "Station finden").
+// globalId der Haltestelle, Format "de:09162:2". Normalerweise leer lassen:
+// Dann oeffnet das Geraet beim ersten Start das Einstellungsportal, dort
+// wird die Station per Namenssuche gewaehlt. Wer selbst vorbelegen will:
+// ID aus der Haltestellenliste haltestellen/Haltestellen_Suche_s26.csv
+// (Spalte "Globale ID", siehe README Abschnitt "Station finden").
 
-#define STATION_GLOBAL_ID "de:09162:2"   // Marienplatz
+#define STATION_GLOBAL_ID ""   // z.B. "de:09162:2" = Marienplatz
 
 // ------------------------------------------------------------
 // SCHRITT 2: RICHTUNGSANZEIGE
@@ -124,6 +126,9 @@
 #define QR_DISPLAY_DURATION_MS 60000UL
 #define LOG_DISPLAY_DURATION_MS 60000UL
 #define LONG_PRESS_MS 3000UL
+// Einstellungsportal: so lange offen nach dem Oeffnen (Systemlog, nach
+// "WLAN verbinden"); ohne gespeicherte Station bleibt es dauerhaft offen
+#define PORTAL_DURATION_MS 1800000UL   // 30 Minuten
 
 // --- API-Stoerungsstatistik (gleitendes 24h-Fenster, siehe stats.cpp) ---
 #define API_FAIL_WINDOW_MS 86400000UL

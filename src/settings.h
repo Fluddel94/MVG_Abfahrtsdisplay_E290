@@ -33,8 +33,20 @@ struct DeviceSettings {
   String qrPassword;
 };
 
-// Die aktuell gueltigen Einstellungen (nach settingsLoad())
+// Die aktuell gueltigen Einstellungen (nach settingsLoad()). Geaendert wird
+// appSettings nur im loop-Kontext (setup/loop). Andere Tasks (Portal,
+// Improv) lesen nur und halten dabei eine SettingsLock.
 extern DeviceSettings appSettings;
+
+// Sperre fuer appSettings, solange das Objekt existiert (verschachtelbar):
+//   { SettingsLock lock; ... appSettings lesen/aendern ... }
+class SettingsLock {
+ public:
+  SettingsLock();
+  ~SettingsLock();
+  SettingsLock(const SettingsLock&) = delete;
+  SettingsLock& operator=(const SettingsLock&) = delete;
+};
 
 // Standardwerte setzen und gespeicherte Werte darueber laden. Einmal ganz
 // am Anfang von setup() aufrufen.

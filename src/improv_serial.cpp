@@ -12,6 +12,7 @@
 #include <WiFi.h>
 #include "settings.h"
 #include "extras.h"
+#include "portal.h"
 #include "improv_serial.h"
 
 // ------------------------------------------------------------
@@ -80,7 +81,16 @@ static void sendPacket(uint8_t type, const uint8_t* data, uint8_t length) {
   buf[9 + length] = checksum;
   buf[10 + length] = '\n';   // nur zur Lesbarkeit im seriellen Monitor
 
-  Serial.write(buf, 11 + length);
+  // Ausgaben blockieren nicht (setTxTimeoutMs(0) in setup()). Kurz
+  // wiederholen, falls der Sendepuffer gerade voll oder belegt ist - der
+  // Browser liest waehrend der Einrichtung mit, der Puffer leert sich schnell.
+  size_t total = 11 + length;
+  size_t sent = 0;
+  for (int tries = 0; sent < total && tries < 100; tries++) {
+    size_t n = Serial.write(buf + sent, total - sent);
+    sent += n;
+    if (n == 0) vTaskDelay(pdMS_TO_TICKS(2));
+  }
 }
 
 static void sendState(uint8_t state) {
@@ -124,7 +134,13 @@ static void restoreSavedWifi() {
   if (pendingWifi) {
     WiFi.begin(pendingSsid.c_str(), pendingPassword.c_str());
   } else if (settingsHasWifi()) {
-    WiFi.begin(appSettings.wifiSsid.c_str(), appSettings.wifiPassword.c_str());
+    String ssid, password;
+    {
+      SettingsLock lock;
+      ssid = appSettings.wifiSsid;
+      password = appSettings.wifiPassword;
+    }
+    WiFi.begin(ssid.c_str(), password.c_str());
   }
 }
 
@@ -169,7 +185,10 @@ static void handleWifiSettings(const uint8_t* data, uint8_t length) {
     pendingWifi = true;
     connecting = false;
     sendState(STATE_PROVISIONED);
-    sendResult(CMD_WIFI_SETTINGS, nullptr, 0);   // (noch) keine Geraete-Adresse
+    // Adresse des Einstellungsportals ("Geraet oeffnen" im Browser). Das
+    // Portal oeffnet improvLoop() gleich danach.
+    String url = portalUrl();
+    sendResult(CMD_WIFI_SETTINGS, &url, 1);
   } else {
     Serial.println("Improv: Verbindung fehlgeschlagen, alte WLAN-Daten bleiben");
     restoreSavedWifi();
@@ -183,7 +202,9 @@ static void handleGetState() {
   uint8_t state = currentState();
   sendState(state);
   if (state == STATE_PROVISIONED) {
-    sendResult(CMD_GET_STATE, nullptr, 0);   // (noch) keine Geraete-Adresse
+    // Adresse nur, solange das Portal offen ist
+    String url = portalUrl();
+    sendResult(CMD_GET_STATE, &url, portalIsOpen() ? 1 : 0);
   }
 }
 
@@ -317,11 +338,12 @@ void improvBegin(const char* firmwareVersion) {
   xTaskCreate(improvTask, "improv", IMPROV_TASK_STACK, nullptr, 1, nullptr);
 }
 
-void improvLoop() {
-  if (!pendingWifi) return;
+bool improvLoop() {
+  if (!pendingWifi) return false;
   settingsSaveWifi(pendingSsid, pendingPassword);
   pendingWifi = false;
   extrasWifiChanged();
+  return true;
 }
 
 bool improvBusy() {

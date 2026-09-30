@@ -1,5 +1,5 @@
 // Version: 1.2.0
-// Letzte Änderung: 30.09.2026 17:34
+// Letzte Änderung: 30.09.2026 20:20
 #define FW_VERSION "1.2.0"
 
 // ------------------------------------------------------------
@@ -30,6 +30,7 @@
 // Programmcode in src/ (Arduino-IDE kompiliert nur einen Ordner namens src):
 //   settings       Einstellungen: NVS mit Standardwerten aus config.h
 //   improv_serial  WLAN-Einrichtung per USB aus dem Browser (Improv)
+//   portal         Einstellungsportal im Heimnetz (Webseite, auf Abruf)
 //   mvg_api        Abruf/Auswertung der MVG-API
 //   display        alles, was gezeichnet wird
 //   line_icons.h   Liniensymbole (S/U/Tram als Bitmap, Bus generiert)
@@ -57,6 +58,7 @@
 #include "config.h"
 #include "src/settings.h"
 #include "src/improv_serial.h"
+#include "src/portal.h"
 #include "src/mvg_api.h"
 #include "src/display.h"
 #include "src/buttons.h"
@@ -98,10 +100,12 @@ Departure cacheAll[MAX_DEPARTURES_SHOWN * 2];   // Seite 1 + Seite 2
 int cacheAllCount = 0;
 
 // Statistik fuer den Log-Screen (API-Stoerungen: siehe stats.cpp)
-// wifiConnectedSince als 64-Bit-Wert (Quelle: uptimeMs()), damit die
-// WLAN-Laufzeit nicht nach ~49,7 Tagen ueberlaeuft
-uint64_t wifiConnectedSince = 0;
 int wifiDisconnectCount = 0;
+
+// Einrichtungs-Screen (noch keine Station) wird gerade angezeigt
+bool setupScreenShown = false;
+// Neue WLAN-Daten per Improv waehrend setup(): Portal danach oeffnen
+bool portalRequested = false;
 
 // WLAN-Fehlerbildschirm: seit wann keine Verbindung besteht und welche
 // Ursache zuletzt angezeigt wurde (nullptr = noch kein Fehlerbildschirm)
@@ -119,6 +123,13 @@ SystemState currentState = STATE_NORMAL;
 // ------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
+#if ARDUINO_USB_CDC_ON_BOOT
+  // Ausgaben ueber den USB-Anschluss nicht abwarten: Haengt das Board am PC,
+  // ohne dass ein Programm mitliest (serieller Monitor zu), blockiert sonst
+  // jede Ausgabe bis zu 2 s (Boardpaket 3.3.x) - Start, Tasten und Portal
+  // werden dann extrem traege. Ungelesene Ausgaben gehen verloren.
+  Serial.setTxTimeoutMs(0);
+#endif
   delay(1000);
 
   Serial.print("Abfahrtsdisplay Firmware v");
@@ -131,6 +142,7 @@ void setup() {
   // Frueh starten, damit der Web-Installer das Geraet schon waehrend des
   // Startbildschirms erkennt
   improvBegin(firmwareVersionText().c_str());
+  portalBegin(firmwareVersionText().c_str());
 
   extrasBegin();
   buttonsInit();
@@ -163,7 +175,7 @@ void setup() {
   unsigned long wifiStart = millis();
   unsigned long lastWifiRetry = millis();
   while (WiFi.status() != WL_CONNECTED) {
-    improvLoop();
+    if (improvLoop()) portalRequested = true;
     extrasStatus(true);
     delay(300);
     Serial.print(".");
@@ -177,14 +189,16 @@ void setup() {
       lastWifiRetry = millis();
     }
   }
-  improvLoop();
+  if (improvLoop()) portalRequested = true;
 
   Serial.println("");
   Serial.println("WLAN verbunden!");
   Serial.print("IP-Adresse: ");
   Serial.println(WiFi.localIP());
 
-  wifiConnectedSince = uptimeMs();
+  // Nach "WLAN verbinden" im Web-Installer: Portal fuer die weitere
+  // Einrichtung oeffnen ("Geraet oeffnen" im Browser)
+  if (portalRequested) portalOpen();
 
   configTzTime(TIMEZONE_INFO, "de.pool.ntp.org", "time.google.com");
 
@@ -199,13 +213,15 @@ void setup() {
   Serial.println();
 
   // Bei Fehler bleibt der Fallback "Bahnhof" stehen
-  fetchStationName(appSettings.stationId.c_str(), stationName);
+  if (settingsHasStation()) {
+    fetchStationName(appSettings.stationId.c_str(), stationName);
+  }
 
   extrasSetup(firmwareVersionText().c_str());
 
   // Erste Abfahrten schon waehrend des Startbildschirms laden, gezeichnet
-  // wird erst danach (Abfahrten oder API-Fehlerbildschirm)
-  fetchDepartures();
+  // wird erst danach (Abfahrten, API-Fehler- oder Einrichtungs-Screen)
+  if (settingsHasStation()) fetchDepartures();
   lastUpdateMinute = timeinfo.tm_min;
   finishSplash();
 }
@@ -214,7 +230,7 @@ void setup() {
 // Loop
 // ------------------------------------------------------------
 void loop() {
-  improvLoop();
+  if (improvLoop()) portalOpen();   // neue WLAN-Daten: Portal fuer "Geraet oeffnen"
   extrasLoop();
   checkApiFailWindow();
 
@@ -252,9 +268,22 @@ void loop() {
   if (currentState == STATE_WIFI_ERROR) {
     Serial.println("WLAN wiederhergestellt!");
     currentState = STATE_NORMAL;
-    wifiConnectedSince = uptimeMs();
-    attemptUpdate(true);
+    setupScreenShown = false;   // IP-Adresse kann sich geaendert haben
+    if (settingsHasStation()) attemptUpdate(true);
     updateCounter = 0;
+  }
+
+  // Im Portal gespeicherte Einstellungen uebernehmen
+  if (portalLoop()) applyNewSettings();
+
+  // Ersteinrichtung: ohne Station bleibt das Portal offen und der
+  // Einrichtungs-Screen stehen
+  if (!settingsHasStation()) {
+    portalOpen();
+    if (!setupScreenShown) showPortalSetupScreen();
+    extrasStatus(false);
+    delay(50);
+    return;
   }
 
   extrasStatus(currentState != STATE_NORMAL);
@@ -424,6 +453,40 @@ void redrawCurrentView() {
   redrawFromCache(true);
 }
 
+// Nach "Speichern" im Portal: Ansicht zuruecksetzen, Stationsname und
+// Abfahrten neu laden (die Einstellungen koennen Station, Anzeigeart und
+// Verkehrsmittel betreffen). QR- und Log-Screen werden dabei beendet.
+void applyNewSettings() {
+  Serial.println("Neue Einstellungen werden uebernommen");
+  logModeActive = false;
+  qrModeActive = false;
+  autoResetPending = false;
+  showZentrum = appSettings.defaultViewZentrum;
+  showPage2 = false;
+  setupScreenShown = false;
+  if (!settingsHasStation()) return;
+
+  stationName = "Bahnhof";
+  fetchStationName(appSettings.stationId.c_str(), stationName);
+
+  time_t nowRaw = time(nullptr);
+  struct tm nowInfo;
+  localtime_r(&nowRaw, &nowInfo);
+  lastUpdateMinute = nowInfo.tm_min;
+  currentState = STATE_NORMAL;   // damit ein Fehler den API-Fehlerbildschirm zeigt
+  attemptUpdate(true);
+  updateCounter = 0;
+}
+
+// Einrichtungs-Screen mit QR-Code und Adresse des Portals
+void showPortalSetupScreen() {
+  String address = WiFi.localIP().toString();
+  Serial.print("Einrichtung: Portal unter ");
+  Serial.println(portalUrl());
+  displayShowPortalSetup(portalUrl().c_str(), address.c_str());
+  setupScreenShown = true;
+}
+
 // Rueckkehr aus QR- oder Log-Screen: Ist inzwischen eine neue Minute
 // angebrochen, laeuft das faellige Minuten-Update jetzt (mit Abruf), sonst
 // wird nur aus dem Zwischenspeicher gezeichnet. Bei API-Stoerung: neuer Versuch.
@@ -508,10 +571,13 @@ void triggerLogAction() {
     logModeActive = false;
     returnToDepartures();
   } else {
-    Serial.println("Log-Anzeige aktiviert (langer Druck, 60s)");
+    Serial.println("Log-Anzeige aktiviert (langer Druck, 60s), Portal offen");
     logModeActive = true;
     logModeStart = millis();
-    displayShowLog(firmwareVersionText().c_str(), wifiConnectedSince, wifiDisconnectCount, getApiFailCount());
+    portalOpen();   // Laufzeit startet bei jedem Oeffnen neu
+    String address = WiFi.localIP().toString();
+    displayShowLog(firmwareVersionText().c_str(), address.c_str(),
+                   portalClosingTime().c_str(), wifiDisconnectCount, getApiFailCount());
   }
 }
 
@@ -579,6 +645,11 @@ void finishSplash() {
   }
   Serial.println("Startbildschirm beendet");
 
+  if (!settingsHasStation()) {
+    portalOpen();
+    showPortalSetupScreen();
+    return;
+  }
   if (currentState == STATE_API_ERROR) {
     displayShowApiError();
   } else {

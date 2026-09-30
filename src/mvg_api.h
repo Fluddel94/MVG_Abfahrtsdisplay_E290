@@ -34,6 +34,16 @@ bool fetchStationName(const char* globalId, String& nameOut);
 // Erfolg (HTTP 200), sonst false.
 bool downloadDepartures(const char* globalId, String& payloadOut);
 
+// Stationssuche fuer das Portal: Treffer der MVG-Suche (nur Haltestellen,
+// max. 15) als JSON-Array [{"n":Name,"p":Ort,"id":globalId,"t":"S-Bahn, ...",
+// "z":Tarifzone,"lat":..,"lon":..}] in UTF-8. true bei Erfolg.
+bool searchStations(const String& query, String& jsonOut);
+
+// Fuer das Portal: Linien und Ziele der naechsten Abfahrten je
+// Richtungskennung als JSON-Array [{"d":"H","l":"S2","z":"Erding"}] (UTF-8,
+// jede Kombination einmal). Hilft beim Festlegen von "Zentrum = H oder R".
+bool listDirections(const char* globalId, String& jsonOut);
+
 // Wertet heruntergeladene Rohdaten aus: filtert nach Richtung (oder alle),
 // gleicht Stoerungs-Duplikate ab, fasst Fluegelzuege zusammen und fuellt
 // result. Kein Netzwerkzugriff - kann fuer mehrere Filter auf dieselben

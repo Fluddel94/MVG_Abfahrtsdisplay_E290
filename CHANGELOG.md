@@ -7,6 +7,19 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 ## [Unveröffentlicht]
 
 ### Neu
+- Einstellungsportal: Webseite im Heimnetz zum Ändern aller Einstellungen
+  (Station, Anzeige, Verkehrsmittel, WLAN-QR, Werkseinstellungen), ohne
+  Neustart wirksam. Öffnet zusammen mit dem System-Log für 30 Minuten
+  (erneutes Öffnen startet die Zeit neu), nach „WLAN verbinden“ im
+  Web-Installer und – solange keine Station gespeichert ist – dauerhaft mit
+  einem Einrichtungs-Screen (QR-Code und Adresse).
+- Stationssuche per Name im Portal (über die inoffizielle MVG-API): bis zu
+  15 Treffer mit Ort, Tarifzone, Verkehrsmitteln, ID und Link auf die
+  Karte, damit gleichnamige Haltestellen unterscheidbar sind. Die
+  Station-ID bleibt als Rückfall eintragbar.
+- „Richtungen anzeigen“ im Portal: listet Linien und Ziele je
+  Richtungskennung (H/R) – damit lässt sich „Richtung Zentrum“ ohne Blick
+  in die API-Antwort festlegen.
 - WLAN-Einrichtung per USB aus dem Browser (Improv Serial): WLAN-Name und
   Passwort lassen sich ohne Arduino IDE setzen und ändern, das Gerät meldet
   Name und Version und liefert eine Liste der sichtbaren Netze. Neue Daten
@@ -14,7 +27,17 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   bisherige WLAN. Funktioniert auch, während der WLAN-Fehlerbildschirm
   angezeigt wird.
 
+### Behoben
+- Hängt das Board am PC, ohne dass der serielle Monitor offen ist, waren
+  Start, Tasten und Übernahme von Einstellungen sehr träge (jede
+  Ausgabe über USB wartete bis zu 2 s). Ausgaben warten jetzt nicht mehr.
+
 ### Geändert
+- System-Log: neue Zeilen mit der Portal-Adresse und bis wann es erreichbar
+  ist; die WLAN-Laufzeit entfällt, WLAN-Abbrüche und API-Störungen stehen
+  in einer Zeile.
+- `STATION_GLOBAL_ID` in `config.h` ist standardmäßig leer: Neue Geräte
+  starten mit dem Einrichtungs-Screen.
 - WLAN-Fehlerbildschirm: Hinweis „Passwort prüfen (Web-Installer)“ statt
   „secrets.h prüfen“. Ohne WLAN-Daten erscheint „Keine WLAN-Daten –
   Einrichten per Web-Installer“.

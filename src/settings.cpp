@@ -41,6 +41,18 @@ static const char* const KEY_QR_PASS = "qrPass";
 
 DeviceSettings appSettings;
 
+// Sperre fuer appSettings (rekursiv, damit verschachtelte Sperren gehen).
+// Wird in settingsLoad() angelegt - vor dem Start der anderen Tasks.
+static SemaphoreHandle_t settingsMutex = nullptr;
+
+SettingsLock::SettingsLock() {
+  if (settingsMutex) xSemaphoreTakeRecursive(settingsMutex, portMAX_DELAY);
+}
+
+SettingsLock::~SettingsLock() {
+  if (settingsMutex) xSemaphoreGiveRecursive(settingsMutex);
+}
+
 // true, wenn beim letzten settingsLoad() gespeicherte Werte gefunden wurden
 static bool storedValuesFound = false;
 
@@ -101,6 +113,8 @@ static void readBool(Preferences& prefs, const char* key, bool& value) {
 }
 
 void settingsLoad() {
+  if (!settingsMutex) settingsMutex = xSemaphoreCreateRecursiveMutex();
+  SettingsLock lock;
   setDefaults(appSettings);
   storedValuesFound = false;
 
@@ -144,6 +158,7 @@ static bool writeBool(Preferences& prefs, const char* key, bool value) {
 }
 
 bool settingsSave() {
+  SettingsLock lock;
   validate(appSettings);
 
   Preferences prefs;
@@ -180,6 +195,7 @@ bool settingsSaveWifi(const String& ssid, const String& password) {
   prefs.end();
 
   if (ok) {
+    SettingsLock lock;
     appSettings.wifiSsid = ssid;
     appSettings.wifiPassword = password;
     storedValuesFound = true;

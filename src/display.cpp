@@ -479,6 +479,29 @@ static String escapeWifiQr(const char* text) {
   return out;
 }
 
+// QR-Code links auf dem Display zeichnen (QR-Generator aus dem ESP32-Core,
+// ESP-IDF-Komponente esp_qrcode; die Version waehlt er selbst, hoechstens
+// QR_MAX_VERSION). Rueckgabe: gezeichnete Kantenlaenge in Pixeln, 0 = Fehler
+// (dann steht "QR-Fehler" an seiner Stelle).
+static int drawQr(const String& payload) {
+  esp_qrcode_config_t cfg = {};
+  cfg.display_func = drawQrCallback;
+  cfg.max_qrcode_version = QR_MAX_VERSION;
+  cfg.qrcode_ecc_level = ESP_QRCODE_ECC_LOW;
+
+  qrDrawnSize = 0;
+  esp_err_t err = esp_qrcode_generate(&cfg, payload.c_str());
+  if (err != ESP_OK || qrDrawnSize == 0) {
+    Serial.print("QR-Code konnte nicht erzeugt werden, Fehler: ");
+    Serial.println((int)err);
+    display.setFont(&FreeSans9pt8b);
+    display.setCursor(QR_MARGIN, 70);
+    display.print("QR-Fehler");
+    return 0;
+  }
+  return qrDrawnSize;
+}
+
 void displayShowWifiQr(const char* title, const char* qrWlanSsid,
                        const char* qrWlanPassword) {
   display.fastmodeOff();
@@ -490,22 +513,7 @@ void displayShowWifiQr(const char* title, const char* qrWlanSsid,
   String qrPayload = "WIFI:T:WPA;S:" + escapeWifiQr(qrWlanSsid) +
                      ";P:" + escapeWifiQr(qrWlanPassword) + ";;";
 
-  // QR-Generator aus dem ESP32-Core (ESP-IDF-Komponente esp_qrcode). Die
-  // Version (Groesse) waehlt er selbst, hoechstens QR_MAX_VERSION.
-  esp_qrcode_config_t cfg = {};
-  cfg.display_func = drawQrCallback;
-  cfg.max_qrcode_version = QR_MAX_VERSION;
-  cfg.qrcode_ecc_level = ESP_QRCODE_ECC_LOW;
-
-  qrDrawnSize = 0;
-  esp_err_t err = esp_qrcode_generate(&cfg, qrPayload.c_str());
-  if (err != ESP_OK || qrDrawnSize == 0) {
-    Serial.print("QR-Code konnte nicht erzeugt werden, Fehler: ");
-    Serial.println((int)err);
-    display.setFont(&FreeSans9pt8b);
-    display.setCursor(QR_MARGIN, 70);
-    display.print("QR-Fehler");
-  }
+  drawQr(qrPayload);
 
   // Text rechts neben dem QR-Bereich (feste Position, unabhaengig von der
   // gewaehlten QR-Version)
@@ -531,8 +539,8 @@ void displayShowWifiQr(const char* title, const char* qrWlanSsid,
   display.update();
 }
 
-void displayShowLog(const char* firmwareVersion, uint64_t wifiConnectedSince,
-                    int wifiDisconnects, int apiFails) {
+void displayShowLog(const char* firmwareVersion, const char* portalAddress,
+                    const char* portalUntil, int wifiDisconnects, int apiFails) {
   display.fastmodeOff();
   display.clearMemory();
   display.setTextColor(BLACK);
@@ -548,12 +556,27 @@ void displayShowLog(const char* firmwareVersion, uint64_t wifiConnectedSince,
   display.setCursor(display.width() - textWidth(versionText) - 5, 16);
   display.print(versionText);
 
+  // Einstellungsportal: Adresse (fett) und bis wann es offen ist
+  display.setCursor(5, 35);
+  display.print("Einstellungen: ");
+  display.setFont(&FreeSansBold9pt8b);
+  display.print(portalAddress);
+  display.setFont(&FreeSans9pt8b);
+  display.setCursor(5, 53);
+  if (portalUntil != nullptr && portalUntil[0] != '\0') {
+    display.print("Ab jetzt bis ");
+    display.print(portalUntil);
+    display.print(" erreichbar");
+  } else {
+    display.print("Ab jetzt 30 Min. erreichbar");
+  }
+
   // Board-Startzeitpunkt = aktuelle NTP-Zeit minus Laufzeit seit Boot.
   // Nur gueltig, wenn die Uhr bereits per NTP gestellt wurde - ohne NTP
   // startet die ESP32-Uhr bei 1970, daher Plausibilitaetsgrenze.
   const time_t TIME_VALID_MIN = 1700000000; // 14.11.2023
   time_t now = time(nullptr);
-  display.setCursor(5, 35);
+  display.setCursor(5, 71);
   display.print("Board-Start: ");
   if (now >= TIME_VALID_MIN) {
     time_t bootTime = now - (time_t)(uptimeMs() / 1000ULL);
@@ -562,13 +585,8 @@ void displayShowLog(const char* firmwareVersion, uint64_t wifiConnectedSince,
     display.print("unbekannt (kein NTP)");
   }
 
-  String wifiUptime = formatUptime(uptimeMs() - wifiConnectedSince);
-  display.setCursor(5, 53);
-  display.print("WLAN-Laufzeit: ");
-  display.print(wifiUptime);
-
   // Momentaufnahme der Signalstaerke beim Oeffnen des Log-Screens
-  display.setCursor(5, 71);
+  display.setCursor(5, 89);
   display.print("WLAN-Signal: ");
   if (WiFi.status() == WL_CONNECTED) {
     int rssi = WiFi.RSSI();
@@ -580,17 +598,45 @@ void displayShowLog(const char* firmwareVersion, uint64_t wifiConnectedSince,
     display.print("--");
   }
 
-  display.setCursor(5, 89);
-  display.print("WLAN-Abbr\xFC" "che: ");   // getrennt: "c" waere sonst Teil von \xFC
-  display.print(wifiDisconnects);
-  display.print(" (seit Start)");
-
+  // WLAN-Abbrueche seit Start, API-Stoerungen der letzten 24 h
   display.setCursor(5, 107);
-  display.print("API-Fehler (24h): ");
+  // ohne Doppelpunkte, damit auch zweistellige Werte in die Zeile passen
+  display.print("WLAN-Abbr. ");
+  display.print(wifiDisconnects);
+  display.print(" / API-Fails (24h) ");
   display.print(apiFails);
 
   display.setCursor(5, 125);
   display.print("Zur\xFC" "ck: 60s oder 3s halten");
+
+  display.update();
+}
+
+// Ersteinrichtung: QR-Code links, rechts Hinweis und Adresse. Die
+// Textspalte beginnt direkt neben dem tatsaechlich gezeichneten QR-Code.
+void displayShowPortalSetup(const char* url, const char* address) {
+  display.fastmodeOff();
+  display.clearMemory();
+  display.setTextColor(BLACK);
+
+  int qrSize = drawQr(String(url));
+  int textX = QR_MARGIN + (qrSize > 0 ? qrSize : QR_AREA_SIZE) + 12;
+
+  display.setFont(&FreeSansBold9pt8b);
+  display.setCursor(textX, 24);
+  display.print("Einrichtung");
+
+  display.setFont(&FreeSans9pt8b);
+  display.setCursor(textX, 50);
+  display.print("QR-Code scannen");
+  display.setCursor(textX, 68);
+  display.print("oder im Browser");
+  display.setCursor(textX, 86);
+  display.print("(gleiches WLAN):");
+
+  display.setFont(&FreeSansBold9pt8b);
+  display.setCursor(textX, 108);
+  display.print(address);
 
   display.update();
 }
