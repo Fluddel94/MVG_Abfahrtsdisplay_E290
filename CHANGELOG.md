@@ -6,6 +6,20 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 ### Behoben
+- Fahrten mit „Fährt nur bis …“, die diese Haltestelle gar nicht mehr
+  erreichen (in der API an dieser Station als ausgefallen markiert), wurden
+  als normale Abfahrt zum neuen Endhalt angezeigt (z.B. „Ostbahnhof ⚠“ in
+  Karlsfeld bei einer Stammstrecken-Störung). Sie erscheinen jetzt als
+  Ausfall mit ursprünglichem Ziel. Hält der Zug noch hier und endet nur
+  früher, wird wie bisher das tatsächliche Ziel angezeigt. Neue
+  Diagnose-Ausgabe im seriellen Monitor für Fahrten mit vorzeitigem Ende.
+- Doppelte Zeilen bei Störungen: Wurden die Zugteile eines Flügelzugs nicht
+  vereinigt, erschien dieselbe Fahrt zweimal (z.B. zweimal „S1
+  Leuchtenbergring“). Gleiche Fahrten werden jetzt zu einer Zeile
+  zusammengefasst. Flügelzüge werden auch bei vorzeitigem Fahrtende
+  zusammengefasst (z.B. „Flugh./Freising“ durchgestrichen, wenn beide
+  Zugteile ausfallen); fällt nur ein Zugteil aus, bleibt er als eigene Zeile
+  sichtbar.
 - Haltestellenliste wurde auf GitHub nicht als durchsuchbare Tabelle
   angezeigt (Datei zu groß, Semikolon als Trennzeichen). Neu:
   `haltestellen/Haltestellen_Suche_s26.csv` mit Name, Ort und Globaler ID,

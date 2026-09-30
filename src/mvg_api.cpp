@@ -263,40 +263,75 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     }
   }
 
-  // --- Schritt 3: Fluegelzuege zusammenfassen ---
+  // --- Schritt 3: vorzeitiges Fahrtende ohne Ersatzzug aufloesen ---
+  // Ob der Zug hier noch haelt, entscheidet die Ausfall-Markierung der API
+  // (beobachtet 30.09.2026: endet die Fahrt vor oder an dieser Station, ist
+  // sie hier "cancelled"). Die Lage des neuen Endhalts wird NICHT aus dem
+  // Text abgeleitet. Danach steht in destination das angezeigte Ziel, damit
+  // Schritt 4 solche Fahrten wie alle anderen zusammenfassen kann.
+  for (int i = 0; i < rawCount; i++) {
+    if (raw[i].superseded || !raw[i].earlyTermination) continue;
+
+    // Diagnose, damit abweichende Faelle bei Stoerungen auffallen
+    Serial.print("Vorzeitiges Fahrtende: ");
+    Serial.print(raw[i].line);
+    Serial.print(" ");
+    Serial.print(formatTime(raw[i].plannedTime));
+    Serial.print(" Ziel=");
+    Serial.print(raw[i].destination);
+    Serial.print(" neu=");
+    Serial.print(raw[i].actualDestination);
+    Serial.println(raw[i].cancelled ? " -> hier ausgefallen" : " -> haelt hier");
+
+    // Ausfall: urspruengliches Ziel bleiben lassen.
+    // Haelt hier, endet aber frueher: tatsaechliches Ziel anzeigen.
+    if (!raw[i].cancelled) raw[i].destination = raw[i].actualDestination;
+    raw[i].hasWarning = true;
+  }
+
+  // --- Schritt 4: Fluegelzuege und doppelte Fahrten zusammenfassen ---
   // Ein Zug, der unterwegs geteilt wird (z.B. S1 -> Flughafen / Freising),
   // erscheint in der API als mehrere Fahrten mit gleicher Linie, gleicher
   // geplanter Zeit und gleichem Gleis, aber verschiedenem Ziel. Sie werden
   // zu einer Zeile zusammengefasst: bekannte Paarungen mit fester Kurzform
   // ("Flugh./Freising", siehe SPLIT_TRAIN_LABELS), sonst alle Ziele voll
   // ausgeschrieben mit "/" (Kuerzung beim Zeichnen per fitText()).
+  // Haben mehrere Fahrten auch dasselbe Ziel (z.B. beide Zugteile einer S1
+  // bei einer Stoerung nicht vereinigt, beobachtet 30.09.2026), bleibt nur
+  // eine Zeile uebrig.
   // Die Richtung muss uebereinstimmen (relevant bei DIR_FILTER_ALL).
   // Bewusst NICHT zusammengefasst:
   // - Busse (kein Gleis; Verstaerkerbusse waeren sonst falsch vereint)
   // - Eintraege ohne Gleisangabe
-  // - unterschiedlicher Ausfall-Status (ein Ausfall soll sichtbar bleiben)
-  // - Fahrten mit vorzeitigem Ende (eigene Logik in Schritt 1/2)
+  // - unterschiedlicher Ausfall-Status: faellt nur ein Zugteil aus, bleibt
+  //   dieser als eigene, durchgestrichene Zeile sichtbar
   // Uebernommen wird jeweils der "schlechtere" Wert (Verspaetung, Warnung).
   for (int i = 0; i < rawCount; i++) {
-    if (raw[i].superseded || raw[i].isBus || !raw[i].hasPlatform || raw[i].earlyTermination) continue;
+    if (raw[i].superseded || raw[i].isBus || !raw[i].hasPlatform) continue;
 
     String firstDest = raw[i].destination;
     String secondDest;
     String allDests = firstDest;   // alle Ziele voll ausgeschrieben
     int parts = 1;
+    int duplicates = 0;
     for (int j = i + 1; j < rawCount; j++) {
-      if (raw[j].superseded || raw[j].isBus || !raw[j].hasPlatform || raw[j].earlyTermination) continue;
+      if (raw[j].superseded || raw[j].isBus || !raw[j].hasPlatform) continue;
       if (raw[j].line != raw[i].line) continue;
       if (raw[j].direction != raw[i].direction) continue;
       if (raw[j].plannedTime != raw[i].plannedTime) continue;
       if (raw[j].platform != raw[i].platform) continue;
       if (raw[j].cancelled != raw[i].cancelled) continue;
-      if (raw[j].destination == raw[i].destination) continue;
 
-      if (parts == 1) secondDest = raw[j].destination;
-      allDests += "/";
-      allDests += raw[j].destination;
-      parts++;
+      // Ziel schon enthalten -> doppelte Fahrt, sonst weiterer Zugteil
+      String wrapped = "/" + allDests + "/";
+      if (wrapped.indexOf("/" + raw[j].destination + "/") != -1) {
+        duplicates++;
+      } else {
+        if (parts == 1) secondDest = raw[j].destination;
+        allDests += "/";
+        allDests += raw[j].destination;
+        parts++;
+      }
 
       if (raw[j].delayMin > raw[i].delayMin) raw[i].delayMin = raw[j].delayMin;
       raw[i].hasWarning = raw[i].hasWarning || raw[j].hasWarning;
@@ -308,14 +343,22 @@ int parseDepartures(const String& payload, DirectionFilter filter,
       // Zwei Ziele: ggf. feste Kurzform; mehr als zwei: immer ausgeschrieben
       raw[i].destination = (parts == 2) ? splitTrainDestination(firstDest, secondDest)
                                         : allDests;
-      Serial.print("Fluegelzug zusammengefasst: ");
+    }
+    if (parts > 1 || duplicates > 0) {
+      Serial.print(parts > 1 ? "Fluegelzug zusammengefasst: " : "Doppelte Fahrt zusammengefasst: ");
       Serial.print(raw[i].line);
       Serial.print(" ");
-      Serial.println(raw[i].destination);
+      Serial.print(raw[i].destination);
+      if (duplicates > 0) {
+        Serial.print(" (");
+        Serial.print(duplicates);
+        Serial.print(" doppelt)");
+      }
+      Serial.println(raw[i].cancelled ? " - Ausfall" : "");
     }
   }
 
-  // --- Schritt 4: finale Liste zusammenstellen ---
+  // --- Schritt 5: finale Liste zusammenstellen ---
   int count = 0;
   for (int i = 0; i < rawCount; i++) {
     if (count >= maxResults) break;
@@ -323,19 +366,9 @@ int parseDepartures(const String& payload, DirectionFilter filter,
 
     Departure d;
     d.line = raw[i].line;
-
-    if (raw[i].earlyTermination) {
-      // Kein Ersatzzug gefunden -> dieser Eintrag selbst wird gezeigt,
-      // mit dem tatsaechlichen (verkuerzten) Ziel statt dem urspruenglichen
-      d.destination = raw[i].actualDestination;
-      d.cancelled = false;
-      d.hasWarning = true;
-    } else {
-      d.destination = raw[i].destination;
-      d.cancelled = raw[i].cancelled;
-      d.hasWarning = raw[i].hasWarning;
-    }
-
+    d.destination = raw[i].destination;
+    d.cancelled = raw[i].cancelled;
+    d.hasWarning = raw[i].hasWarning;
     d.delayMin = raw[i].delayMin;
     d.realtime = raw[i].realtime;
     d.isBus = raw[i].isBus;

@@ -36,8 +36,11 @@ Aktuelle Version: siehe `FW_VERSION` in `MVG_Abfahrtsdisplay_E290.ino`,
 - **Störungen:** Bei Zugausfällen wird die Uhrzeit durchgestrichen und ein
   Warndreieck angezeigt. Fahrtrelevante Meldungen bekommen ein Warndreieck
   hinter dem Ziel, bei vorzeitigem Fahrtende steht das tatsächliche Ziel da.
+  Endet die Fahrt schon vor dieser Haltestelle, erscheint sie als Ausfall.
 - **Flügelzüge:** Züge, die unterwegs geteilt werden (z.B. S1 Flughafen /
-  Freising), erscheinen als eine Zeile.
+  Freising), erscheinen als eine Zeile – auch bei einem Ausfall beider
+  Zugteile. Fällt nur ein Zugteil aus, bleibt er als eigene Zeile sichtbar.
+  Doppelt gelieferte gleiche Fahrten erscheinen nur einmal.
 - **Echte Umlaute** auf dem Display.
 - **System-Log** (Taste 3 s halten): Firmware-Version, Startzeitpunkt,
   WLAN-Laufzeit und -Signal, WLAN-Abbrüche, API-Störungen der letzten 24 h.
@@ -225,9 +228,10 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   Rückkehr aus QR/Log in einer neuen Minute und alle 10 s während einer
   Störung. Umschalten und Blättern zeichnen aus einem Zwischenspeicher.
 - **Flügelzüge:** Die API liefert geteilte Züge als getrennte Fahrten.
-  `mvg_api.cpp` fasst Einträge mit gleicher Linie, Richtung, geplanter Zeit
-  und gleichem Gleis zusammen (nicht bei Bussen, fehlendem Gleis,
-  abweichendem Ausfall-Status oder vorzeitigem Fahrtende). Feste Kurzformen
+  `mvg_api.cpp` fasst Einträge mit gleicher Linie, Richtung, geplanter Zeit,
+  gleichem Gleis und gleichem Ausfall-Status zusammen (nicht bei Bussen oder
+  fehlendem Gleis). Bei vorzeitigem Fahrtende zählt das angezeigte Ziel;
+  Einträge mit gleichem Ziel werden zu einer Zeile. Feste Kurzformen
   stehen in der Tabelle `SPLIT_TRAIN_LABELS`.
 - **Liniensymbole:** neue Bitmaps in `line_icons.h` ergänzen – maximal
   36 px breit (per `static_assert` in `display.cpp` geprüft). Die
