@@ -44,6 +44,15 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   Ausgabe über USB wartete bis zu 2 s). Ausgaben warten jetzt nicht mehr.
 
 ### Geändert
+- README neu aufgebaut: Einrichtung über Web-Installer und
+  Einstellungsportal statt Arduino IDE, eigene Abschnitte zu Portal,
+  Update, WLAN ändern und „Hilfe bei Problemen“ (u.a. Download-Modus per
+  BOOT-Taste). Die Anleitung für die Arduino IDE steht jetzt unter „Selbst
+  kompilieren“ (Boardpaket esp32 3.3.12), dazu wie die Firmware für den
+  Web-Installer gebaut wird.
+- Web-Installer-Seite: Hinweise zu leerem Board (PC piept im
+  Sekundentakt), Neustart nach der BOOT-Notlösung, fehlendem WLAN in der
+  Liste und zum Häkchen „Erase device“ bei Updates.
 - System-Log: neue Zeilen mit der Portal-Adresse und bis wann es erreichbar
   ist; die WLAN-Laufzeit entfällt, WLAN-Abbrüche und API-Störungen stehen
   in einer Zeile.

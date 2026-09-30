@@ -5,6 +5,11 @@ einem 2,9"-E-Ink-Display an – mit Liniensymbolen, Verspätungen, Ausfällen
 und Störungshinweisen. Das Display läuft im Dauerbetrieb am USB-Netzteil und
 aktualisiert sich einmal pro Minute.
 
+Eingerichtet wird es komplett im Browser: Firmware über den
+**[Web-Installer](https://fluddel94.github.io/MVG_Abfahrtsdisplay_E290/)**
+aufspielen, WLAN eingeben, Station im Einstellungsportal auswählen – ohne
+Arduino IDE.
+
 > **Hinweis:** Das Projekt nutzt die **inoffizielle, undokumentierte
 > MVG-API**. Es steht in keiner Verbindung zur MVG, zum MVV oder zur
 > Deutschen Bahn. Laut Impressum der MVG wird eine *gemäßigte Nutzung für
@@ -42,86 +47,176 @@ Aktuelle Version: siehe `FW_VERSION` in `MVG_Abfahrtsdisplay_E290.ino`,
   Zugteile. Fällt nur ein Zugteil aus, bleibt er als eigene Zeile sichtbar.
   Doppelt gelieferte gleiche Fahrten erscheinen nur einmal.
 - **Echte Umlaute** auf dem Display.
+- **Einrichtung im Browser:** Web-Installer für Firmware und WLAN,
+  [Einstellungsportal](#einstellungsportal) im Heimnetz mit Stationssuche
+  per Name, Richtungsanzeige und Firmware-Update. Alle Einstellungen bleiben
+  bei Updates erhalten.
 - **Startbildschirm:** Projektname und Firmware-Version für etwa 5 Sekunden
   nach dem Einschalten, währenddessen startet alles im Hintergrund.
-- **System-Log** (Taste 3 s halten): Firmware-Version, Startzeitpunkt,
-  WLAN-Laufzeit und -Signal, WLAN-Abbrüche, API-Störungen der letzten 24 h.
+- **System-Log** (Taste 3 s halten): Firmware-Version, Adresse des
+  Einstellungsportals, Startzeitpunkt, WLAN-Signal, WLAN-Abbrüche und
+  API-Störungen der letzten 24 h.
 - **Fehleranzeige:** eigene Bildschirme bei WLAN- oder API-Ausfall mit
   automatischem Neuversuch. Klappt die WLAN-Verbindung länger als 20 s
   nicht, zeigt das Display die vermutete Ursache (z.B. „Passwort falsch?“
   oder „Netz nicht gefunden“).
-- **Optional:** WLAN-QR-Code (z.B. für ein Gast-WLAN), siehe
-  [Zusatzfunktionen](#zusatzfunktionen).
+- **Optional:** WLAN-QR-Code (z.B. für ein Gäste-WLAN), einschaltbar im
+  Einstellungsportal.
+
+## Was du brauchst
+
+- **Heltec Vision Master E290** (ESP32-S3 mit integriertem 2,9"-E-Ink-Display)
+- USB-C-Kabel, das **Daten** überträgt (reine Ladekabel funktionieren
+  nicht), und ein USB-Netzteil für den Dauerbetrieb
+- PC oder Mac mit **Chrome**, **Edge** oder **Firefox ab Version 151**
+  (Safari und Handys können nicht auf USB-Geräte zugreifen)
+- WLAN mit 2,4 GHz
+- optional: 3D-Drucker für das [Gehäuse](#gehäuse)
+
+## Einrichtung
+
+Alles läuft über den **[Web-Installer](https://fluddel94.github.io/MVG_Abfahrtsdisplay_E290/)**.
+Sein Dialog ist englisch, die Knöpfe stehen deshalb unten im Original.
+
+1. Web-Installer öffnen, das Display per USB anstecken und
+   **Installieren** klicken. Firefox fragt vorher, ob die Seite auf
+   serielle Geräte zugreifen darf – erlauben.
+2. Im Browser-Fenster das Gerät wählen (meist *USB JTAG/serial debug
+   unit*) und *Connect* klicken.
+3. *Install MVG Abfahrtsdisplay* wählen, **Erase device anhaken** und
+   bestätigen. Beim ersten Mal ist das nötig: Heltec liefert das Board mit
+   einer eigenen Firmware aus, die dabei vollständig gelöscht wird. Das
+   Aufspielen dauert etwa eine Minute.
+4. *Connect to Wi-Fi*: WLAN wählen, Passwort eingeben. Fehlt dein WLAN in
+   der Liste, den Dialog schließen und *Connect to Wi-Fi* erneut öffnen –
+   oder unten *Join other…* wählen und den Namen von Hand eingeben.
+5. *Visit device* öffnet das [Einstellungsportal](#einstellungsportal).
+   Solange noch keine Station gespeichert ist, zeigt das Display außerdem
+   einen QR-Code und die Adresse des Portals – so kommst du auch vom Handy
+   hin.
+6. Im Portal die Station suchen, auswählen, Anzeige und Verkehrsmittel
+   einstellen und **Speichern**. Das Display zeigt sofort die Abfahrten.
+7. USB-Kabel abziehen, Display ins Gehäuse, ans Netzteil – fertig.
+
+Klappt etwas nicht, siehe [Hilfe bei Problemen](#hilfe-bei-problemen).
 
 ## Bedienung
 
 | Taste | Aktion |
 |---|---|
 | BOOT (GPIO 0) | gemischte Anzeige: Seite 2 (Abfahrt 5–8); getrennte Anzeige: Richtung umschalten. Nach 30 s geht es automatisch zurück. |
-| Taste GPIO 21, 3 s halten | System-Log für 60 s, erneut 3 s halten = zurück |
+| Taste GPIO 21, 3 s halten | System-Log für 60 s **und** Einstellungsportal für 30 Minuten öffnen; erneut 3 s halten = zurück |
 | Taste GPIO 21, kurz | WLAN-QR-Code für 60 s (nur wenn eingeschaltet), erneuter Druck = zurück |
 
-## Was du brauchst
+## Einstellungsportal
 
-- **Heltec Vision Master E290** (ESP32-S3 mit integriertem 2,9"-E-Ink-Display)
-- USB-C-Kabel und ein USB-Netzteil für den Dauerbetrieb
-- WLAN mit 2,4 GHz
-- [Arduino IDE 2](https://www.arduino.cc/en/software)
-- optional: 3D-Drucker für das [Gehäuse](#gehäuse)
+Eine Webseite auf dem Display selbst, erreichbar im Heimnetz von jedem
+Browser (auch vom Handy). Änderungen wirken nach dem Speichern sofort, ohne
+Neustart.
 
-## Einrichtung
+### Öffnen
 
-### 1. Arduino-IDE vorbereiten
+- **Taste GPIO 21 drei Sekunden halten:** Das System-Log zeigt die Adresse
+  (z.B. `http://192.168.178.42`) und bis wann das Portal erreichbar ist.
+  Das Portal bleibt 30 Minuten offen, erneutes Öffnen startet die Zeit neu.
+- **Nach *Connect to Wi-Fi* im Web-Installer:** *Visit device* führt direkt
+  hin, das Portal ist ebenfalls 30 Minuten offen.
+- **Ohne gespeicherte Station** (erste Einrichtung, nach Werkseinstellungen)
+  ist das Portal dauerhaft offen, das Display zeigt QR-Code und Adresse.
 
-1. **Boardpaket:** *Werkzeuge → Board → Boardverwalter*, nach „esp32“
-   suchen und **esp32 von Espressif Systems** installieren (entwickelt mit
-   Version 3.3.11).
-2. **Libraries:** *Werkzeuge → Bibliotheken verwalten*, installieren:
+Nach einem normalen Neustart ist das Portal geschlossen. Die Adresse vergibt
+dein Router; sie kann sich ändern und steht immer im System-Log.
 
-   | Library | Hinweis |
-   |---|---|
-   | heltec-eink-modules | Display-Treiber inkl. Grafikfunktionen und Schriften (getestet mit 4.6.0) |
-   | ArduinoJson | Version 7 |
+### Einstellungen
 
-   Mehr ist nicht nötig: WLAN, HTTPS, der Einstellungsspeicher und der
-   QR-Generator stecken im ESP32-Boardpaket, die Grafikfunktionen
-   (abgeleitet von Adafruit GFX) in heltec-eink-modules.
-3. **Board auswählen:** *Werkzeuge → Board → esp32 →* **Heltec Vision Master E290**.
+- **Station:** Namen eingeben und *Suchen*. Die Treffer zeigen Ort,
+  Tarifzone, Verkehrsmittel und ID, über den Kartenlink lassen sich
+  gleichnamige Haltestellen unterscheiden. *Auswählen* übernimmt die
+  Station. Alternativ die ID von Hand eintragen, siehe
+  [Station finden](#station-finden).
+- **Anzeige:** alle Richtungen gemischt oder getrennt nach Zentrum und
+  Auswärts. Für die getrennte Anzeige festlegen, welche Richtungskennung
+  (H oder R) Richtung Zentrum fährt – *Richtungen anzeigen* listet dazu die
+  aktuellen Linien und Ziele je Kennung. Dazu die Standardansicht.
+- **Verkehrsmittel:** S-Bahn, U-Bahn, Tram, Bus (Stadt- und Regionalbus),
+  Regionalzug.
+- **WLAN-QR-Code:** einschalten, Überschrift, WLAN-Name und Passwort des
+  WLANs, das der QR-Code teilen soll (z.B. Gäste-WLAN). Das Passwort steht
+  im Klartext auf dem Display – also nur ein WLAN verwenden, das du teilen
+  möchtest.
+- **Gerät:** zeigt das verbundene WLAN mit Signalstärke, Firmware-Version
+  und Adresse. Das WLAN selbst wird im Web-Installer geändert
+  (*Change Wi-Fi*, siehe [WLAN ändern](#wlan-ändern)).
+- **Firmware aktualisieren:** Firmware-Datei hochladen, siehe
+  [Update](#update).
+- **Werkseinstellungen:** löscht alle Einstellungen inklusive WLAN und
+  startet das Display neu. Danach das WLAN wieder über den Web-Installer
+  eintragen (*Connect to Wi-Fi*).
 
-### 2. Projekt herunterladen
+Gespeicherte Passwörter zeigt das Portal nie an; ein leeres Passwortfeld
+bedeutet „unverändert“.
 
-Auf GitHub *Code → Download ZIP*, entpacken. Der Ordner muss
-`MVG_Abfahrtsdisplay_E290` heißen – genau wie die `.ino`-Datei darin,
-sonst öffnet die Arduino-IDE den Sketch nicht (beim ZIP-Download heißt er
-`MVG_Abfahrtsdisplay_E290-main` und muss umbenannt werden). Wer mit Git
-arbeitet (`git clone`), bekommt den Ordner direkt mit dem richtigen Namen.
+> Das Portal hat kein Passwort und läuft über `http` (für Geräte im
+> Heimnetz gibt es keine anerkannten Zertifikate). Während es offen ist,
+> kann jeder in deinem WLAN die Einstellungen ändern. Deshalb öffnet es nur
+> auf Abruf und schließt sich nach 30 Minuten.
 
-### 3. WLAN-Zugangsdaten eintragen
+## Update
 
-`secrets_example.h` kopieren, die Kopie in **`secrets.h`** umbenennen und
-WLAN-Name und -Passwort eintragen. Die übrigen Zeilen (Zusatzfunktionen)
-dürfen Platzhalter behalten. `secrets.h` niemals weitergeben.
+Einstellungen, Station und WLAN bleiben bei beiden Wegen erhalten.
 
-### 4. `config.h` anpassen
+- **Per USB:** Web-Installer öffnen, **Installieren**, Gerät wählen,
+  *Update MVG Abfahrtsdisplay*. Bietet der Installer nur *Install* an und
+  fragt nach *Erase device*, das Häkchen **weglassen** – sonst sind WLAN
+  und Station weg.
+- **Ohne Kabel im Portal:** Die Datei `firmware.bin` aus dem
+  [aktuellen Release](https://github.com/Fluddel94/MVG_Abfahrtsdisplay_E290/releases/latest)
+  herunterladen, im Portal unter *Firmware aktualisieren* auswählen und
+  *Hochladen*. Das Display zeigt „Firmware-Update läuft“ und startet danach
+  neu. Das Portal prüft vorher, ob die Datei zu diesem Display passt; bei
+  Fehler oder Abbruch läuft die bisherige Firmware weiter.
 
-| Schritt | Einstellung | Werte |
-|---|---|---|
-| 1 Station | `STATION_GLOBAL_ID` | globalId deiner Haltestelle (siehe [Station finden](#station-finden)), Standard: Marienplatz |
-| 2 Anzeige | `FEATURE_DIRECTION_VIEW` | 0 = alle Richtungen gemischt mit Seite 2 (Standard), 1 = getrennt nach Zentrum/Auswärts |
-| 2a nur bei 1 | `ZENTRUM_IS_H` | 1, wenn `:H:` Richtung Zentrum fährt, sonst 0 (siehe [Richtungen prüfen](#richtungen-prüfen)) |
-| 2b nur bei 1 | `DEFAULT_VIEW_ZENTRUM` | Standardansicht: 1 = Zentrum, 0 = Auswärts |
-| 3 Verkehrsmittel | `SHOW_SBAHN`, `SHOW_UBAHN`, `SHOW_TRAM`, `SHOW_BUS`, `SHOW_BAHN` | je 1 = anzeigen, 0 = ausblenden; mindestens eines muss 1 sein |
+## WLAN ändern
 
-### 5. Hochladen
+Display per USB anstecken, im Web-Installer **Installieren**, Gerät wählen,
+*Change Wi-Fi*. Die neuen Daten werden erst übernommen, wenn die
+Verbindung klappt – sonst bleibt das bisherige WLAN. Das funktioniert auch,
+wenn das Display gerade den WLAN-Fehlerbildschirm zeigt.
 
-Board per USB anschließen, Port wählen und hochladen. Nach dem Start
-verbindet sich das Board mit dem WLAN, holt die Uhrzeit und zeigt die
-Abfahrten. Klappt die WLAN-Verbindung nicht, erscheint nach 20 s ein
-Fehlerbildschirm mit der vermuteten Ursache.
+## Hilfe bei Problemen
+
+- **Das Display wird im Browser nicht gefunden:** anderes USB-Kabel (muss
+  Daten übertragen) oder einen anderen USB-Anschluss probieren.
+- **Der PC piept im Sekundentakt:** Das Board ist leer (z.B. nach einer
+  abgebrochenen Installation) und startet ständig neu. Dann die Notlösung
+  verwenden.
+- **Notlösung (Download-Modus):** Kabel abziehen, die Taste **BOOT**
+  gedrückt halten und dabei das Kabel einstecken, nach zwei Sekunden
+  loslassen. Dann im Web-Installer **Installieren**. **Wichtig:** Nach dem
+  Aufspielen startet das Display erst, wenn du das Kabel ab- und wieder
+  ansteckst – bis dahin tut sich auf dem Bildschirm nichts. Danach
+  **Installieren** → *Connect to Wi-Fi*.
+- **Nach der Installation gibt es kein *Connect to Wi-Fi*:** Kabel ab- und
+  wieder anstecken, etwa zehn Sekunden warten, bis das Display
+  „Keine WLAN-Daten“ zeigt, dann erneut **Installieren**.
+- **Mein WLAN fehlt in der Liste:** Dialog schließen und *Connect to Wi-Fi*
+  erneut öffnen, oder *Join other…* und den Namen von Hand eingeben. Das
+  Display kann nur 2,4-GHz-WLAN.
+- **„Keine WLAN-Daten“ auf dem Display:** Es ist noch kein WLAN
+  gespeichert (z.B. nach Werkseinstellungen) – per USB im Web-Installer
+  *Connect to Wi-Fi*.
+- **WLAN-Fehlerbildschirm:** Das Display zeigt die vermutete Ursache und
+  versucht es alle 10 Sekunden erneut. Stimmt das Passwort nicht, im
+  Web-Installer *Change Wi-Fi*.
+- **Das Portal ist nicht erreichbar:** Es ist nur 30 Minuten nach dem
+  Öffnen erreichbar – Taste GPIO 21 drei Sekunden halten und die Adresse
+  aus dem System-Log verwenden. Handy/PC müssen im selben WLAN sein.
 
 ## Station finden
 
-Die `globalId` hat das Format `de:09162:2`. So findest du sie:
+Normalerweise sucht man die Station im
+[Einstellungsportal](#einstellungsportal) per Name. Die ID (`globalId`,
+Format `de:09162:2`) lässt sich auch von Hand eintragen:
 
 1. Die Haltestellenliste öffnen:
    [`haltestellen/Haltestellen_Suche_s26.csv`](haltestellen/Haltestellen_Suche_s26.csv)
@@ -129,8 +224,8 @@ Die `globalId` hat das Format `de:09162:2`. So findest du sie:
    es die Originaldatei des MVV im selben Ordner.
 2. Im Suchfeld („Search this file…“) den Stationsnamen eingeben. Bei
    gleichnamigen Haltestellen auf die Spalte *Ort* achten.
-3. Den Wert aus der Spalte *Globale ID* als `STATION_GLOBAL_ID` in
-   `config.h` eintragen.
+3. Den Wert aus der Spalte *Globale ID* im Portal ins Feld *Station-ID*
+   eintragen.
 4. Optional prüfen: `https://www.mvg.de/api/bgw-pt/v3/departures?globalId=<ID>`
    im Browser aufrufen – kommt eine Liste mit Abfahrten zurück, stimmt die ID.
 
@@ -138,28 +233,11 @@ Mehr zur Liste (Spalten, Quelle, Lizenz): [`haltestellen/README.md`](haltestelle
 
 ### Richtungen prüfen
 
-Nur nötig bei `FEATURE_DIRECTION_VIEW 1`. In der Abfahrtsliste aus Schritt 4
-bei einigen Einträgen `lineId` (enthält `:H:` oder `:R:`) mit `destination`
-vergleichen. Fährt `:H:` Richtung Zentrum, gilt `ZENTRUM_IS_H 1`, sonst 0.
-Eine feste Regel gibt es nicht – das hängt von Linie und Station ab.
-
-## Zusatzfunktionen
-
-Standardmäßig **aus**, eingeschaltet wird in `config.h` im Abschnitt
-„ZUSATZFUNKTIONEN“.
-
-### WLAN-QR-Code (`FEATURE_WIFI_QR`)
-
-Ein kurzer Druck auf die Taste GPIO 21 zeigt 60 s lang einen QR-Code, mit
-dem sich Handys direkt mit einem WLAN verbinden können (z.B. Gast-WLAN),
-plus SSID und Passwort im Klartext. Zugangsdaten in `secrets.h`
-(`qrWlanSsid`, `qrWlanPassword`), Überschrift in `config.h`
-(`QR_SCREEN_TITLE`). Das Passwort ist für jeden sichtbar, der vor dem
-Display steht – also nur für ein WLAN verwenden, das du teilen möchtest.
-
-Die Arduino-Library „QRCode“ von Richard Moore darf **nicht** installiert
-sein: Ihre `qrcode.h` heißt genauso wie die des Boardpakets und würde
-stattdessen eingebunden.
+Nur nötig für die getrennte Anzeige. Am einfachsten mit *Richtungen
+anzeigen* im Portal. Von Hand: in der Abfahrtsliste aus Schritt 4 bei
+einigen Einträgen `lineId` (enthält `:H:` oder `:R:`) mit `destination`
+vergleichen. Eine feste Regel gibt es nicht – das hängt von Linie und
+Station ab.
 
 ## Einschränkungen
 
@@ -175,11 +253,82 @@ stattdessen eingebunden.
 - Bei der gemischten Anzeige reichen die abgerufenen 20 Abfahrten an
   ruhigen Stationen evtl. nicht für eine volle Seite 2.
 - Der Header kürzt lange Stationsnamen automatisch („.“ am Ende).
+- Das Einstellungsportal hat kein Passwort und nutzt `http` (siehe
+  [Einstellungsportal](#einstellungsportal)).
+
+## Selbst kompilieren
+
+Nur nötig, wer den Code ändern möchte – zum Einrichten reicht der
+Web-Installer.
+
+### Arduino IDE vorbereiten
+
+1. **Boardpaket:** *Werkzeuge → Board → Boardverwalter*, nach „esp32“
+   suchen und **esp32 von Espressif Systems** installieren (entwickelt mit
+   Version 3.3.12).
+2. **Libraries:** *Werkzeuge → Bibliotheken verwalten*, installieren:
+
+   | Library | Hinweis |
+   |---|---|
+   | heltec-eink-modules | Display-Treiber inkl. Grafikfunktionen und Schriften (getestet mit 4.6.0) |
+   | ArduinoJson | Version 7 |
+
+   Mehr ist nicht nötig: WLAN, HTTPS, Webserver, der Einstellungsspeicher
+   und der QR-Generator stecken im ESP32-Boardpaket, die Grafikfunktionen
+   (abgeleitet von Adafruit GFX) in heltec-eink-modules. Die Library
+   „QRCode“ von Richard Moore darf **nicht** installiert sein: Ihre
+   `qrcode.h` heißt genauso wie die des Boardpakets und würde stattdessen
+   eingebunden.
+3. **Board auswählen:** *Werkzeuge → Board → esp32 →* **Heltec Vision
+   Master E290**. Die übrigen Board-Einstellungen bleiben auf Standard.
+
+### Projekt herunterladen
+
+Auf GitHub *Code → Download ZIP*, entpacken. Der Ordner muss
+`MVG_Abfahrtsdisplay_E290` heißen – genau wie die `.ino`-Datei darin,
+sonst öffnet die Arduino IDE den Sketch nicht (beim ZIP-Download heißt er
+`MVG_Abfahrtsdisplay_E290-main` und muss umbenannt werden). Wer mit Git
+arbeitet (`git clone`), bekommt den Ordner direkt mit dem richtigen Namen.
+
+### Standardwerte und Hochladen
+
+- **`config.h`** enthält die Standardwerte aller Einstellungen (Station,
+  Anzeige, Verkehrsmittel, WLAN-QR). Sie gelten nur, solange im Gerät noch
+  nichts gespeichert ist – im Portal gespeicherte Werte haben immer
+  Vorrang.
+- **`secrets.h`** ist optional und belegt WLAN und WLAN-QR vor: Vorlage
+  `secrets_example.h` kopieren, in `secrets.h` umbenennen, Werte eintragen.
+  `secrets.h` steht in `.gitignore` und darf nie weitergegeben werden –
+  ebenso keine Firmware, die damit gebaut wurde (sie enthält die
+  Zugangsdaten).
+- **Hochladen** wie gewohnt per USB. Die gespeicherten Einstellungen
+  bleiben erhalten, solange in der IDE *Erase All Flash Before Sketch
+  Upload* ausgeschaltet ist (Standard).
+- **`partitions.csv` nie ändern** – sonst gehen die gespeicherten
+  Einstellungen bei Updates verloren.
+
+### Firmware für den Web-Installer bauen
+
+Für Mitentwickler, die eine neue Version veröffentlichen:
+
+1. `secrets.h` aus dem Sketch-Ordner entfernen (die Firmware darf keine
+   Zugangsdaten enthalten).
+2. Arduino IDE: *Sketch → Kompilierte Binärdatei exportieren*.
+3. Doppelklick auf `werkzeuge/firmware_fuer_installer.bat`. Das Skript
+   kopiert Bootloader, Partitionstabelle und Firmware nach `docs/firmware/`
+   und trägt die Version aus `FW_VERSION` in `docs/manifest.json` ein.
+   Vorher prüft es die Dateien und bricht ab, wenn die Firmware mit
+   `secrets.h` gebaut wurde.
+4. Committen und pushen – GitHub Pages veröffentlicht den Ordner `docs/`.
+
+Die Firmware liegt bewusst in vier Teilen vor (Bootloader, Partitionen,
+`boot_app0.bin`, Firmware) statt als ein Gesamtabbild: So überschreibt ein
+Update über den Installer den Einstellungsspeicher nicht.
 
 ## Dateien
 
 Im Hauptordner liegt nur, was pro Gerät angepasst wird; der Programmcode
-liegt in `src/`. Der Unterordner **muss** `src` heißen – die Arduino-IDE
+liegt in `src/`. Der Unterordner **muss** `src` heißen – die Arduino IDE
 kompiliert außer dem Hauptordner nur diesen Ordner.
 
 | Datei | Inhalt |
@@ -190,7 +339,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `partitions.csv` | Partitionsschema – nie ändern, sonst gehen die gespeicherten Einstellungen bei Updates verloren |
 | `src/settings.h/.cpp` | Einstellungen im Gerätespeicher (NVS), Standardwerte aus `config.h` |
 | `src/improv_serial.h/.cpp` | WLAN-Einrichtung per USB aus dem Browser (Improv Serial) |
-| `src/portal.h/.cpp` | Einstellungsportal im Heimnetz (Webseite, Stationssuche, Richtungen) |
+| `src/portal.h/.cpp` | Einstellungsportal im Heimnetz (Webseite, Stationssuche, Richtungen, Firmware-Upload) |
 | `src/mvg_api.h/.cpp` | Abruf und Auswertung der MVG-API |
 | `src/display.h/.cpp` | Alles, was gezeichnet wird |
 | `src/line_icons.h` | Liniensymbole und Generator für Bus-/Zug-Symbole |
@@ -201,6 +350,8 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `src/wifi_diag.h/.cpp` | Ursache von WLAN-Abbrüchen für den Fehlerbildschirm |
 | `src/extras.h/.cpp` | Andockstellen für eigene Erweiterungen (standardmäßig ohne Funktion) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | Display-Schriften mit Umlauten |
+| `docs/` | Web-Installer (GitHub Pages): Seite, `manifest.json`, Firmware in `docs/firmware/` |
+| `werkzeuge/` | Skript, das die exportierte Firmware für den Web-Installer bereitstellt |
 | `haltestellen/` | Haltestellenliste des MVV mit globalen IDs (eigene Lizenz, siehe dort) |
 | `gehaeuse/` | 3D-Druck-Gehäuse (eigene Lizenz, siehe dort) |
 
@@ -227,12 +378,21 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   fehlendem Gleis). Bei vorzeitigem Fahrtende zählt das angezeigte Ziel;
   Einträge mit gleichem Ziel werden zu einer Zeile. Feste Kurzformen
   stehen in der Tabelle `SPLIT_TRAIN_LABELS`.
+- **Einstellungen:** `src/settings` hält alle Werte in `appSettings`
+  (NVS-Namensraum `abfahrt`). Die NVS-Schlüssel nie umbenennen, sonst
+  gehen gespeicherte Einstellungen bei Updates verloren. `appSettings` wird
+  nur im `loop()`-Kontext geändert; andere Tasks lesen mit `SettingsLock`.
+- **Web-Installer:** Der Firmware-Name in der Improv-Antwort
+  (`IMPROV_FIRMWARE_NAME` in `improv_serial.cpp`) muss mit `name` in
+  `docs/manifest.json` übereinstimmen – nur dann bietet der Installer
+  *Update* ohne Löschen an. Die Kennung `FIRMWARE_MARKER` (Firmware-Upload
+  im Portal, Prüfung im Export-Skript) nie ändern.
 - **Liniensymbole:** neue Bitmaps in `line_icons.h` ergänzen – maximal
   36 px breit (per `static_assert` in `display.cpp` geprüft). Die
   Pixelschrift der generierten Symbole kennt 0–9, „N“, „X“, „R“, „B“, „E“;
   andere Zeichen erscheinen in der eingebauten 6×8-Schrift.
 - **Umlaute:** Die Display-Schriften sind Latin-1-kodiert. Texte aus API
-  und `secrets.h` (UTF-8) wandelt `utf8ToLatin1()` um. Feste Texte im Code
+  und Einstellungen (UTF-8) wandelt `utf8ToLatin1()` um. Feste Texte im Code
   als Escape schreiben, z.B. `"Ausw\xE4rts"` – folgt direkt ein Zeichen
   0–9/a–f/A–F, den String trennen (`"Zur\xFC" "ck"`).
 - **WLAN-Ursache:** `wifi_diag.cpp` wertet den Reason-Code des ESP32 beim
@@ -248,6 +408,9 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 - **`#include <HTTPClient.h>` im .ino nicht entfernen:** Ist die Library
   ArduinoHttpClient installiert, bindet die IDE unter Windows sonst deren
   `HttpClient.h` ein (Groß-/Kleinschreibung).
+- **Serielle Ausgabe:** `Serial.setTxTimeoutMs(0)` direkt nach
+  `Serial.begin()` nicht entfernen – sonst wartet jede Ausgabe bis zu 2 s,
+  wenn das Board am PC hängt und kein Programm mitliest.
 
 ## Gehäuse
 
@@ -275,6 +438,8 @@ entfernt, das Gehäuse steht geneigt auf dem Tisch. Der Remix steht ebenfalls un
   Tarifverbund GmbH (MVV), CC BY 4.0, Details in
   [`haltestellen/README.md`](haltestellen/README.md).
 - **Gehäuse:** CC BY 4.0, siehe [Gehäuse](#gehäuse).
+- **Web-Installer:** nutzt [ESP Web Tools](https://github.com/esphome/esp-web-tools)
+  (Apache-2.0), geladen von unpkg.com, nicht in diesem Repository enthalten.
 - Verwendete Libraries (nicht in diesem Repository enthalten) stehen unter
   ihren eigenen Lizenzen.
 
