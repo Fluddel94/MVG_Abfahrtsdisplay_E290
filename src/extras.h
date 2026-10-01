@@ -8,8 +8,7 @@
 // Updates lassen sich ohne Konflikte uebernehmen. Der Autor nutzt das selbst
 // fuer eine private Variante mit Zusatzfunktionen fuer den Eigengebrauch.
 //
-// Was das NICHT ist: keine Fernsteuerung und keine Datenuebertragung. In
-// dieser Version tun alle Funktionen nichts (leere Standardfassungen in
+// In dieser Version tun alle Funktionen nichts (leere Standardfassungen in
 // extras.cpp, als "weak" markiert). Aktiv wird eine Erweiterung nur, wenn
 // jemand eigenen Code in src/ ablegt und die Firmware selbst kompiliert -
 // nicht nachtraeglich und nicht von aussen.

@@ -92,7 +92,13 @@
 
 // --- Abfahrten ---
 #define MAX_DEPARTURES_SHOWN 4
-#define MAX_RAW_ENTRIES 20
+#define MAX_RAW_ENTRIES 20      // ausgewertete Fahrten je Liste (Richtung bzw. gemischt)
+// So viele Abfahrten werden bei der MVG abgefragt. Die API zaehlt das Limit
+// ueber ALLE Verkehrsmittel der Station und filtert erst danach (beobachtet
+// 01.10.2026, Moosach: Limit 20 nur S-Bahn -> 5 Fahrten, Limit 60 -> 14).
+// An grossen Stationen mit einem einzelnen Verkehrsmittel reicht 20 daher
+// nicht fuer 4 Zeilen je Richtung.
+#define API_DEPARTURE_LIMIT 60
 // Verfruehte Abfahrten erst ab so vielen Minuten anzeigen ("-3"). Kleinere
 // Werte (-1, -2) entstehen meist durch Rundung/Prognose und werden wie
 // puenktlich behandelt.
@@ -114,6 +120,9 @@
 #define BUTTON_EDGE_STABLE_MS 30UL     // Entprellung: Taste vorher so lange stabil
 #define BUTTON_LATCH_MAX_AGE_MS 15000UL // aeltere gemerkte Druecke verwerfen
 #define ERROR_RETRY_INTERVAL_MS 10000UL
+// Misslingt ein Abruf der Abfahrten, nach dieser Pause einmal still
+// wiederholen - erst wenn auch das scheitert: Fehlerbildschirm + API-Fail
+#define API_RETRY_DELAY_MS 2000UL
 // Startbildschirm (Projektname + Version) mindestens so lange zeigen.
 // WLAN, Uhrzeit und erster Abruf laufen im Hintergrund weiter.
 #define SPLASH_DURATION_MS 5000UL

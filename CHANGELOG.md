@@ -6,13 +6,21 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Behoben
+- Zu wenige Abfahrten an großen Stationen, wenn nur ein Verkehrsmittel
+  gewählt ist (z.B. Moosach, nur S-Bahn, eine Richtung: nur 2 Zeilen).
+  Die MVG zählt das Abfragelimit über alle Verkehrsmittel der Station.
+  Das Display fragt jetzt 60 statt 20 Abfahrten ab und liest davon nur die
+  benötigten Angaben ein (weniger Speicherbedarf).
+
+### Geändert
+- Misslingt ein Abruf der Abfahrten, versucht das Display es nach 2 s
+  still ein zweites Mal. Erst wenn auch das scheitert, erscheint der
+  Fehlerbildschirm und der Abruf zählt als API-Störung – einzelne
+  Aussetzer (z.B. Zeitüberschreitung) bleiben unsichtbar.
+
 ### Intern
-- Andockstellen für eigene Zusatzfunktionen (`src/extras.h`,
-  `README_TECHNIK.md`) ausführlicher erklärt: wofür sie gedacht sind (z.B.
-  Status-LED in einer eigenen Variante), dass sie in dieser Version leer
-  sind, die Firmware außer den Abfahrtsabfragen keine Daten nach außen
-  sendet und Erweiterungen nur durch selbst kompilierten Code aktiv
-  werden. Keine Änderung an der Firmware.
+- Kommentare und technische Dokumentation überarbeitet.
 
 ## [2.0.0] – 30.09.2026
 

@@ -118,8 +118,11 @@ Station ab.
   Anzeige oft die bessere Wahl.
 - Pünktliche Abfahrten meldet die API ohne Echtzeit-Kennzeichen. „Live und
   pünktlich“ ist daher nicht von „keine Live-Daten“ zu unterscheiden.
-- Bei der gemischten Anzeige reichen die abgerufenen 20 Abfahrten an
-  ruhigen Stationen evtl. nicht für eine volle Seite 2.
+- Abgefragt werden 60 Abfahrten (`API_DEPARTURE_LIMIT`). Die API zählt
+  dieses Limit über **alle** Verkehrsmittel der Station und filtert erst
+  danach (beobachtet). An großen Stationen mit nur einem gewählten
+  Verkehrsmittel reicht die Vorschau damit für etwa eine Stunde; selten
+  fahrende Linien können trotzdem weniger als 4 Zeilen ergeben.
 - Der Header kürzt lange Stationsnamen automatisch („.“ am Ende).
 - Das Einstellungsportal hat kein Passwort und nutzt `http`: Für Geräte
   im Heimnetz gibt es keine anerkannten Zertifikate, ein selbst signiertes
@@ -171,8 +174,12 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 - **API-Abrufe:** Abfahrten werden nur in `attemptUpdate()` (.ino, Abschnitt
   Update-Steuerung) abgerufen – beim Minuten-Update, beim Start, nach
   WLAN-Wiederkehr, bei Rückkehr aus QR/Log in einer neuen Minute und alle
-  10 s während einer Störung. Umschalten und Blättern zeichnen aus einem
-  Zwischenspeicher.
+  10 s während einer Störung. Misslingt ein Abruf im Normalbetrieb, wird
+  er nach `API_RETRY_DELAY_MS` (2 s) einmal still wiederholt – erst dann
+  erscheinen Fehlerbildschirm und API-Fail. Umschalten und Blättern
+  zeichnen aus einem Zwischenspeicher. `parseDepartures()` liest per
+  ArduinoJson-Filter nur die ausgewerteten Felder ein (spart Speicher bei
+  60 Fahrten); neue ausgewertete Felder dort im Filter ergänzen.
 - **Flügelzüge:** Die API liefert geteilte Züge als getrennte Fahrten.
   `mvg_api.cpp` fasst Einträge mit gleicher Linie, Richtung, geplanter Zeit,
   gleichem Gleis und gleichem Ausfall-Status zusammen (nicht bei Bussen oder
@@ -211,7 +218,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   - **In dieser Version tun die Andockstellen nichts:** Die
     Standardfassungen in `extras.cpp` sind leer (als `weak` markiert).
     Die veröffentlichte Firmware sendet außer den Abfahrtsabfragen an die
-    MVG keine Daten nach außen und lässt sich nicht fernsteuern.
+    MVG keine Daten nach außen.
   - **Aktiv wird eine Erweiterung nur**, wenn jemand eigenen Code in `src/`
     ablegt und die Firmware selbst kompiliert – nicht nachträglich und
     nicht von außen.

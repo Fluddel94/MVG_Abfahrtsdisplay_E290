@@ -246,7 +246,8 @@ bool downloadDepartures(const char* globalId, String& payloadOut) {
 
   String url = "https://www.mvg.de/api/bgw-pt/v3/departures?globalId=";
   url += globalId;
-  url += "&limit=20";
+  url += "&limit=";
+  url += API_DEPARTURE_LIMIT;
   url += "&transportTypes=";
   url += transportTypesParam();
 
@@ -269,8 +270,27 @@ bool downloadDepartures(const char* globalId, String& payloadOut) {
 
 int parseDepartures(const String& payload, DirectionFilter filter,
                     Departure result[], int maxResults) {
+  // Nur die ausgewerteten Felder einlesen: Die Antwort enthaelt je Fahrt
+  // viele weitere Felder; ohne Filter braucht die Auswertung bei
+  // API_DEPARTURE_LIMIT Fahrten ein Vielfaches an Speicher.
+  JsonDocument fields;
+  JsonObject f = fields[0].to<JsonObject>();
+  f["lineId"] = true;
+  f["label"] = true;
+  f["destination"] = true;
+  f["delayInMinutes"] = true;
+  f["cancelled"] = true;
+  f["realtime"] = true;
+  f["plannedDepartureTime"] = true;
+  f["transportType"] = true;
+  f["product"] = true;
+  f["platform"] = true;
+  f["infos"][0]["type"] = true;
+  f["infos"][0]["message"] = true;
+
   JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, payload);
+  DeserializationError error =
+      deserializeJson(doc, payload, DeserializationOption::Filter(fields));
 
   if (error) {
     Serial.print("JSON-Parsing fehlgeschlagen: ");

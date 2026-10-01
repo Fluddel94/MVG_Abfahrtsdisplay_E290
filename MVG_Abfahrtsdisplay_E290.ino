@@ -1,5 +1,5 @@
 // Version: 2.0.0
-// Letzte Änderung: 30.09.2026 22:48
+// Letzte Änderung: 01.10.2026 11:03
 #define FW_VERSION "2.0.0"
 
 // ------------------------------------------------------------
@@ -404,7 +404,36 @@ void attemptUpdate(bool preferFullRefresh) {
 
 // Laedt die Abfahrten und fuellt den Zwischenspeicher, ohne zu zeichnen.
 // Setzt currentState (STATE_NORMAL bzw. STATE_API_ERROR). true bei Erfolg.
+// Ein misslungener Versuch wird nach API_RETRY_DELAY_MS einmal still
+// wiederholt; bis dahin bleibt die bisherige Anzeige stehen.
 bool fetchDepartures() {
+  bool success = fetchDeparturesOnce();
+  // Nur aus dem Normalbetrieb heraus; waehrend einer laufenden Stoerung
+  // versucht es loop() ohnehin alle ERROR_RETRY_INTERVAL_MS erneut
+  if (!success && currentState != STATE_API_ERROR && WiFi.status() == WL_CONNECTED) {
+    Serial.println("Abruf fehlgeschlagen - zweiter Versuch");
+    delay(API_RETRY_DELAY_MS);
+    success = fetchDeparturesOnce();
+  }
+
+  if (!success) {
+    // Nur beim Wechsel von normal -> Fehler zaehlen (neue Stoerung),
+    // nicht bei jedem einzelnen Retry-Versuch waehrend einer laufenden Stoerung
+    if (currentState != STATE_API_ERROR) {
+      recordApiFail();
+      currentState = STATE_API_ERROR;
+      lastErrorRetry = millis();
+    }
+    return false;
+  }
+
+  currentState = STATE_NORMAL;
+  return true;
+}
+
+// Ein Abrufversuch: Rohdaten laden und fuer alle Ansichten auswerten.
+// Aendert den Zwischenspeicher nur bei Erfolg. true bei Erfolg.
+bool fetchDeparturesOnce() {
   String payload;
   bool success = downloadDepartures(appSettings.stationId.c_str(), payload);
 
@@ -430,20 +459,7 @@ bool fetchDepartures() {
       cacheAllCount = count;
     }
   }
-
-  if (!success) {
-    // Nur beim Wechsel von normal -> Fehler zaehlen (neue Stoerung),
-    // nicht bei jedem einzelnen Retry-Versuch waehrend einer laufenden Stoerung
-    if (currentState != STATE_API_ERROR) {
-      recordApiFail();
-      currentState = STATE_API_ERROR;
-      lastErrorRetry = millis();
-    }
-    return false;
-  }
-
-  currentState = STATE_NORMAL;
-  return true;
+  return success;
 }
 
 // Zeichnet die aktuelle Ansicht (Richtung bzw. Seite) aus dem
