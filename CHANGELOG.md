@@ -6,6 +6,9 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Dokumentation
+- Fotos des Displays oben in der README (neuer Ordner `bilder/`).
+
 ## [2.1.0] – 01.10.2026
 
 ### Behoben

@@ -1,5 +1,11 @@
 # MVG-Abfahrtsdisplay (Heltec Vision Master E290)
 
+<p align="center">
+  <img src="bilder/marienplatz.jpg" width="32%" alt="Display mit Abfahrten am Marienplatz (U-Bahn und S-Bahn mit Verspätungen)">
+  <img src="bilder/dachau_seitenansicht.jpg" width="32%" alt="Seitenansicht des Gehäuses, Abfahrten Dachau Bahnhof">
+  <img src="bilder/wlan_qr_code.jpg" width="32%" alt="QR-Code für das Gäste-WLAN">
+</p>
+
 Ein kleines E-Ink-Display für zu Hause, das die nächsten Abfahrten an deiner
 Münchner Haltestelle zeigt – live, mit Verspätungen, Ausfällen und
 Störungshinweisen. Es läuft dauerhaft am USB-Netzteil und aktualisiert sich
