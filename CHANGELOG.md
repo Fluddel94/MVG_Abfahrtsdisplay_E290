@@ -6,6 +6,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.1.0] – 01.10.2026
+
 ### Behoben
 - Zu wenige Abfahrten an großen Stationen, wenn nur ein Verkehrsmittel
   gewählt ist (z.B. Moosach, nur S-Bahn, eine Richtung: nur 2 Zeilen).
