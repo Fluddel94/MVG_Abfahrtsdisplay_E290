@@ -4,33 +4,38 @@ Alle nennenswerten Änderungen am Abfahrtsdisplay. Neueste Version oben.
 Versionierung nach Semantic Versioning (`MAJOR.MINOR.PATCH`): PATCH =
 Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
-## [Unveröffentlicht]
+## [2.2.0] – 03.10.2026
 
 ### Neu
-- Einstellungsportal: **Linienauswahl** je Station. „Linien auswählen“
-  listet alle Linien der Station, nach Verkehrsmittel und Nummer sortiert,
-  mit Beispielzielen je Richtungskennung H/R. Je Linie „beide Richtungen“,
-  „nur H“ oder „nur R“, höchstens 16 Linien; keine Auswahl = alle Linien.
-  Die Liste enthält nur Linien der angehakten Verkehrsmittel (und bereits
-  gewählte Linien). Sind Linien gewählt, zeigt das Display nur diese.
+- **Linienauswahl** je Station im Einstellungsportal: „Linien auswählen“
+  listet alle Linien der angehakten Verkehrsmittel (nach Verkehrsmittel
+  und Nummer sortiert) mit Beispielzielen je Richtungskennung H/R aus den
+  nächsten rund 12 Stunden. Je Linie „beide Richtungen“, „nur H“ oder
+  „nur R“, höchstens 16 Linien; keine Auswahl = alle Linien. Sind Linien
+  gewählt, zeigt das Display nur diese und fragt 100 statt 60 Abfahrten
+  ab (`API_DEPARTURE_LIMIT_LINES`). Ersatzbusse für Regionalzüge
+  erscheinen, sobald ein Regionalzug gewählt ist (die MVG nennt nur die
+  Zugnummer).
 - Optionale **zweite Station** mit eigenen Verkehrsmitteln, Richtung und
-  Linien (im Einstellungsportal). Die BOOT-Taste schaltet dann zwischen
-  Station 1 und 2 um, nach 30 s (`STATION_AUTO_RESET_MS`) geht es zurück
-  zu Station 1, nach dem Neustart ebenso. Die Nummer steht weiß in einem
-  schwarzen Kästchen vor dem Stationsnamen. Beide Stationen werden jede
-  Minute abgerufen, das Umschalten geht daher ohne Wartezeit. Je Station
-  vier Abfahrten; getrennte Ansicht Zentrum/Auswärts und Seite 2 gibt es
-  nur mit einer Station.
+  Linien. Die BOOT-Taste schaltet zwischen Station 1 und 2 um, nach 30 s
+  (`STATION_AUTO_RESET_MS`) und nach einem Neustart gilt wieder Station 1.
+  Die Nummer steht weiß in einem schwarzen Kästchen vor dem
+  Stationsnamen. Beide Stationen werden jede Minute abgerufen, das
+  Umschalten geht ohne Wartezeit. Je Station vier Abfahrten; getrennte
+  Ansicht Zentrum/Auswärts und Seite 2 gibt es nur mit einer Station.
 - Einstellung **„Richtung“ je Station**: alle Richtungen, nur Richtung H
   oder nur Richtung R (gilt für alle Linien der Station; die
-  Richtungswahl je Linie entfällt dann). Bei Station 1 zusätzlich wie bisher die getrennte
-  Ansicht Zentrum/Auswärts (H/R). Ein Hinweis erklärt, dass H und R die
-  Richtungskennungen der MVG sind. Neue Werte im Gerätespeicher: `dir1`, `dir2`.
-  „Richtungen anzeigen“ gibt es jetzt für beide Stationen und zeigt nur
-  die angehakten Verkehrsmittel (höchstens 15 Einträge).
+  Richtungswahl je Linie entfällt dann). Bei Station 1 zusätzlich wie
+  bisher die getrennte Ansicht Zentrum/Auswärts (H/R). Ein Hinweis
+  erklärt, dass H und R die Richtungskennungen der MVG sind.
+  „Richtungen anzeigen“ gibt es für beide Stationen und zeigt nur die
+  angehakten Verkehrsmittel (höchstens 15 Einträge).
 - Einstellungsportal: Der Name der eingestellten Station steht in der
-  Überschrift („Station 1: Pasing“), nicht nur die ID; eine unbekannte ID
-  wird gemeldet.
+  Überschrift („Station 1: Pasing“), eine unbekannte ID wird gemeldet.
+- Für Entwickler: zusätzliche Diagnose im seriellen Monitor
+  (Antwortgrößen, freier Arbeitsspeicher, Einzelschritte der Linienliste)
+  mit `DEBUG_LOG 1` in `config.h` (neue Datei `src/debug_log.h`),
+  Standard: aus.
 
 ### Geändert
 - Kurze Störungen der MVG-API (z.B. HTTP 503 oder keine Antwort) werden
@@ -53,34 +58,19 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   Verspätung der Zugteile.
 - Geteilte Züge (z.B. S1 Flughafen / Freising) zeigen jetzt ebenfalls die
   kleinste statt der größten Verspätung der Zugteile.
-
-### Intern
-- Zusätzliche Diagnose im seriellen Monitor (Antwortgrößen, freier
-  Arbeitsspeicher, Einzelschritte der Linienliste) lässt sich mit
-  `DEBUG_LOG` in `config.h` einschalten (neue Datei `src/debug_log.h`),
-  Standard: aus.
-- Einstellungsportal: neue Abfrage `/linien?id=…` liefert alle Linien einer
-  Station (MVG-Endpunkt `lines`) mit Beispielzielen je Richtungskennung
-  H/R aus den Abfahrten der nächsten rund 12 Stunden – Grundlage für die
-  geplante Linienauswahl. Die Antworten werden direkt aus dem Datenstrom
-  ausgewertet (spart Arbeitsspeicher); der serielle Monitor zeigt dabei
-  Dauer und freien Arbeitsspeicher.
-- Der minütliche Abruf der Abfahrten wird ebenfalls direkt aus dem
-  Datenstrom ausgewertet, statt die ganze Antwort (bis 46 KB) erst als Text
-  zu speichern, und nur noch einmal statt je Richtung eingelesen.
-- Einstellungen für Linienauswahl und zweite Station vorbereitet (neue
-  Werte im Gerätespeicher: `lines1`, `station2`, `types2`, `lines2`).
-  Bestehende Einstellungen bleiben beim Update erhalten und gelten für
-  Station 1. Mit gewählten Linien werden 100 statt 60 Abfahrten abgefragt
-  (`API_DEPARTURE_LIMIT_LINES`), die Verkehrsmittel ergeben sich dann aus
-  den gewählten Linien. Ersatzbusse für Regionalzüge erscheinen, sobald
-  ein Regionalzug gewählt ist (die API nennt nur die Zugnummer).
+- Die Antworten der MVG werden direkt aus dem Datenstrom ausgewertet,
+  statt sie erst ganz als Text zu speichern (bis 46 KB) – weniger
+  Arbeitsspeicher, und der minütliche Abruf wird nur einmal statt je
+  Richtung eingelesen.
+- Bestehende Einstellungen bleiben beim Update erhalten und gelten für
+  Station 1. Neue Werte im Gerätespeicher: `lines1`, `lines2`,
+  `station2`, `types2`, `dir1`, `dir2`.
 
 ### Dokumentation
-- Fotos des Displays oben in der README (neuer Ordner `bilder/`).
+- Fotos des Displays oben in der README (neuer Ordner `bilder/`), dazu
+  Bilder vom Einstellungsportal und vom Web-Installer.
 - README und README_TECHNIK beschreiben Linienauswahl, Richtung je
-  Station, zweite Station und das Überbrücken von Störungen; Bilder vom
-  Einstellungsportal und vom Web-Installer.
+  Station, zweite Station und das Überbrücken von Störungen.
 - Englische Fassungen: `README_EN.md`, `README_TECHNIK_EN.md`.
 - README: Link zum Gehäuse auf MakerWorld, kurzer Hinweis zur Entwicklung
   mit Agentic Coding.
