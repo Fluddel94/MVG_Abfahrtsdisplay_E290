@@ -44,6 +44,8 @@ static const char* const KEY_LINES1 = "lines1";
 static const char* const KEY_STATION2 = "station2";
 static const char* const KEY_TYPES2 = "types2";
 static const char* const KEY_LINES2 = "lines2";
+static const char* const KEY_DIR1 = "dir1";
+static const char* const KEY_DIR2 = "dir2";
 
 DeviceSettings appSettings;
 
@@ -103,9 +105,11 @@ static void setDefaults(DeviceSettings& s) {
 #endif
   s.stationId = STATION_GLOBAL_ID;
   s.lines1 = "";
+  s.dir1 = 'B';
   s.station2Id = STATION2_GLOBAL_ID;
   s.types2 = defaultTypes();
   s.lines2 = "";
+  s.dir2 = 'B';
   s.directionView = FEATURE_DIRECTION_VIEW;
   s.zentrumIsH = ZENTRUM_IS_H;
   s.defaultViewZentrum = DEFAULT_VIEW_ZENTRUM;
@@ -126,6 +130,10 @@ static void validate(DeviceSettings& s) {
   if (s.types2 == 0) s.types2 = defaultTypes();
   s.lines1 = normalizeLines(s.lines1);
   s.lines2 = normalizeLines(s.lines2);
+  if (s.dir1 != 'H' && s.dir1 != 'R') s.dir1 = 'B';
+  if (s.dir2 != 'H' && s.dir2 != 'R') s.dir2 = 'B';
+  // Getrennte Ansicht zeigt ohnehin beide Richtungen nacheinander
+  if (s.directionView) s.dir1 = 'B';
 }
 
 // ------------------------------------------------------------
@@ -144,6 +152,10 @@ static void readBool(Preferences& prefs, const char* key, bool& value) {
 
 static void readUChar(Preferences& prefs, const char* key, uint8_t& value) {
   if (prefs.isKey(key)) value = prefs.getUChar(key, value);
+}
+
+static void readChar(Preferences& prefs, const char* key, char& value) {
+  if (prefs.isKey(key)) value = (char)prefs.getUChar(key, (uint8_t)value);
 }
 
 void settingsLoad() {
@@ -177,6 +189,8 @@ void settingsLoad() {
     readString(prefs, KEY_STATION2, appSettings.station2Id);
     readUChar(prefs, KEY_TYPES2, appSettings.types2);
     readString(prefs, KEY_LINES2, appSettings.lines2);
+    readChar(prefs, KEY_DIR1, appSettings.dir1);
+    readChar(prefs, KEY_DIR2, appSettings.dir2);
     prefs.end();
   }
 
@@ -228,6 +242,8 @@ bool settingsSave() {
   ok &= writeString(prefs, KEY_STATION2, appSettings.station2Id);
   ok &= writeUChar(prefs, KEY_TYPES2, appSettings.types2);
   ok &= writeString(prefs, KEY_LINES2, appSettings.lines2);
+  ok &= writeUChar(prefs, KEY_DIR1, (uint8_t)appSettings.dir1);
+  ok &= writeUChar(prefs, KEY_DIR2, (uint8_t)appSettings.dir2);
   prefs.end();
 
   if (ok) storedValuesFound = true;
@@ -285,12 +301,14 @@ StationConfig stationConfig(int index) {
     c.id = s.station2Id;
     c.types = s.types2;
     c.lines = s.lines2;
+    c.dir = s.dir2;
   } else {
     c.id = s.stationId;
     c.types = (s.showSbahn ? TYPE_SBAHN : 0) | (s.showUbahn ? TYPE_UBAHN : 0) |
               (s.showTram ? TYPE_TRAM : 0) | (s.showBus ? TYPE_BUS : 0) |
               (s.showBahn ? TYPE_BAHN : 0);
     c.lines = s.lines1;
+    c.dir = s.dir1;
   }
   return c;
 }
@@ -321,6 +339,9 @@ void settingsPrint() {
     Serial.print(s.zentrumIsH ? ":H:" : ":R:");
     Serial.print(", Standardansicht ");
     Serial.println(s.defaultViewZentrum ? "Zentrum" : "Auswaerts");
+  } else if (s.dir1 != 'B') {
+    Serial.print("nur Richtung ");
+    Serial.println(s.dir1);
   } else {
     Serial.println("gemischt");
   }
@@ -338,6 +359,8 @@ void settingsPrint() {
     Serial.print(s.station2Id);
     Serial.print(", Verkehrsmittel-Bits 0x");
     Serial.print(s.types2, HEX);
+    Serial.print(", Richtung ");
+    Serial.print(s.dir2 == 'B' ? String("alle") : String(s.dir2));
     Serial.print(", Linien: ");
     Serial.println(s.lines2.length() ? s.lines2 : String("(alle)"));
   } else {

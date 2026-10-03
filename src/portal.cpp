@@ -2,9 +2,10 @@
 // Einstellungsportal (siehe portal.h).
 //
 // Seiten: "/" Formular, "/speichern" (POST), "/werkseinstellungen" (POST),
-// "/suche?q=" Stationssuche (JSON), "/richtungen?id=" Linien je
-// Richtungskennung (JSON), "/linien?id=" alle Linien der Station mit
-// Beispielzielen (JSON), "/update" (POST) Firmware-Upload. Die aktuellen
+// "/suche?q=" Stationssuche (JSON), "/richtungen?id=&types=" Linien je
+// Richtungskennung (JSON, max. 15), "/name?id=" Stationsname (JSON),
+// "/linien?id=&types=" Linien der Station
+// (Verkehrsmittel als TYPE_...-Bits) mit Beispielzielen (JSON), "/update" (POST) Firmware-Upload. Die aktuellen
 // Werte bekommt die Seite als JSON-Objekt S, das Formular fuellt sich per
 // JavaScript.
 
@@ -41,7 +42,7 @@ body{font-family:system-ui,sans-serif;margin:0;background:#f2f2f2;color:#111}
 main{max-width:560px;margin:auto;padding:12px}
 h1{font-size:1.4em;margin:8px 0}
 section{background:#fff;border-radius:8px;padding:12px;margin:12px 0}
-h2{font-size:1.1em;margin:0 0 8px}
+h2{font-size:1.1em;margin:0 0 8px}h3{font-size:1em;margin:16px 0 4px}
 label{display:block;margin:8px 0 4px}
 input[type=text],select{width:100%;box-sizing:border-box;padding:8px;font-size:1em}
 .row{display:flex;gap:8px}.row input{flex:1}
@@ -49,41 +50,33 @@ button{padding:9px 14px;font-size:1em;border-radius:6px;border:1px solid #888;ba
 button.main{background:#0a5;color:#fff;border-color:#0a5;width:100%;padding:12px}
 button.danger{background:#fff;color:#b00;border-color:#b00}
 .hint{color:#555;font-size:.9em}
-.cb{display:flex;align-items:center;gap:8px;margin:6px 0}.cb input{width:20px;height:20px}
+.cb{display:flex;align-items:center;gap:8px;margin:6px 0}.cb input{width:20px;height:20px;flex:none}.cb label{margin:0}
+
 .hit{border:1px solid #bbb;border-radius:6px;padding:8px;margin:6px 0;background:#fff;color:#111;font-size:1rem}
 .hit .acts{display:flex;gap:12px;align-items:center;margin-top:6px}
 table{border-collapse:collapse;width:100%;font-size:.9em}td,th{border-bottom:1px solid #ddd;padding:4px;text-align:left}
+.grp{font-weight:bold;margin:12px 0 2px;padding-bottom:2px;border-bottom:1px solid #ccc}
+.ln{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+.ln .cb{margin:0}.ln select{width:auto;padding:4px;font-size:.9em}.ln select:disabled{visibility:hidden}.nod .ln select{display:none}
+.ln .dst{grid-column:1/3;padding-left:28px;color:#555;font-size:.85em}
+.ln.old{background:#fff6e0}
+.lb{display:inline-block;min-width:2.2em;padding:1px 5px;border-radius:4px;color:#fff;font-weight:bold;text-align:center}
+.tS{background:#408335}.tU{background:#0065ae}.tT{background:#d82020}.tB,.tR{background:#00586a}.tZ{background:#555}
+.sum{margin:4px 0}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #999;border-top-color:transparent;border-radius:50%;animation:r 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes r{to{transform:rotate(360deg)}}
 </style></head><body><main>
 <h1>Abfahrtsdisplay</h1>
 <p class="hint">Hilfe zu allen Einstellungen: <a id="help" href="#" target="_blank">Anleitung (README)</a></p>
 <form method="post" action="/speichern" onsubmit="return check()">
-<section><h2>Station</h2>
-<label for="q">Station suchen</label>
-<div class="row"><input type="text" id="q" placeholder="z.B. Marienplatz"><button type="button" onclick="search()">Suchen</button></div>
-<div id="results" class="hint"></div>
-<label for="station">Station-ID (globalId)</label>
-<input type="text" id="station" name="station" placeholder="z.B. de:09162:2">
-<p class="hint" id="stationName"></p>
-<p class="hint">Die Suche nutzt die inoffizielle MVG-API. Klappt sie nicht, die ID aus der Haltestellenliste eintragen (siehe Anleitung).</p>
+<section><h2>Station 1<span id="hn1"></span></h2><div id="st1"></div></section>
+<section><h2>Station 2<span id="hn2"></span> <span class="hint" id="opt2">(optional)</span></h2>
+<div id="no2"><p class="hint">Mit einer zweiten Station wechselt die BOOT-Taste zwischen beiden Stationen (nach 30&nbsp;s zur&uuml;ck zu Station 1).</p>
+<button type="button" onclick="show2(1)">Zweite Station hinzuf&uuml;gen</button></div>
+<div id="has2"><div id="st2"></div><p><button type="button" class="danger" onclick="show2(0)">Station 2 entfernen</button></p></div>
 </section>
-<section><h2>Anzeige</h2>
-<label for="dirView">Richtungen</label>
-<select id="dirView" name="dirView" onchange="upd()"><option value="0">gemischt (alle Richtungen, Seite 2 per Taste)</option><option value="1">getrennt nach Zentrum / Ausw&auml;rts</option></select>
-<div id="dirOpts">
-<label for="zentrum">Richtung Zentrum hat die Kennung</label>
-<select id="zentrum" name="zentrum"><option value="H">H</option><option value="R">R</option></select>
-<p><button type="button" onclick="dirs()">Richtungen anzeigen</button></p>
-<div id="dirList" class="hint"></div>
-<label for="defView">Standardansicht</label>
-<select id="defView" name="defView"><option value="Z">Zentrum</option><option value="A">Ausw&auml;rts</option></select>
-</div></section>
-<section><h2>Verkehrsmittel</h2>
-<div class="cb"><input type="checkbox" id="sbahn" name="sbahn"><label for="sbahn">S-Bahn</label></div>
-<div class="cb"><input type="checkbox" id="ubahn" name="ubahn"><label for="ubahn">U-Bahn</label></div>
-<div class="cb"><input type="checkbox" id="tram" name="tram"><label for="tram">Tram</label></div>
-<div class="cb"><input type="checkbox" id="bus" name="bus"><label for="bus">Bus (Stadt- und Regionalbus)</label></div>
-<div class="cb"><input type="checkbox" id="bahn" name="bahn"><label for="bahn">Regionalzug</label></div>
-</section>
+<input type="hidden" name="lines1" id="lines1"><input type="hidden" name="station2" id="station2">
+<input type="hidden" name="types2" id="types2"><input type="hidden" name="lines2" id="lines2">
 <section><h2>WLAN-QR-Code</h2>
 <div class="cb"><input type="checkbox" id="qrOn" name="qrOn" onchange="upd()"><label for="qrOn">Kurzer Tastendruck zeigt einen QR-Code f&uuml;r ein WLAN (z.B. G&auml;ste-WLAN)</label></div>
 <div id="qrOpts">
@@ -111,35 +104,114 @@ table{border-collapse:collapse;width:100%;font-size:.9em}td,th{border-bottom:1px
 static const char PAGE_SCRIPT[] = R"HTML(<script>
 const $=i=>document.getElementById(i);
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function upd(){$('dirOpts').style.display=$('dirView').value=='1'?'':'none';$('qrOpts').style.display=$('qrOn').checked?'':'none';}
-function check(){
- if(!$('station').value.trim()){alert('Bitte eine Station wählen.');return false;}
- if(!['sbahn','ubahn','tram','bus','bahn'].some(i=>$(i).checked)){alert('Mindestens ein Verkehrsmittel wählen.');return false;}
+const TY=['sbahn','ubahn','tram','bus','bahn'],TN=['S-Bahn','U-Bahn','Tram','Bus (Stadt- und Regionalbus)','Regionalzug'];
+const TC={SBAHN:'S',UBAHN:'U',TRAM:'T',BUS:'B',REGIONAL_BUS:'R',BAHN:'Z'},TB={S:0,U:1,T:2,B:3,R:3,Z:4};
+const GN={S:'S-Bahn',U:'U-Bahn',T:'Tram',B:'Bus',R:'Regionalbus',Z:'Regionalzug'},DN={B:'beide',H:'nur H',R:'nur R'};
+const MAX=16,NO='keine Fahrt in den nächsten 12 h';
+const sel=[0,new Map(),new Map()],lst=[0,0,0],lt=[0,0,0],sid=['','',''];
+function sd(n){const v=$(n==1?'dirView':'dir2').value;return'HR'.includes(v)?v:'B';}
+function tb(n){let b=0;TY.forEach((t,i)=>{if($(t+n).checked)b|=1<<i;});sel[n].forEach(v=>{b|=1<<TB[v.c];});return b;}
+function block(n){
+ let h='<label for="q'+n+'">Station suchen</label><div class="row"><input type="text" id="q'+n+'" placeholder="z.B. Marienplatz"><button type="button" onclick="search('+n+')">Suchen</button></div><div id="res'+n+'" class="hint"></div>'+
+  '<label for="id'+n+'">Station-ID (globalId)</label><input type="text" id="id'+n+'"'+(n==1?' name="station"':'')+' placeholder="z.B. de:09162:2" onchange="setSt('+n+')"><p class="hint" id="nm'+n+'"></p>';
+ if(n==1)h+='<p class="hint">Die Suche nutzt die inoffizielle MVG-API. Klappt sie nicht, die ID aus der Haltestellenliste eintragen (siehe Anleitung).</p>';
+ h+='<h3>Verkehrsmittel</h3><div id="ty'+n+'">';
+ TY.forEach((t,i)=>{h+='<div class="cb"><input type="checkbox" id="'+t+n+'"'+(n==1?' name="'+t+'"':'')+' onchange="tyc('+n+')"><label for="'+t+n+'">'+TN[i]+'</label></div>';});
+ h+='</div><p class="hint" id="tyh'+n+'">Es sind Linien gewählt: Das Display zeigt nur diese Linien. Die Verkehrsmittel legen dann nur fest, welche Linien die Liste anbietet.</p><h3>Richtung</h3><select id="'+(n==1?'dirView" name="dirView':'dir2" name="dir2')+'" onchange="upd()">'+
+  (n==1?'<option value="0">alle Richtungen</option><option value="1">getrennt nach Zentrum / Auswärts (Umschalten per Taste)</option>':'<option value="B">alle Richtungen</option>')+
+  '<option value="H">nur Richtung H</option><option value="R">nur Richtung R</option></select><p class="hint" id="dh'+n+'">Gilt für alle Linien der Station.</p>';
+ if(n==1)h+='<p class="hint" id="viewHint">Mit zwei Stationen wechselt die BOOT-Taste die Station, getrennte Ansicht und Seite 2 gibt es dann nicht.</p>'+
+  '<div id="dirOpts"><label for="zentrum">Richtung Zentrum hat die Kennung</label><select id="zentrum" name="zentrum"><option value="H">H</option><option value="R">R</option></select>'+
+  '<label for="defView">Standardansicht</label><select id="defView" name="defView"><option value="Z">Zentrum</option><option value="A">Auswärts</option></select></div>';
+ h+='<p><button type="button" onclick="dirs('+n+')">Richtungen anzeigen</button></p><div id="dl'+n+'" class="hint"></div>'+
+  '<h3>Linien</h3><p class="sum" id="sum'+n+'"></p><p><button type="button" id="lb'+n+'" onclick="lines('+n+')">Linien auswählen</button></p><div id="ls'+n+'"></div>';
+ $('st'+n).innerHTML=h;
+ $('q'+n).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();search(n);}});}
+function parseSel(n,t){sel[n].clear();(t||'').split(',').forEach(e=>{const p=e.split(':');if(p.length==3)sel[n].set(p[0],{d:p[1],c:p[2],n:p[0]});});}
+function selStr(n){const d=sd(n);return[...sel[n]].map(([k,v])=>k+':'+(d=='B'?v.d:'B')+':'+v.c).join(',');}
+function on2(){return $('has2').style.display!='none';}
+function upd(){const t=on2(),v=$('dirView'),o=v.options[1];o.hidden=o.disabled=t;if(t&&v.value=='1')v.value='0';
+ $('viewHint').style.display=t?'':'none';$('opt2').style.display=t?'none':'';$('dirOpts').style.display=v.value=='1'?'':'none';
+ $('dh1').style.display='HR'.includes(v.value)?'':'none';$('dh2').style.display=$('dir2').value!='B'?'':'none';
+ $('qrOpts').style.display=$('qrOn').checked?'':'none';
+ [1,2].forEach(n=>{if($('ls'+n).querySelector('.ln'))draw(n);else sum(n);});}
+function sum(n,note){const s=sel[n],d=sd(n);
+ $('sum'+n).innerHTML=(s.size?'<b>'+s.size+' von max. '+MAX+' Linien'+(d=='B'?'':', nur Richtung '+d)+':</b> '+[...s.values()].map(v=>'<span class="lb t'+v.c+'">'+esc(v.n)+'</span>'+(d=='B'?' '+DN[v.d]:'')).join(d=='B'?', ':' '):'Keine Auswahl: alle Linien der gewählten Verkehrsmittel.')+(note?' <i>'+note+'</i>':'');
+ $('tyh'+n).style.display=s.size?'':'none';
+ $('ls'+n).querySelectorAll('.ln input').forEach(c=>{c.disabled=!c.checked&&s.size>=MAX;});
+ const f=$('full'+n);if(f)f.style.display=s.size>=MAX?'':'none';}
+function nm(n,t){$('hn'+n).textContent=t?': '+t:'';}
+function getName(n){const id=$('id'+n).value.trim();nm(n,'');if(!id)return Promise.resolve();
+ return fetch('/name?id='+encodeURIComponent(id)).then(r=>r.json()).then(j=>{if(!j.n)throw 0;nm(n,j.n);})
+ .catch(()=>{$('nm'+n).textContent='Name nicht gefunden – ID prüfen.';});}
+function setSt(n,name){const v=$('id'+n).value.trim();if(v==sid[n])return;sid[n]=v;$('nm'+n).textContent='';if(name!==undefined)nm(n,name);else getName(n);
+ const had=sel[n].size>0;sel[n].clear();lst[n]=0;$('ls'+n).innerHTML='';
+ sum(n,had?'(Auswahl gelöscht: andere Station)':'');$('dl'+n).textContent='';}
+function show2(on){$('no2').style.display=on?'none':'';$('has2').style.display=on?'':'none';
+ if(!on){$('id2').value='';$('dir2').value='B';$('res2').innerHTML='';$('nm2').textContent='';setSt(2);}upd();}
+function check(){const t=on2();
+ if(!$('id1').value.trim()){alert('Bitte Station 1 wählen.');return false;}
+ if(t&&!$('id2').value.trim()){alert('Bitte Station 2 wählen oder entfernen.');return false;}
+ for(const n of t?[1,2]:[1]){if(!TY.some(i=>$(i+n).checked)){
+  if(!sel[n].size){alert('Station '+n+': mindestens ein Verkehrsmittel wählen.');return false;}
+  sel[n].forEach(v=>{$(TY[TB[v.c]]+n).checked=true;});}}
  if($('qrOn').checked&&!$('qrSsid').value.trim()){alert('WLAN-Name für den QR-Code fehlt.');return false;}
+ let b=0;TY.forEach((i,x)=>{if($(i+'2').checked)b|=1<<x;});
+ $('lines1').value=selStr(1);$('station2').value=t?$('id2').value.trim():'';$('types2').value=b||S.types2;$('lines2').value=t?selStr(2):'';
  return true;}
-function search(){
- const q=$('q').value.trim(); if(q.length<2)return;
- $('results').textContent='Suche ...';
+function search(n){
+ const q=$('q'+n).value.trim(),R=$('res'+n); if(q.length<2)return;
+ R.textContent='Suche ...';
  fetch('/suche?q='+encodeURIComponent(q)).then(r=>r.json()).then(l=>{
-  if(!l.length){$('results').textContent='Keine Station gefunden.';return;}
-  $('results').innerHTML='';
+  if(!l.length){R.textContent='Keine Station gefunden.';return;}
+  R.innerHTML='';
   l.forEach(s=>{const d=document.createElement('div');d.className='hit';
    let h='<b>'+esc(s.n)+'</b><br>Ort: '+esc(s.p)+(s.z?' &middot; Zone '+esc(s.z.toUpperCase()):'')+
     '<br>'+esc(s.t)+'<br><span class="hint">ID '+esc(s.id)+'</span><div class="acts"><button type="button">Ausw&auml;hlen</button>';
    if(s.lat&&s.lon)h+='<a target="_blank" href="https://www.openstreetmap.org/?mlat='+s.lat+'&mlon='+s.lon+'#map=17/'+s.lat+'/'+s.lon+'">Auf Karte zeigen</a>';
    d.innerHTML=h+'</div>';
-   d.querySelector('button').onclick=()=>{$('station').value=s.id;$('stationName').textContent='Gewählt: '+s.n+', '+s.p+' ('+s.id+')';$('results').innerHTML='';};
-   $('results').appendChild(d);});
- }).catch(()=>{$('results').textContent='Suche fehlgeschlagen (MVG-API nicht erreichbar).';});}
-function dirs(){
- const id=$('station').value.trim(); if(!id){alert('Erst eine Station wählen.');return;}
- $('dirList').textContent='Lade Abfahrten ...';
- fetch('/richtungen?id='+encodeURIComponent(id)).then(r=>r.json()).then(l=>{
-  if(!l.length){$('dirList').textContent='Keine Abfahrten gefunden.';return;}
+   d.querySelector('button').onclick=()=>{$('id'+n).value=s.id;R.innerHTML='';setSt(n,s.n);$('nm'+n).textContent='Gewählt: '+s.n+', '+s.p+' ('+s.id+')';};
+   R.appendChild(d);});
+ }).catch(()=>{R.textContent='Suche fehlgeschlagen (MVG-API nicht erreichbar).';});}
+function lines(n){
+ const id=$('id'+n).value.trim(),B=$('lb'+n),D=$('ls'+n),b=tb(n); if(!id){alert('Erst eine Station wählen.');return;}
+ if(!b){alert('Erst Verkehrsmittel wählen.');return;}
+ if(lst[n]&&lt[n]==b){draw(n);return;}
+ B.disabled=true;D.innerHTML='<p class="hint"><span class="spin"></span>Lade Linien und Ziele der nächsten 12 Stunden (ca. 10 s) ...</p>';
+ fetch('/linien?id='+encodeURIComponent(id)+'&types='+b).then(r=>r.json()).then(l=>{if(!Array.isArray(l))throw 0;lst[n]=l;lt[n]=b;draw(n);})
+ .catch(()=>{D.innerHTML='<p class="hint">Abruf fehlgeschlagen (MVG-API nicht erreichbar). Bitte erneut versuchen.</p>';})
+ .finally(()=>{B.disabled=false;});}
+function sk(k){const m=k.match(/\d+/),c=/^N\d/.test(k)?2:/^X\d/.test(k)?1:0;return[c,m?+m[0]:1e9,k];}
+function cmp(a,b){const x=sk(a.k),y=sk(b.k);for(let i=0;i<3;i++)if(x[i]!=y[i])return x[i]<y[i]?-1:1;return 0;}
+function tyc(n){if($('ls'+n).querySelector('.ln'))$('ls'+n).innerHTML='<p class="hint">Verkehrsmittel geändert – „Linien auswählen“ lädt die Liste neu.</p>';}
+function done(n){$('ls'+n).innerHTML='';$('sum'+n).scrollIntoView({block:'center'});}
+function draw(n){
+ const d=sd(n),s=sel[n],L=lst[n].map(x=>({k:x.k,n:x.n,c:TC[x.t]||'B',H:x.H,R:x.R}));
+ s.forEach((v,k)=>{const x=L.find(y=>y.k==k);if(x){v.n=x.n;v.c=x.c;}else L.push({k:k,n:v.n,c:v.c,old:1});});
+ let h='<p class="hint">Linien anhaken, die das Display zeigen soll (max. '+MAX+'). Keine angehakt = alle Linien. Gezeigt werden die Linien der angehakten Verkehrsmittel'+(d=='B'?'. H und R sind die Richtungskennungen der MVG, darunter Beispielziele.':', darunter Beispielziele in Richtung '+d+'.')+'</p><p class="hint" id="full'+n+'"><b>Maximum von '+MAX+' Linien erreicht.</b></p>';
+ 'SUTBRZ'.split('').forEach(c=>{const g=L.filter(x=>x.c==c).sort(cmp);if(!g.length)return;
+  h+='<div class="grp">'+GN[c]+'</div>';
+  g.forEach(x=>{const i=esc('l'+n+x.k);
+   h+='<div class="ln'+(x.old?' old':'')+'" data-k="'+esc(x.k)+'"><div class="cb"><input type="checkbox" id="'+i+'"><label for="'+i+'"><span class="lb t'+c+'">'+esc(x.n)+'</span></label></div>'+
+    '<select><option value="B">beide Richtungen</option><option value="H">nur H</option><option value="R">nur R</option></select><div class="dst">'+
+    (x.old?'Nicht mehr im Fahrplan dieser Station. Haken entfernen zum Löschen.':d!='B'?d+' &rarr; '+esc(x[d]||NO):x.H||x.R?'H &rarr; '+esc(x.H||NO)+'<br>R &rarr; '+esc(x.R||NO):NO)+'</div></div>';});});
+ h+='<p><button type="button" onclick="done('+n+')">Fertig</button></p>';
+ const D=$('ls'+n);D.innerHTML=h;D.className=d=='B'?'':'nod';
+ D.querySelectorAll('.ln').forEach(r=>{const k=r.dataset.k,x=L.find(y=>y.k==k),c=r.querySelector('input'),d=r.querySelector('select');
+  c.checked=s.has(k);d.disabled=!c.checked;if(c.checked)d.value=s.get(k).d;
+  c.onchange=()=>{d.disabled=!c.checked;if(c.checked)s.set(k,{d:d.value,c:x.c,n:x.n});else s.delete(k);sum(n);};
+  d.onchange=()=>{if(s.has(k))s.get(k).d=d.value;sum(n);};});
+ sum(n);}
+function dirs(n){
+ const id=$('id'+n).value.trim(),D=$('dl'+n); if(!id){alert('Erst eine Station wählen.');return;}
+ const b=tb(n);if(!b){alert('Erst Verkehrsmittel wählen.');return;}
+ D.textContent='Lade Abfahrten ...';
+ fetch('/richtungen?id='+encodeURIComponent(id)+'&types='+b).then(r=>r.json()).then(l=>{
+  if(!l.length){D.textContent='Keine Abfahrten gefunden.';return;}
   let h='<table><tr><th>Kennung</th><th>Linie</th><th>Ziel</th></tr>';
   l.forEach(d=>{h+='<tr><td>'+esc(d.d)+'</td><td>'+esc(d.l)+'</td><td>'+esc(d.z)+'</td></tr>';});
-  $('dirList').innerHTML=h+'</table><p>F&auml;hrt H Richtung Innenstadt, &bdquo;H&ldquo; w&auml;hlen, sonst &bdquo;R&ldquo;.</p>';
- }).catch(()=>{$('dirList').textContent='Abruf fehlgeschlagen.';});}
+  D.innerHTML=h+'</table>';
+ }).catch(()=>{D.textContent='Abruf fehlgeschlagen.';});}
 function upload(){
  const f=$('fw').files[0]; if(!f){alert('Bitte eine .bin-Datei wählen.');return;}
  if(f.size>S.fwMax){alert('Die Datei ist zu groß. Bitte die Firmware-Datei nehmen, nicht das Gesamtabbild (merged).');return;}
@@ -151,14 +223,15 @@ function upload(){
   else{$('fwMsg').textContent='Fehler: '+x.responseText+' Die bisherige Firmware läuft weiter.';$('fwBtn').disabled=false;}};
  x.onerror=()=>{$('fwMsg').textContent='Verbindung abgebrochen. Die bisherige Firmware läuft weiter.';$('fwBtn').disabled=false;};
  $('fwBtn').disabled=true;$('fwBar').style.display='';$('fwBar').value=0;$('fwMsg').textContent='Lade hoch ...';x.send(fd);}
-$('help').href=S.help;$('station').value=S.station;
-$('dirView').value=S.dirView?'1':'0';$('zentrum').value=S.zentrumIsH?'H':'R';$('defView').value=S.defZentrum?'Z':'A';
-['sbahn','ubahn','tram','bus','bahn','qrOn'].forEach(i=>$(i).checked=S[i]);
-$('qrTitle').value=S.qrTitle;$('qrSsid').value=S.qrSsid;if(S.qrPassSet)$('qrPass').placeholder='unverändert';
+block(1);block(2);
+$('help').href=S.help;$('id1').value=sid[1]=S.station;$('id2').value=sid[2]=S.station2;
+$('dirView').value=S.dir1!='B'?S.dir1:S.dirView?'1':'0';$('dir2').value=S.dir2;$('zentrum').value=S.zentrumIsH?'H':'R';$('defView').value=S.defZentrum?'Z':'A';
+TY.forEach((t,i)=>{$(t+'1').checked=S[t];$(t+'2').checked=!!(S.types2&(1<<i));});
+$('qrOn').checked=S.qrOn;$('qrTitle').value=S.qrTitle;$('qrSsid').value=S.qrSsid;if(S.qrPassSet)$('qrPass').placeholder='unverändert';
+parseSel(1,S.lines1);parseSel(2,S.lines2);sum(1);sum(2);show2(S.station2?1:0);
+getName(1).then(()=>{if(S.station2)getName(2);});
 $('wifi').textContent=S.wifi;$('rssi').textContent=S.rssi;$('version').textContent=S.version;$('ip').textContent=S.ip;
 $('closes').textContent=S.closes?'Diese Seite ist bis '+S.closes+' Uhr erreichbar (erneut öffnen: Taste 3 s halten).':'';
-$('q').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();search();}});
-upd();
 </script></body></html>)HTML";
 
 // ------------------------------------------------------------
@@ -226,9 +299,11 @@ static void handleRoot() {
     const DeviceSettings& s = appSettings;
     doc["station"] = s.stationId;
     doc["lines1"] = s.lines1;
+    doc["dir1"] = String(s.dir1);
     doc["station2"] = s.station2Id;
     doc["types2"] = s.types2;
     doc["lines2"] = s.lines2;
+    doc["dir2"] = String(s.dir2);
     doc["dirView"] = s.directionView;
     doc["zentrumIsH"] = s.zentrumIsH;
     doc["defZentrum"] = s.defaultViewZentrum;
@@ -282,7 +357,11 @@ static void handleSave() {
     return;
   }
   s.stationId = station;
-  s.directionView = server->arg("dirView") == "1";
+  // "Richtung" Station 1: 0 = alle, 1 = getrennt (Zentrum/Auswaerts),
+  // H/R = nur diese Richtungskennung
+  String view = server->arg("dirView");
+  s.directionView = view == "1";
+  s.dir1 = (view == "H" || view == "R") ? view[0] : 'B';
   s.zentrumIsH = server->arg("zentrum") != "R";
   s.defaultViewZentrum = server->arg("defView") != "A";
   s.showSbahn = server->hasArg("sbahn");
@@ -317,6 +396,10 @@ static void handleSave() {
       return;
     }
     s.types2 = (uint8_t)types2;
+  }
+  if (server->hasArg("dir2")) {
+    String dir2 = server->arg("dir2");
+    s.dir2 = (dir2 == "H" || dir2 == "R") ? dir2[0] : 'B';
   }
   if (server->hasArg("lines2")) {
     LineSelection sel;
@@ -362,17 +445,34 @@ static void handleSearch() {
 static void handleDirections() {
   String id = formArg("id", 40);
   String json;
-  if (!validStationId(id) || !listDirections(id.c_str(), json)) {
+  uint8_t types = (uint8_t)(server->arg("types").toInt() & TYPE_ALL);
+  if (!validStationId(id) || !listDirections(id.c_str(), types, json)) {
     server->send(502, "application/json", "{\"error\":\"Abruf fehlgeschlagen\"}");
     return;
   }
   server->send(200, "application/json; charset=utf-8", json);
 }
 
+static void handleName() {
+  String id = formArg("id", 40);
+  String name;
+  if (!validStationId(id) || !fetchStationName(id.c_str(), name, false)) {
+    server->send(502, "application/json", "{\"error\":\"Abruf fehlgeschlagen\"}");
+    return;
+  }
+  JsonDocument doc;
+  doc["n"] = name;
+  String json;
+  serializeJson(doc, json);
+  server->send(200, "application/json; charset=utf-8", json);
+}
+
 static void handleLines() {
   String id = formArg("id", 40);
   String json;
-  if (!validStationId(id) || !listStationLines(id.c_str(), json)) {
+  // Verkehrsmittel als TYPE_...-Bits (fehlt/0 = alle)
+  uint8_t types = (uint8_t)(server->arg("types").toInt() & TYPE_ALL);
+  if (!validStationId(id) || !listStationLines(id.c_str(), types, json)) {
     server->send(502, "application/json", "{\"error\":\"Abruf fehlgeschlagen\"}");
     return;
   }
@@ -519,6 +619,7 @@ void portalOpen() {
   server->on("/werkseinstellungen", HTTP_POST, handleFactoryReset);
   server->on("/suche", HTTP_GET, handleSearch);
   server->on("/richtungen", HTTP_GET, handleDirections);
+  server->on("/name", HTTP_GET, handleName);
   server->on("/linien", HTTP_GET, handleLines);
   server->on("/update", HTTP_POST, handleUpdateDone, handleUpdateUpload);
   server->onNotFound([]() {

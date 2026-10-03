@@ -28,9 +28,10 @@ enum DirectionFilter {
   DIR_FILTER_ALL   // alle Richtungen gemischt (gemischte Anzeige)
 };
 
-// Ruft den Stationsnamen ab. Bei Erfolg: true, Name (Latin-1 fuer die Anzeige) in
-// nameOut. Bei Fehler: false, nameOut bleibt unveraendert.
-bool fetchStationName(const char* globalId, String& nameOut);
+// Ruft den Stationsnamen ab. Bei Erfolg: true, Name in nameOut (Latin-1 fuer
+// die Anzeige, mit forDisplay = false UTF-8 fuers Portal). Bei Fehler:
+// false, nameOut bleibt unveraendert.
+bool fetchStationName(const char* globalId, String& nameOut, bool forDisplay = true);
 
 // Laedt die aktuellen Abfahrten einer Station (ein HTTPS-Abruf) in docOut -
 // nur die ausgewerteten Felder, direkt aus dem Datenstrom. Die
@@ -47,16 +48,20 @@ bool searchStations(const String& query, String& jsonOut);
 
 // Fuer das Portal: Linien und Ziele der naechsten Abfahrten je
 // Richtungskennung als JSON-Array [{"d":"H","l":"S2","z":"Erding"}] (UTF-8,
-// jede Kombination einmal). Hilft beim Festlegen von "Zentrum = H oder R".
-bool listDirections(const char* globalId, String& jsonOut);
+// jede Kombination einmal, hoechstens DIRECTION_LIST_MAX Eintraege). Nur
+// Verkehrsmittel in typeBits (TYPE_...-Bits, 0 = alle). Hilft beim
+// Festlegen von "Zentrum = H oder R" bzw. "nur Richtung H/R".
+#define DIRECTION_LIST_MAX 15
+bool listDirections(const char* globalId, uint8_t typeBits, String& jsonOut);
 
 // Fuer das Portal (Linienauswahl): alle Linien der Station mit
 // Beispielzielen je Richtungskennung als JSON-Array
 // [{"k":"RE80","n":"RE 80","t":"BAHN","H":"...","R":"..."}] (UTF-8, Format
 // siehe line_select.h). Fuenf Abrufe (Linienliste + Abfahrten ueber rund 12
-// Stunden, alle Verkehrsmittel), dauert einige Sekunden. true, wenn
-// wenigstens die Linienliste abgerufen werden konnte.
-bool listStationLines(const char* globalId, String& jsonOut);
+// Stunden), dauert einige Sekunden. Nur Linien der Verkehrsmittel in
+// typeBits (TYPE_...-Bits, 0 = alle). true, wenn wenigstens die
+// Linienliste abgerufen werden konnte.
+bool listStationLines(const char* globalId, uint8_t typeBits, String& jsonOut);
 
 // Wertet heruntergeladene Abfahrten (downloadDepartures) aus: filtert nach
 // Richtung (oder alle) und Linienauswahl (leer = alle Linien), gleicht

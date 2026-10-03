@@ -16,11 +16,15 @@ struct DeviceSettings {
   // Linienauswahl Station 1 (Textform siehe LineSelection in
   // line_select.h, "" = alle Linien)
   String lines1;
+  // Richtung Station 1: 'B' alle, 'H' nur ":H:", 'R' nur ":R:" - gilt fuer
+  // alle Linien, zusaetzlich zur Linienauswahl. Nicht mit directionView.
+  char dir1;
 
   // Optionale Station 2 ("" = keine). Umschalten per BOOT-Taste.
   String station2Id;
   uint8_t types2;            // Verkehrsmittel Station 2 (TYPE_...-Bits)
   String lines2;             // Linienauswahl Station 2
+  char dir2;                 // Richtung Station 2 ('B', 'H', 'R' wie dir1)
 
   // Richtungsanzeige (nur Station 1 und nur ohne Station 2)
   bool directionView;        // true = getrennt nach Zentrum/Auswaerts, false = gemischt
@@ -54,6 +58,7 @@ struct StationConfig {
   String id;       // globalId ("" = nicht eingerichtet)
   uint8_t types;   // TYPE_...-Bits, mindestens eins gesetzt
   String lines;    // Linienauswahl ("" = alle Linien)
+  char dir;        // Richtung: 'B' alle, 'H', 'R' (zusaetzlich zu lines)
 };
 
 // Die aktuell gueltigen Einstellungen (nach settingsLoad()). Geaendert wird

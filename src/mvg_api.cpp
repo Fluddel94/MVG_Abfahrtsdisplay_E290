@@ -103,16 +103,34 @@ static int splitTrainGroup(const String& line) {
 // empirisch ermittelt. Mindestens ein Verkehrsmittel ist immer
 // eingeschaltet (settings.cpp prueft das). Ersatzbusse (SEV) kommen beim
 // Filter des ersetzten Verkehrsmittels mit.
+static String typesParam(uint8_t typeBits) {
+  String types;
+  if (typeBits & TYPE_SBAHN) types += ",SBAHN";
+  if (typeBits & TYPE_UBAHN) types += ",UBAHN";
+  if (typeBits & TYPE_TRAM) types += ",TRAM";
+  if (typeBits & TYPE_BUS) types += ",BUS,REGIONAL_BUS";
+  if (typeBits & TYPE_BAHN) types += ",BAHN";
+  return types.substring(1);   // fuehrendes Komma weglassen
+}
+
 static String transportTypesParam(const StationConfig& station,
                                   const LineSelection& lines) {
   if (!lines.empty()) return lines.transportTypes();
-  String types;
-  if (station.types & TYPE_SBAHN) types += ",SBAHN";
-  if (station.types & TYPE_UBAHN) types += ",UBAHN";
-  if (station.types & TYPE_TRAM) types += ",TRAM";
-  if (station.types & TYPE_BUS) types += ",BUS,REGIONAL_BUS";
-  if (station.types & TYPE_BAHN) types += ",BAHN";
-  return types.substring(1);   // fuehrendes Komma weglassen
+  return typesParam(station.types);
+}
+
+// Gehoert ein API-Verkehrsmittel zu den TYPE_...-Bits? Unbekannte nur,
+// wenn alle Verkehrsmittel gefragt sind.
+static bool typeAllowed(const char* transportType, uint8_t typeBits) {
+  switch (lineTypeCode(transportType)) {
+    case 'S': return typeBits & TYPE_SBAHN;
+    case 'U': return typeBits & TYPE_UBAHN;
+    case 'T': return typeBits & TYPE_TRAM;
+    case 'B':
+    case 'R': return typeBits & TYPE_BUS;
+    case 'Z': return typeBits & TYPE_BAHN;
+    default: return (typeBits & TYPE_ALL) == TYPE_ALL;
+  }
 }
 
 // Prozent-Kodierung fuer einen URL-Parameter (UTF-8 bleibt byteweise erhalten)
@@ -203,15 +221,14 @@ bool searchStations(const String& query, String& jsonOut) {
   return true;
 }
 
-bool listDirections(const char* globalId, String& jsonOut) {
-  // Verkehrsmittel wie bei Station 1, aber ohne Linienauswahl
+bool listDirections(const char* globalId, uint8_t typeBits, String& jsonOut) {
+  // Verkehrsmittel aus dem Portal (die angehakten), ohne Linienauswahl
   StationConfig station;
-  {
-    SettingsLock lock;
-    station = stationConfig(0);
-  }
   station.id = globalId;
+  station.types = typeBits & TYPE_ALL;
+  if (station.types == 0) station.types = TYPE_ALL;
   station.lines = "";
+  station.dir = 'B';
   LineSelection noLines;
   JsonDocument doc;
   if (!downloadDepartures(station, noLines, doc)) return false;
@@ -231,6 +248,7 @@ bool listDirections(const char* globalId, String& jsonOut) {
       }
     }
     if (known) continue;
+    if (list.size() >= DIRECTION_LIST_MAX) break;
     JsonObject entry = list.add<JsonObject>();
     entry["d"] = dir;
     entry["l"] = line;
@@ -240,9 +258,6 @@ bool listDirections(const char* globalId, String& jsonOut) {
   return true;
 }
 
-// Alle Verkehrsmittel fuer Abrufe, die unabhaengig von den Einstellungen
-// sein muessen (Linienliste)
-static const char* ALL_TRANSPORT_TYPES = "SBAHN,UBAHN,TRAM,BUS,REGIONAL_BUS,BAHN";
 
 // Versatz (Minuten) der Abfahrtsabrufe fuer die Beispielziele der
 // Linienliste: deckt rund 12 Stunden ab, auch seltene Linien
@@ -374,7 +389,9 @@ static bool fetchJsonStream(const String& url, JsonDocument& doc,
   return true;
 }
 
-bool listStationLines(const char* globalId, String& jsonOut) {
+bool listStationLines(const char* globalId, uint8_t typeBits, String& jsonOut) {
+  typeBits &= TYPE_ALL;
+  if (typeBits == 0) typeBits = TYPE_ALL;
   unsigned long start = millis();
   logHeap("vor Linienliste");
 
@@ -395,6 +412,7 @@ bool listStationLines(const char* globalId, String& jsonOut) {
     return false;
   }
   for (JsonObject l : doc.as<JsonArray>()) {
+    if (!typeAllowed(l["transportType"], typeBits)) continue;
     lines->addLine(l["label"], l["transportType"], l["sev"] | false);
   }
   Serial.printf("Linienliste: %d Linien\n", lines->count());
@@ -416,7 +434,7 @@ bool listStationLines(const char* globalId, String& jsonOut) {
     url += "&offsetInMinutes=";
     url += offset;
     url += "&transportTypes=";
-    url += ALL_TRANSPORT_TYPES;
+    url += typesParam(typeBits);
     doc.clear();
     if (!fetchJsonStream(url, doc, filter)) continue;
     for (JsonObject d : doc.as<JsonArray>()) {
@@ -435,7 +453,7 @@ bool listStationLines(const char* globalId, String& jsonOut) {
   return true;
 }
 
-bool fetchStationName(const char* globalId, String& nameOut) {
+bool fetchStationName(const char* globalId, String& nameOut, bool forDisplay) {
   HTTPClient http;
   http.setConnectTimeout(HTTP_TIMEOUT_MS);
   http.setTimeout(HTTP_TIMEOUT_MS);
@@ -454,7 +472,8 @@ bool fetchStationName(const char* globalId, String& nameOut) {
     DeserializationError error = deserializeJson(doc, payload);
 
     if (!error && doc["name"].is<const char*>()) {
-      nameOut = utf8ToLatin1(String((const char*)doc["name"]));
+      nameOut = String((const char*)doc["name"]);
+      if (forDisplay) nameOut = utf8ToLatin1(nameOut);
       success = true;
       Serial.print("Stationsname ermittelt: ");
       Serial.println(nameOut);

@@ -6,6 +6,25 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Neu
+- Einstellungsportal: **Linienauswahl** je Station. „Linien auswählen“
+  listet alle Linien der Station, nach Verkehrsmittel und Nummer sortiert,
+  mit Beispielzielen je Richtungskennung H/R. Je Linie „beide Richtungen“,
+  „nur H“ oder „nur R“, höchstens 16 Linien; keine Auswahl = alle Linien.
+  Die Liste enthält nur Linien der angehakten Verkehrsmittel (und bereits
+  gewählte Linien). Sind Linien gewählt, zeigt das Display nur diese.
+- Einstellungsportal: optionale **zweite Station** mit eigenen
+  Verkehrsmitteln, Richtung und Linien (Umschalten am Gerät folgt).
+- Einstellung **„Richtung“ je Station**: alle Richtungen, nur Richtung H
+  oder nur Richtung R (gilt für alle Linien der Station; die
+  Richtungswahl je Linie entfällt dann). Bei Station 1 zusätzlich wie bisher die getrennte
+  Ansicht Zentrum/Auswärts. Neue Werte im Gerätespeicher: `dir1`, `dir2`.
+  „Richtungen anzeigen“ gibt es jetzt für beide Stationen und zeigt nur
+  die angehakten Verkehrsmittel (höchstens 15 Einträge).
+- Einstellungsportal: Der Name der eingestellten Station steht in der
+  Überschrift („Station 1: Pasing“), nicht nur die ID; eine unbekannte ID
+  wird gemeldet.
+
 ### Geändert
 - Schienenersatzverkehr wird als „SEV“ im Bus-Rahmen angezeigt. Bisher
   erschien je nach Fall die Zugnummer (z.B. „67116“ in Weilheim) oder die

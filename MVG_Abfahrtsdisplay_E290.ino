@@ -1,5 +1,5 @@
 // Version: 2.1.0
-// Letzte Änderung: 03.10.2026 13:59
+// Letzte Änderung: 03.10.2026 16:08
 #define FW_VERSION "2.1.0"
 
 // ------------------------------------------------------------
@@ -455,8 +455,13 @@ bool fetchDeparturesOnce() {
     cacheZentrumCount = parseDepartures(doc, zentrumFilter, lines, cacheZentrum, MAX_DEPARTURES_SHOWN);
     cacheAuswaertsCount = parseDepartures(doc, auswaertsFilter, lines, cacheAuswaerts, MAX_DEPARTURES_SHOWN);
   } else {
-    // Alle Richtungen gemischt: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
-    cacheAllCount = parseDepartures(doc, DIR_FILTER_ALL, lines, cacheAll, MAX_DEPARTURES_SHOWN * 2);
+    // Gemischte Anzeige: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8).
+    // Richtung der Station (Portal "nur Richtung H/R") gilt zusaetzlich
+    // zur Linienauswahl.
+    DirectionFilter filter = DIR_FILTER_ALL;
+    if (station.dir == 'H') filter = DIR_FILTER_H;
+    if (station.dir == 'R') filter = DIR_FILTER_R;
+    cacheAllCount = parseDepartures(doc, filter, lines, cacheAll, MAX_DEPARTURES_SHOWN * 2);
   }
   return true;
 }
