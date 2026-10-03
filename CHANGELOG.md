@@ -10,6 +10,13 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 - Schienenersatzverkehr wird als „SEV“ im Bus-Rahmen angezeigt. Bisher
   erschien je nach Fall die Zugnummer (z.B. „67116“ in Weilheim) oder die
   ersetzte Linie (z.B. „S2“), ohne Hinweis auf den Ersatzbus.
+- Gekoppelte Regionalzüge mit verschiedenen Liniennummern erscheinen als
+  eine Zeile mit dem Symbol „RB“ bzw. „RE“ und allen Zielen (bisher eine
+  Zeile je Zugteil): BRB RB 55/56/57, RB 6/60, RB 65/66, RE 80/89. Lange
+  Ziele werden gleichmäßig gekürzt, angezeigt wird die kleinste
+  Verspätung der Zugteile.
+- Geteilte Züge (z.B. S1 Flughafen / Freising) zeigen jetzt ebenfalls die
+  kleinste statt der größten Verspätung der Zugteile.
 
 ### Dokumentation
 - Fotos des Displays oben in der README (neuer Ordner `bilder/`).

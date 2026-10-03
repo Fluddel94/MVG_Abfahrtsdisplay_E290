@@ -25,6 +25,7 @@ struct RawEntry {
   bool isBus;
   bool hasPlatform;   // "platform" nur bei Schienenverkehr vorhanden
   int platform;
+  bool multiDest;      // destination = mehrere Ziele "A/B/C"
   char direction;     // 'H' oder 'R' laut lineId, '?' falls keins von beiden
   long long plannedTime;
 };
@@ -52,17 +53,44 @@ static const SplitTrainLabel SPLIT_TRAIN_LABELS[] = {
   { "Flughafen", "Freising", "Flugh./Freising" },   // S1 (Fluegelung in Neufahrn)
 };
 
-// Anzeige-Ziel fuer zwei zusammengefasste Ziele: feste Kurzform aus
-// SPLIT_TRAIN_LABELS, sonst beide Ziele ausgeschrieben ("A/B"). Ist das zu
-// lang, kuerzt fitText() (display.cpp) beim Zeichnen automatisch.
-static String splitTrainDestination(const String& a, const String& b) {
+// Feste Kurzform fuer zwei zusammengefasste Ziele aus SPLIT_TRAIN_LABELS,
+// leer wenn keine passt
+static String fixedSplitLabel(const String& a, const String& b) {
   for (const SplitTrainLabel& p : SPLIT_TRAIN_LABELS) {
     if ((a.startsWith(p.destA) && b.startsWith(p.destB)) ||
         (a.startsWith(p.destB) && b.startsWith(p.destA))) {
       return String(p.label);
     }
   }
-  return a + "/" + b;
+  return "";
+}
+
+// Fluegelzuege mit verschiedenen Liniennummern (Regionalzuege): Die Zugteile
+// erscheinen in der API als eigene Linien mit gleicher geplanter Zeit,
+// gleichem Gleis und gleicher Richtung, aber ohne gemeinsames Merkmal
+// (geprueft 03.10.2026). Zusammengefasst wird daher nur innerhalb dieser
+// festen Gruppen - zufaellig gleichzeitige fremde Zuege bleiben getrennt.
+// Linien ohne Leerzeichen (wie RawEntry.line), mit Komma am Anfang und Ende.
+// Weitere Gruppen hier ergaenzen.
+struct SplitTrainGroup {
+  const char* lines;
+  const char* icon;    // Liniensymbol der zusammengefassten Zeile
+};
+static const SplitTrainGroup SPLIT_TRAIN_GROUPS[] = {
+  { ",RB55,RB56,RB57,", "RB" },   // BRB Oberland (Bayrischzell/Lenggries/Tegernsee)
+  { ",RB6,RB60,",       "RB" },   // Werdenfelsbahn (Mittenwald/Pfronten)
+  { ",RB65,RB66,",      "RB" },
+  { ",RE80,RE89,",      "RE" },
+};
+
+// Index der Fluegelzug-Gruppe einer Linie, -1 wenn keine
+static int splitTrainGroup(const String& line) {
+  String key = "," + line + ",";
+  int count = sizeof(SPLIT_TRAIN_GROUPS) / sizeof(SPLIT_TRAIN_GROUPS[0]);
+  for (int g = 0; g < count; g++) {
+    if (strstr(SPLIT_TRAIN_GROUPS[g].lines, key.c_str()) != nullptr) return g;
+  }
+  return -1;
 }
 
 // Wert fuer den API-Parameter "transportTypes" aus den Verkehrsmittel-
@@ -330,6 +358,7 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     r.earlyTermination = false;
     r.superseded = false;
     r.hasWarning = false;
+    r.multiDest = false;
 
     // Verkehrsmittel erkennen (fuer das Liniensymbol). Der Feldname ist
     // nicht offiziell dokumentiert: "transportType" (bgw-pt/v3), als
@@ -442,8 +471,13 @@ int parseDepartures(const String& payload, DirectionFilter filter,
   // erscheint in der API als mehrere Fahrten mit gleicher Linie, gleicher
   // geplanter Zeit und gleichem Gleis, aber verschiedenem Ziel. Sie werden
   // zu einer Zeile zusammengefasst: bekannte Paarungen mit fester Kurzform
-  // ("Flugh./Freising", siehe SPLIT_TRAIN_LABELS), sonst alle Ziele voll
-  // ausgeschrieben mit "/" (Kuerzung beim Zeichnen per fitText()).
+  // ("Flugh./Freising", siehe SPLIT_TRAIN_LABELS), sonst alle Ziele nach
+  // Linie sortiert mit "/" (beim Zeichnen gleichmaessig gekuerzt).
+  // Regionalzuege aus SPLIT_TRAIN_GROUPS werden auch bei verschiedener
+  // Linie zusammengefasst; die Zeile zeigt dann das Symbol ohne Nummer ("RB").
+  // Verspaetung: die kleinste der Fahrten mit Echtzeit - die Teile fahren
+  // gemeinsam ab, so kommt niemand zu spaet. Unterschiede sind meist nur
+  // kurzzeitig (Echtzeit kommt je Zugteil zeitversetzt, geprueft 03.10.2026).
   // Haben mehrere Fahrten auch dasselbe Ziel (z.B. beide Zugteile einer S1
   // bei einer Stoerung nicht vereinigt, beobachtet 30.09.2026), bleibt nur
   // eine Zeile uebrig.
@@ -453,44 +487,73 @@ int parseDepartures(const String& payload, DirectionFilter filter,
   // - Eintraege ohne Gleisangabe
   // - unterschiedlicher Ausfall-Status: faellt nur ein Zugteil aus, bleibt
   //   dieser als eigene, durchgestrichene Zeile sichtbar
-  // Uebernommen wird jeweils der "schlechtere" Wert (Verspaetung, Warnung).
+  // Eine Warnung irgendeiner Fahrt gilt fuer die ganze Zeile.
+  const int MAX_PARTS = 4;
+  const int NO_DELAY = 10000;
   for (int i = 0; i < rawCount; i++) {
     if (raw[i].superseded || raw[i].isBus || !raw[i].hasPlatform) continue;
 
-    String firstDest = raw[i].destination;
-    String secondDest;
-    String allDests = firstDest;   // alle Ziele voll ausgeschrieben
+    int group = splitTrainGroup(raw[i].line);
+    String partLine[MAX_PARTS];
+    String partDest[MAX_PARTS];
+    partLine[0] = raw[i].line;
+    partDest[0] = raw[i].destination;
     int parts = 1;
     int duplicates = 0;
+    bool mixedLines = false;
+    int minRealtimeDelay = raw[i].realtime ? raw[i].delayMin : NO_DELAY;
     for (int j = i + 1; j < rawCount; j++) {
       if (raw[j].superseded || raw[j].isBus || !raw[j].hasPlatform) continue;
-      if (raw[j].line != raw[i].line) continue;
+      bool sameLine = (raw[j].line == raw[i].line);
+      if (!sameLine && (group < 0 || splitTrainGroup(raw[j].line) != group)) continue;
       if (raw[j].direction != raw[i].direction) continue;
       if (raw[j].plannedTime != raw[i].plannedTime) continue;
       if (raw[j].platform != raw[i].platform) continue;
       if (raw[j].cancelled != raw[i].cancelled) continue;
 
       // Ziel schon enthalten -> doppelte Fahrt, sonst weiterer Zugteil
-      String wrapped = "/" + allDests + "/";
-      if (wrapped.indexOf("/" + raw[j].destination + "/") != -1) {
+      bool known = false;
+      for (int k = 0; k < parts; k++) {
+        if (partDest[k] == raw[j].destination) known = true;
+      }
+      if (known) {
         duplicates++;
-      } else {
-        if (parts == 1) secondDest = raw[j].destination;
-        allDests += "/";
-        allDests += raw[j].destination;
+      } else if (parts < MAX_PARTS) {
+        partLine[parts] = raw[j].line;
+        partDest[parts] = raw[j].destination;
         parts++;
       }
 
-      if (raw[j].delayMin > raw[i].delayMin) raw[i].delayMin = raw[j].delayMin;
+      if (!sameLine) mixedLines = true;
+      if (raw[j].realtime && raw[j].delayMin < minRealtimeDelay) minRealtimeDelay = raw[j].delayMin;
       raw[i].hasWarning = raw[i].hasWarning || raw[j].hasWarning;
       raw[i].realtime = raw[i].realtime || raw[j].realtime;
       raw[j].superseded = true;
     }
 
+    if (mixedLines) raw[i].line = SPLIT_TRAIN_GROUPS[group].icon;
+    if (minRealtimeDelay != NO_DELAY) raw[i].delayMin = minRealtimeDelay;
+
     if (parts > 1) {
-      // Zwei Ziele: ggf. feste Kurzform; mehr als zwei: immer ausgeschrieben
-      raw[i].destination = (parts == 2) ? splitTrainDestination(firstDest, secondDest)
-                                        : allDests;
+      // Ziele nach Linie sortieren (stabil), damit die Reihenfolge nicht
+      // mit der Reihenfolge in der API-Antwort wechselt
+      for (int a = 1; a < parts; a++) {
+        for (int b = a; b > 0 && partLine[b] < partLine[b - 1]; b--) {
+          String tmp = partLine[b]; partLine[b] = partLine[b - 1]; partLine[b - 1] = tmp;
+          tmp = partDest[b]; partDest[b] = partDest[b - 1]; partDest[b - 1] = tmp;
+        }
+      }
+      String fixed = (parts == 2) ? fixedSplitLabel(partDest[0], partDest[1]) : "";
+      if (fixed.length() > 0) {
+        raw[i].destination = fixed;
+      } else {
+        raw[i].destination = partDest[0];
+        for (int k = 1; k < parts; k++) {
+          raw[i].destination += "/";
+          raw[i].destination += partDest[k];
+        }
+        raw[i].multiDest = true;
+      }
     }
     if (parts > 1 || duplicates > 0) {
       Serial.print(parts > 1 ? "Fluegelzug zusammengefasst: " : "Doppelte Fahrt zusammengefasst: ");
@@ -520,6 +583,7 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     d.delayMin = raw[i].delayMin;
     d.realtime = raw[i].realtime;
     d.isBus = raw[i].isBus;
+    d.multiDest = raw[i].multiDest;
     d.time = formatTime(raw[i].plannedTime);
 
     result[count] = d;

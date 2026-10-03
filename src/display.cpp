@@ -102,6 +102,48 @@ static String fitText(String text, int maxWidth) {
   return result + ".";
 }
 
+// Kuerzt mehrere Ziele "A/B/C" (Fluegelzug) gleichmaessig: Jedes Ziel wird
+// auf hoechstens k Zeichen gekuerzt ("." am Ende), k sinkt, bis alles in
+// maxWidth passt. Kurze Ziele bleiben so lange vollstaendig.
+static String fitEvenly(const String& joined, int maxWidth) {
+  if (textWidth(joined) <= maxWidth) return joined;
+
+  const int MAX_PARTS = 4;
+  String parts[MAX_PARTS];
+  int count = 0;
+  int start = 0;
+  while (count < MAX_PARTS) {
+    int slash = joined.indexOf('/', start);
+    if (slash < 0 || count == MAX_PARTS - 1) {
+      parts[count++] = joined.substring(start);
+      break;
+    }
+    parts[count++] = joined.substring(start, slash);
+    start = slash + 1;
+  }
+
+  int maxLen = 0;
+  for (int i = 0; i < count; i++) {
+    if ((int)parts[i].length() > maxLen) maxLen = parts[i].length();
+  }
+
+  for (int k = maxLen - 1; k >= 1; k--) {
+    String result;
+    for (int i = 0; i < count; i++) {
+      String p = parts[i];
+      if ((int)p.length() > k) {
+        p = p.substring(0, k);
+        p.trim();
+        p += ".";
+      }
+      if (i > 0) result += "/";
+      result += p;
+    }
+    if (textWidth(result) <= maxWidth) return result;
+  }
+  return fitText(joined, maxWidth);
+}
+
 // ============================================================
 // Grafik-Elemente
 // ============================================================
@@ -267,7 +309,9 @@ static void drawContent(const Departure departures[], int found,
         destMaxWidth -= (WARNING_ICON_WIDTH + WARNING_ICON_GAP);
       }
 
-      String dest = fitText(departures[i].destination, destMaxWidth);
+      String dest = departures[i].multiDest
+                        ? fitEvenly(departures[i].destination, destMaxWidth)
+                        : fitText(departures[i].destination, destMaxWidth);
       display.setCursor(COL_DEST, y);
       display.print(dest);
 

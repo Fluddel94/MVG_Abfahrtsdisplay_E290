@@ -40,7 +40,9 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
 - **Ausfälle und Störungen:** Fällt ein Zug aus, ist die Uhrzeit
   durchgestrichen; bei Störungen erscheint ein Warndreieck. Endet ein Zug
   früher, steht das tatsächliche Ziel da.
-- **Geteilte Züge** (z.B. S1 Flughafen / Freising) erscheinen als eine Zeile.
+- **Geteilte Züge** (z.B. S1 Flughafen / Freising) erscheinen als eine Zeile –
+  auch Regionalzüge, deren Zugteile verschiedene Liniennummern haben (z.B.
+  BRB RB 55/56/57, Symbol „RB“, Ziele gekürzt: „Lenggri./Tegerns.“).
 - **Ersatzverkehr:** Ersatzbusse für Züge, S-Bahn oder Tram erscheinen als „SEV“.
 - **Alles im Browser einstellbar** – auch vom Handy aus, über das
   [Einstellungsportal](#einstellungsportal).

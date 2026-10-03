@@ -15,6 +15,7 @@ struct Departure {
   bool realtime;
   bool hasWarning;      // Warndreieck anzeigen
   bool isBus;           // laut API ein Bus -> generiertes Bus-Icon
+  bool multiDest;       // mehrere Ziele "A/B/C" (Fluegelzug) -> gleichmaessig kuerzen
 };
 
 // Richtungsfilter fuer parseDepartures()
