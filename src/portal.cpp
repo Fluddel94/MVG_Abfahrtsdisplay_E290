@@ -3,8 +3,10 @@
 //
 // Seiten: "/" Formular, "/speichern" (POST), "/werkseinstellungen" (POST),
 // "/suche?q=" Stationssuche (JSON), "/richtungen?id=" Linien je
-// Richtungskennung (JSON), "/update" (POST) Firmware-Upload. Die aktuellen Werte bekommt die Seite als
-// JSON-Objekt S, das Formular fuellt sich per JavaScript.
+// Richtungskennung (JSON), "/linien?id=" alle Linien der Station mit
+// Beispielzielen (JSON), "/update" (POST) Firmware-Upload. Die aktuellen
+// Werte bekommt die Seite als JSON-Objekt S, das Formular fuellt sich per
+// JavaScript.
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -334,6 +336,16 @@ static void handleDirections() {
   server->send(200, "application/json; charset=utf-8", json);
 }
 
+static void handleLines() {
+  String id = formArg("id", 40);
+  String json;
+  if (!validStationId(id) || !listStationLines(id.c_str(), json)) {
+    server->send(502, "application/json", "{\"error\":\"Abruf fehlgeschlagen\"}");
+    return;
+  }
+  server->send(200, "application/json; charset=utf-8", json);
+}
+
 // ------------------------------------------------------------
 // Firmware-Upload
 // ------------------------------------------------------------
@@ -474,6 +486,7 @@ void portalOpen() {
   server->on("/werkseinstellungen", HTTP_POST, handleFactoryReset);
   server->on("/suche", HTTP_GET, handleSearch);
   server->on("/richtungen", HTTP_GET, handleDirections);
+  server->on("/linien", HTTP_GET, handleLines);
   server->on("/update", HTTP_POST, handleUpdateDone, handleUpdateUpload);
   server->onNotFound([]() {
     server->sendHeader("Location", "/");

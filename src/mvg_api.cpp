@@ -9,6 +9,7 @@
 #include "settings.h"
 #include "mvg_api.h"
 #include "text_utils.h"   // utf8ToLatin1(): Umlaute fuer die Display-Schriften
+#include "line_select.h"  // LineCollector: Linienliste fuers Portal
 
 // Interne Rohdaten-Struktur, nur waehrend parseDepartures() genutzt,
 // um Duplikate (Stoerungsmeldung + echter Ersatzzug) abzugleichen
@@ -229,6 +230,201 @@ bool listDirections(const char* globalId, String& jsonOut) {
     entry["z"] = dest;
   }
   serializeJson(out, jsonOut);
+  return true;
+}
+
+// Alle Verkehrsmittel fuer Abrufe, die unabhaengig von den Einstellungen
+// sein muessen (Linienliste)
+static const char* ALL_TRANSPORT_TYPES = "SBAHN,UBAHN,TRAM,BUS,REGIONAL_BUS,BAHN";
+
+// Versatz (Minuten) der Abfahrtsabrufe fuer die Beispielziele der
+// Linienliste: deckt rund 12 Stunden ab, auch seltene Linien
+static const int LINE_SAMPLE_OFFSETS[] = { 0, 120, 360, 720 };
+// Abfahrten je Abruf (die API liefert hoechstens 100)
+#define LINE_SAMPLE_LIMIT 100
+
+// Freien Heap im seriellen Monitor ausgeben (Messung fuer die Linienliste)
+static void logHeap(const char* step) {
+  Serial.printf("Heap %s: frei %u, groesster Block %u, Minimum %u\n", step,
+                (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap(),
+                (unsigned)ESP.getMinFreeHeap());
+}
+
+// Lesestrom fuer den Antwortinhalt eines HTTP-Abrufs: wartet bis zu
+// timeoutMs auf weitere Daten (die Antwort kommt in mehreren TLS-Bloecken)
+// und entfernt die Blocklaengen, falls der Server trotz HTTP/1.0 in
+// Bloecken ("chunked") antwortet. Zaehlt die gelesenen Bytes.
+class HttpBodyStream : public Stream {
+ public:
+  HttpBodyStream(Client& client, bool chunked, unsigned long timeoutMs)
+      : in(client), isChunked(chunked), timeout(timeoutMs) {}
+
+  int read() override {
+    int c = peek();
+    peeked = -1;
+    if (c >= 0) bytesRead++;
+    return c;
+  }
+  int peek() override {
+    if (peeked < 0 && !finished) peeked = nextBodyByte();
+    return peeked;
+  }
+  int available() override { return (peeked >= 0 || !finished) ? 1 : 0; }
+  size_t write(uint8_t) override { return 0; }
+  size_t count() const { return bytesRead; }
+  bool timedOut() const { return hitTimeout; }
+
+ private:
+  Client& in;
+  bool isChunked;
+  unsigned long timeout;
+  long chunkLeft = 0;      // Restbytes im aktuellen Block
+  bool finished = false;
+  bool hitTimeout = false;
+  int peeked = -1;
+  size_t bytesRead = 0;
+
+  // Naechstes Byte vom Netz, -1 bei Ende oder Zeitueberschreitung
+  int rawByte() {
+    unsigned long start = millis();
+    while (true) {
+      int c = in.read();
+      if (c >= 0) return c;
+      if (!in.connected() && in.available() <= 0) return -1;
+      if (millis() - start >= timeout) {
+        hitTimeout = true;
+        return -1;
+      }
+      delay(1);
+    }
+  }
+
+  int nextBodyByte() {
+    if (!isChunked) {
+      int c = rawByte();
+      if (c < 0) finished = true;
+      return c;
+    }
+    if (chunkLeft == 0) {
+      // Blockkopf: Laenge hexadezimal, ggf. ";Erweiterung", dann CRLF
+      long size = 0;
+      bool digits = true;
+      while (true) {
+        int c = rawByte();
+        if (c < 0) { finished = true; return -1; }
+        if (c == '\n') break;
+        if (c == ';' || c == '\r') digits = false;
+        if (!digits) continue;
+        if (isxdigit(c)) size = size * 16 + (isdigit(c) ? c - '0' : (tolower(c) - 'a' + 10));
+      }
+      if (size == 0) { finished = true; return -1; }
+      chunkLeft = size;
+    }
+    int c = rawByte();
+    if (c < 0) { finished = true; return -1; }
+    if (--chunkLeft == 0) {
+      rawByte();   // CR
+      rawByte();   // LF
+    }
+    return c;
+  }
+};
+
+// GET-Abruf und Auswertung direkt aus dem Datenstrom (ohne die ganze
+// Antwort als String zu halten). HTTP/1.0, damit der Server moeglichst
+// nicht in Bloecken antwortet (falls doch, entfernt HttpBodyStream die
+// Blocklaengen). true bei HTTP 200 und gueltigem JSON.
+static bool fetchJsonStream(const String& url, JsonDocument& doc,
+                            const JsonDocument& filter) {
+  HTTPClient http;
+  http.setConnectTimeout(HTTP_TIMEOUT_MS);
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  http.useHTTP10(true);
+  const char* headerKeys[] = { "Transfer-Encoding" };
+  http.collectHeaders(headerKeys, 1);
+  http.begin(url);
+  int httpCode = http.GET();
+  if (httpCode != 200) {
+    Serial.print("Abruf fehlgeschlagen, HTTP-Code: ");
+    Serial.println(httpCode);
+    http.end();
+    return false;
+  }
+  bool chunked = http.header("Transfer-Encoding").equalsIgnoreCase("chunked");
+  int size = http.getSize();   // -1 = Laenge nicht angegeben
+  HttpBodyStream body(http.getStream(), chunked, HTTP_TIMEOUT_MS);
+  DeserializationError error = deserializeJson(doc, body,
+                                               DeserializationOption::Filter(filter));
+  http.end();
+  Serial.printf("Antwort: Laenge %d, chunked %d, gelesen %u Bytes%s\n", size,
+                chunked ? 1 : 0, (unsigned)body.count(),
+                body.timedOut() ? ", Zeitueberschreitung" : "");
+  if (error) {
+    Serial.print("JSON-Fehler: ");
+    Serial.println(error.c_str());
+    return false;
+  }
+  return true;
+}
+
+bool listStationLines(const char* globalId, String& jsonOut) {
+  unsigned long start = millis();
+  logHeap("vor Linienliste");
+
+  // Gross (ca. 80 Linien), daher auf dem Heap statt auf dem Task-Stack
+  LineCollector* lines = new LineCollector();
+  if (lines == nullptr) return false;
+
+  // 1. Vollstaendige Linienliste der Station
+  JsonDocument filter;
+  filter[0]["label"] = true;
+  filter[0]["transportType"] = true;
+  filter[0]["sev"] = true;
+  JsonDocument doc;
+  String url = "https://www.mvg.de/api/bgw-pt/v3/lines/";
+  url += globalId;
+  if (!fetchJsonStream(url, doc, filter)) {
+    delete lines;
+    return false;
+  }
+  for (JsonObject l : doc.as<JsonArray>()) {
+    lines->addLine(l["label"], l["transportType"], l["sev"] | false);
+  }
+  Serial.printf("Linienliste: %d Linien\n", lines->count());
+  logHeap("nach lines");
+
+  // 2. Beispielziele je Kennung H/R aus Abfahrten (ca. 12 Stunden).
+  // Fehlschlaege einzelner Abrufe sind egal - dann fehlen nur Ziele.
+  filter.clear();
+  filter[0]["label"] = true;
+  filter[0]["transportType"] = true;
+  filter[0]["lineId"] = true;
+  filter[0]["destination"] = true;
+  filter[0]["sev"] = true;
+  for (int offset : LINE_SAMPLE_OFFSETS) {
+    url = "https://www.mvg.de/api/bgw-pt/v3/departures?globalId=";
+    url += globalId;
+    url += "&limit=";
+    url += LINE_SAMPLE_LIMIT;
+    url += "&offsetInMinutes=";
+    url += offset;
+    url += "&transportTypes=";
+    url += ALL_TRANSPORT_TYPES;
+    doc.clear();
+    if (!fetchJsonStream(url, doc, filter)) continue;
+    for (JsonObject d : doc.as<JsonArray>()) {
+      lines->addDeparture(d["label"], d["transportType"], d["lineId"],
+                          d["destination"], d["sev"] | false);
+    }
+    Serial.printf("Abfahrten ab +%d Min.: %d\n", offset, (int)doc.size());
+    logHeap("nach Abfahrten");
+  }
+
+  lines->toJson(jsonOut);
+  Serial.printf("Linienliste fertig: %d Linien, %u Bytes JSON, %lu ms\n",
+                lines->count(), (unsigned)jsonOut.length(), millis() - start);
+  delete lines;
+  logHeap("Ende Linienliste");
   return true;
 }
 

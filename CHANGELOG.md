@@ -18,6 +18,14 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 - Geteilte Züge (z.B. S1 Flughafen / Freising) zeigen jetzt ebenfalls die
   kleinste statt der größten Verspätung der Zugteile.
 
+### Intern
+- Einstellungsportal: neue Abfrage `/linien?id=…` liefert alle Linien einer
+  Station (MVG-Endpunkt `lines`) mit Beispielzielen je Richtungskennung
+  H/R aus den Abfahrten der nächsten rund 12 Stunden – Grundlage für die
+  geplante Linienauswahl. Die Antworten werden direkt aus dem Datenstrom
+  ausgewertet (spart Arbeitsspeicher); der serielle Monitor zeigt dabei
+  Dauer und freien Arbeitsspeicher.
+
 ### Dokumentation
 - Fotos des Displays oben in der README (neuer Ordner `bilder/`).
 - README: Link zum Gehäuse auf MakerWorld, kurzer Hinweis zur Entwicklung

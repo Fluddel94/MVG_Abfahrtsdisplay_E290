@@ -45,6 +45,14 @@ bool searchStations(const String& query, String& jsonOut);
 // jede Kombination einmal). Hilft beim Festlegen von "Zentrum = H oder R".
 bool listDirections(const char* globalId, String& jsonOut);
 
+// Fuer das Portal (Linienauswahl): alle Linien der Station mit
+// Beispielzielen je Richtungskennung als JSON-Array
+// [{"k":"RE80","n":"RE 80","t":"BAHN","H":"...","R":"..."}] (UTF-8, Format
+// siehe line_select.h). Fuenf Abrufe (Linienliste + Abfahrten ueber rund 12
+// Stunden, alle Verkehrsmittel), dauert einige Sekunden. true, wenn
+// wenigstens die Linienliste abgerufen werden konnte.
+bool listStationLines(const char* globalId, String& jsonOut);
+
 // Wertet heruntergeladene Rohdaten aus: filtert nach Richtung (oder alle),
 // gleicht Stoerungs-Duplikate ab, fasst Fluegelzuege zusammen und fuellt
 // result. Kein Netzwerkzugriff - kann fuer mehrere Filter auf dieselben

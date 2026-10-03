@@ -1,5 +1,5 @@
 // Version: 2.1.0
-// Letzte Änderung: 03.10.2026 12:27
+// Letzte Änderung: 03.10.2026 13:39
 #define FW_VERSION "2.1.0"
 
 // ------------------------------------------------------------
@@ -36,6 +36,7 @@
 //   portal         Einstellungsportal im Heimnetz (Webseite, auf Abruf,
 //                  inkl. Firmware-Upload)
 //   mvg_api        Abruf/Auswertung der MVG-API
+//   line_select    Linienauswahl (Linienliste einer Station fuers Portal)
 //   display        alles, was gezeichnet wird
 //   line_icons.h   Liniensymbole (S/U/Tram als Bitmap, Bus generiert)
 //   buttons        Tastenauswertung
