@@ -199,6 +199,8 @@ ein Remix von **„Vision Master E290 V0.3.1 case for Meshtastic“** von
 lizenziert unter [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 Änderungen: Antennenanschluss entfernt, Schrift- und Logovertiefungen
 entfernt, das Gehäuse steht geneigt auf dem Tisch. Der Remix steht ebenfalls unter CC BY 4.0.
+Die Druckdateien gibt es auch auf
+[MakerWorld](https://makerworld.com/de/models/3385427-heltec-e290-munich-departure-display-mvg-mvv).
 
 ## Lizenz
 
@@ -221,5 +223,7 @@ entfernt, das Gehäuse steht geneigt auf dem Tisch. Der Remix steht ebenfalls un
   (Apache-2.0), geladen von unpkg.com, nicht in diesem Repository enthalten.
 - Verwendete Libraries (nicht in diesem Repository enthalten) stehen unter
   ihren eigenen Lizenzen.
+
+Bei der Entwicklung hat uns Claude (Anthropic) mit Agentic Coding unterstützt.
 
 Keine Gewähr für Richtigkeit und Vollständigkeit der angezeigten Daten.

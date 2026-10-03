@@ -8,6 +8,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ### Dokumentation
 - Fotos des Displays oben in der README (neuer Ordner `bilder/`).
+- README: Link zum Gehäuse auf MakerWorld, kurzer Hinweis zur Entwicklung
+  mit Agentic Coding.
 
 ## [2.1.0] – 01.10.2026
 
