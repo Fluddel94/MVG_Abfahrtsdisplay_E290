@@ -26,9 +26,10 @@
 
 #define STATION_GLOBAL_ID ""   // z.B. "de:09162:2" = Marienplatz
 
-// Optionale zweite Station (Umschalten per BOOT-Taste), normalerweise leer
-// lassen und im Einstellungsportal waehlen. Linien je Station waehlt man
-// nur im Portal.
+// Optionale zweite Station, normalerweise leer lassen und im
+// Einstellungsportal waehlen. Linien je Station waehlt man nur im Portal.
+// Mit zwei Stationen schaltet die BOOT-Taste zwischen beiden um (statt
+// Richtung/Seite 2), nach STATION_AUTO_RESET_MS (30 s) zurueck zu Station 1.
 #define STATION2_GLOBAL_ID ""
 
 // ------------------------------------------------------------
@@ -141,6 +142,7 @@
 #define HTTP_TIMEOUT_MS 10000        // 5000 fuehrte zu Fehlercode -11 (TLS-Handshake)
 #define DIRECTION_AUTO_RESET_MS 30000UL
 #define PAGE_AUTO_RESET_MS 30000UL   // Seite 2 bei FEATURE_DIRECTION_VIEW 0
+#define STATION_AUTO_RESET_MS 30000UL   // Station 2 -> zurueck zu Station 1
 #define QR_DISPLAY_DURATION_MS 60000UL
 #define LOG_DISPLAY_DURATION_MS 60000UL
 #define LONG_PRESS_MS 3000UL

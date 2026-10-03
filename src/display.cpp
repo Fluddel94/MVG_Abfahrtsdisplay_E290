@@ -61,6 +61,8 @@ static_assert(COL_ICON + LINE_ICON_MAX_WIDTH < COL_DEST,
 #define HEADER_CLOCK_GAP 6          // Mindestabstand Header-Text -> Uhr-Box
 #define PAGE2_HINT "(2/2)"          // Seitenhinweis bei gemischter Anzeige
 #define HEADER_HINT_SPACE 6         // Breite des Leerzeichens vor dem Seitenhinweis
+#define STATION_BOX_SIZE 17         // Kaestchen mit Stationsnummer (zwei Stationen)
+#define STATION_BOX_GAP 6           // Abstand Kaestchen -> Stationsname
 
 // --- Startbildschirm ---
 #define SPLASH_TITLE    "MVG Abfahrtsdisplay"   // 7-Bit-Schrift: keine Umlaute
@@ -176,10 +178,12 @@ static void drawWarningTriangle(int x, int yBaseline) {
 
 // Zeichnet Header und Abfahrtsliste in den Displayspeicher (ohne
 // display.update()). Header: "Station -> Richtung" (showDirection) oder nur
-// der Stationsname, auf Seite 2 mit Hinweis "(2/2)" (isPage2).
+// der Stationsname, auf Seite 2 mit Hinweis "(2/2)" (isPage2). Bei
+// stationNumber 1/2 steht die Nummer weiss in einem schwarzen Kaestchen vor
+// dem Namen (zwei Stationen, nicht zusammen mit showDirection).
 static void drawContent(const Departure departures[], int found,
                         const String& stationName, bool showDirection,
-                        bool showZentrum, bool isPage2) {
+                        bool showZentrum, bool isPage2, int stationNumber) {
   display.setTextColor(BLACK);
 
   display.setFont(&FreeSansBold12pt7b);
@@ -256,6 +260,24 @@ static void drawContent(const Departure departures[], int found,
   } else {
     // Nur der Stationsname, auf Seite 2 mit "(2/2)" dahinter. Gekuerzt wird
     // nur der Name - der Seitenhinweis bleibt immer vollstaendig sichtbar.
+    int nameX = 5;
+    if (stationNumber > 0) {
+      // Kaestchen mit Nummer, vertikal mittig zur Uhr-Box
+      int boxTop = boxCenterY - STATION_BOX_SIZE / 2;
+      display.fillRect(5, boxTop, STATION_BOX_SIZE, STATION_BOX_SIZE, BLACK);
+      String number(stationNumber);
+      int16_t dbx, dby;
+      uint16_t dbw, dbh;
+      display.getTextBounds(number, 0, 0, &dbx, &dby, &dbw, &dbh);
+      display.setTextColor(WHITE);
+      display.setCursor(5 + (STATION_BOX_SIZE - dbw) / 2 - dbx,
+                        boxTop + (STATION_BOX_SIZE - dbh) / 2 - dby);
+      display.print(number);
+      display.setTextColor(BLACK);
+      nameX += STATION_BOX_SIZE + STATION_BOX_GAP;
+      availableWidth -= STATION_BOX_SIZE + STATION_BOX_GAP;
+    }
+
     int hintWidth = isPage2 ? HEADER_HINT_SPACE + textWidth(PAGE2_HINT) : 0;
     String name = fitText(stationName, availableWidth - hintWidth);
 
@@ -266,11 +288,11 @@ static void drawContent(const Departure departures[], int found,
     display.getTextBounds(name, 0, 0, &nbx, &nby, &nbw, &nbh);
     int headerCursorY = boxCenterY - nby - nbh / 2;
 
-    display.setCursor(5, headerCursorY);
+    display.setCursor(nameX, headerCursorY);
     display.print(name);
 
     if (isPage2) {
-      display.setCursor(5 + nbw + HEADER_HINT_SPACE, headerCursorY);
+      display.setCursor(nameX + nbw + HEADER_HINT_SPACE, headerCursorY);
       display.print(PAGE2_HINT);
     }
   }
@@ -414,18 +436,19 @@ void displayShowSplash(const char* firmwareVersion) {
 
 void displayShowDepartures(const Departure departures[], int found,
                            const String& stationName, bool showDirection,
-                           bool showZentrum, bool isPage2, bool fullRefresh) {
+                           bool showZentrum, bool isPage2, bool fullRefresh,
+                           int stationNumber) {
   if (fullRefresh) {
     display.fastmodeOff();
     display.clearMemory();
-    drawContent(departures, found, stationName, showDirection, showZentrum, isPage2);
+    drawContent(departures, found, stationName, showDirection, showZentrum, isPage2, stationNumber);
     display.update();
   } else {
     // Fast Mode: zweimal hintereinander aktualisieren, verbessert den
     // Kontrast pro Update und wirkt Grauschleier entgegen
     display.fastmodeOn();
     display.clearMemory();
-    drawContent(departures, found, stationName, showDirection, showZentrum, isPage2);
+    drawContent(departures, found, stationName, showDirection, showZentrum, isPage2, stationNumber);
     display.update();
     display.update();
   }

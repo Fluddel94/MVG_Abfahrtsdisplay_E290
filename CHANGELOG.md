@@ -13,8 +13,14 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   „nur H“ oder „nur R“, höchstens 16 Linien; keine Auswahl = alle Linien.
   Die Liste enthält nur Linien der angehakten Verkehrsmittel (und bereits
   gewählte Linien). Sind Linien gewählt, zeigt das Display nur diese.
-- Einstellungsportal: optionale **zweite Station** mit eigenen
-  Verkehrsmitteln, Richtung und Linien (Umschalten am Gerät folgt).
+- Optionale **zweite Station** mit eigenen Verkehrsmitteln, Richtung und
+  Linien (im Einstellungsportal). Die BOOT-Taste schaltet dann zwischen
+  Station 1 und 2 um, nach 30 s (`STATION_AUTO_RESET_MS`) geht es zurück
+  zu Station 1, nach dem Neustart ebenso. Die Nummer steht weiß in einem
+  schwarzen Kästchen vor dem Stationsnamen. Beide Stationen werden jede
+  Minute abgerufen, das Umschalten geht daher ohne Wartezeit. Je Station
+  vier Abfahrten; getrennte Ansicht Zentrum/Auswärts und Seite 2 gibt es
+  nur mit einer Station.
 - Einstellung **„Richtung“ je Station**: alle Richtungen, nur Richtung H
   oder nur Richtung R (gilt für alle Linien der Station; die
   Richtungswahl je Linie entfällt dann). Bei Station 1 zusätzlich wie bisher die getrennte

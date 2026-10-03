@@ -15,11 +15,14 @@ void displayShowSplash(const char* firmwareVersion);
 // showDirection = true: Header "Station -> Zentrum/Auswaerts" (showZentrum
 //   waehlt die Richtung, ggf. Kurzform); false: Header nur Stationsname,
 //   bei isPage2 mit Seitenhinweis "(2/2)".
+// stationNumber = 1 oder 2: Nummer im schwarzen Kaestchen vor dem Namen
+//   (nur bei zwei Stationen), 0 = ohne.
 // fullRefresh = true: sauberer Full Refresh, false: Fast Mode (schneller,
 //   doppeltes Update gegen Grauschleier).
 void displayShowDepartures(const Departure departures[], int found,
                            const String& stationName, bool showDirection,
-                           bool showZentrum, bool isPage2, bool fullRefresh);
+                           bool showZentrum, bool isPage2, bool fullRefresh,
+                           int stationNumber = 0);
 
 // Fehlerbildschirme
 // WLAN-Fehler mit vermuteter Ursache und optionalem Hinweis ("" = keiner),

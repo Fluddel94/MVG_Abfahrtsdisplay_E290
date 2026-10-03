@@ -1,5 +1,5 @@
 // Version: 2.1.0
-// Letzte Änderung: 03.10.2026 16:08
+// Letzte Änderung: 03.10.2026 16:40
 #define FW_VERSION "2.1.0"
 
 // ------------------------------------------------------------
@@ -91,10 +91,11 @@ int lastUpdateMinute = -1;
 bool showZentrum = true;
 // Seite 2 (Abfahrt 5-8) aktiv - nur bei gemischter Anzeige
 bool showPage2 = false;
-// Angezeigte Station: 0 = Station 1, 1 = Station 2 (Umschalten folgt mit
-// der Tastenbelegung; bis dahin immer Station 1)
+// Angezeigte Station: 0 = Station 1, 1 = Station 2 (nur wenn im Portal
+// eingerichtet). BOOT-Taste schaltet um, Start und Auto-Reset: Station 1.
 int activeStation = 0;
-String stationName = "Bahnhof";
+String stationName = "Bahnhof";       // Station 1 (Latin-1 fuer die Anzeige)
+String station2Name = "Station 2";    // Station 2
 
 // Zwischenspeicher der zuletzt abgerufenen Abfahrten. Umschalten, Blaettern
 // und Auto-Reset zeichnen nur daraus neu - abgerufen wird nur beim
@@ -106,6 +107,12 @@ int cacheZentrumCount = 0;
 int cacheAuswaertsCount = 0;
 Departure cacheAll[MAX_DEPARTURES_SHOWN * 2];   // Seite 1 + Seite 2
 int cacheAllCount = 0;
+// Station 2 (immer gemischt bzw. mit ihrer Richtung, ohne Seite 2). Beide
+// Stationen werden jede Minute abgerufen, damit das Umschalten ohne Abruf
+// auskommt. cacheValid: letzter Abruf der Station erfolgreich.
+Departure cacheStation2[MAX_DEPARTURES_SHOWN];
+int cacheStation2Count = 0;
+bool cacheValid[2] = { false, false };
 
 // Statistik fuer den Log-Screen (API-Stoerungen: siehe stats.cpp)
 int wifiDisconnectCount = 0;
@@ -223,15 +230,15 @@ void setup() {
   Serial.println();
 
   // Bei Fehler bleibt der Fallback "Bahnhof" stehen
-  if (settingsHasStation()) {
-    fetchStationName(appSettings.stationId.c_str(), stationName);
-  }
+  fetchStationNames();
 
   extrasSetup(firmwareVersionText().c_str());
 
   // Erste Abfahrten schon waehrend des Startbildschirms laden, gezeichnet
   // wird erst danach (Abfahrten, API-Fehler- oder Einrichtungs-Screen)
-  if (settingsHasStation()) fetchDepartures();
+  if (settingsHasStation()) {
+    if (fetchDepartures()) fetchOtherStation();
+  }
   lastUpdateMinute = timeinfo.tm_min;
   finishSplash();
 }
@@ -296,7 +303,7 @@ void loop() {
     Serial.println("WLAN wiederhergestellt!");
     currentState = STATE_NORMAL;
     setupScreenShown = false;   // IP-Adresse kann sich geaendert haben
-    if (settingsHasStation()) attemptUpdate(true);
+    if (settingsHasStation()) attemptUpdate(true, true);
     updateCounter = 0;
   }
 
@@ -341,24 +348,24 @@ void loop() {
     }
   }
 
-  // --- BOOT-Taste: Richtung umschalten bzw. blaettern ---
+  // --- BOOT-Taste: Station wechseln, Richtung umschalten bzw. blaettern ---
   handleBootButton(triggerBootAction);
 
-  // --- Auto-Reset: zurueck zur Standardansicht (Richtung bzw. Seite 1) ---
+  // --- Auto-Reset: zurueck zu Station 1 bzw. zur Standardansicht ---
   const unsigned long viewResetMs =
-      appSettings.directionView ? DIRECTION_AUTO_RESET_MS : PAGE_AUTO_RESET_MS;
+      settingsHasStation2() ? STATION_AUTO_RESET_MS
+      : useDirectionView()  ? DIRECTION_AUTO_RESET_MS
+                            : PAGE_AUTO_RESET_MS;
   if (autoResetPending && millis() - autoResetStart >= viewResetMs) {
-    resetViewToDefault();
     autoResetPending = false;
-
-    redrawCurrentView();   // kein Abruf, nur aus dem Zwischenspeicher
+    resetViewToDefault();
     updateCounter++;
   }
 
   if (currentState == STATE_API_ERROR) {
     if (millis() - lastErrorRetry >= ERROR_RETRY_INTERVAL_MS) {
       Serial.println("Erneuter API-Versuch nach Fehler...");
-      attemptUpdate(true);
+      attemptUpdate(true, true);
       lastErrorRetry = millis();
     }
     return;
@@ -384,7 +391,7 @@ void loop() {
     Serial.print(updateCounter);
     Serial.println(doFullRefresh ? " (Full Refresh)" : " (Fast Mode)");
 
-    attemptUpdate(doFullRefresh);
+    attemptUpdate(doFullRefresh, true);
   }
 }
 
@@ -394,7 +401,9 @@ void loop() {
 // Einziger Ort, an dem Abfahrten von der MVG-API abgerufen werden
 // (fetchDepartures). Laedt die Rohdaten einmal, wertet sie fuer alle
 // Ansichten aus (Zwischenspeicher) und zeichnet dann die aktuelle Ansicht.
-void attemptUpdate(bool preferFullRefresh) {
+// Mit zwei Stationen wird danach auch die andere Station abgerufen
+// (withOther), damit das Umschalten sofort aus dem Zwischenspeicher geht.
+void attemptUpdate(bool preferFullRefresh, bool withOther) {
   bool wasApiError = (currentState == STATE_API_ERROR);
 
   if (!fetchDepartures()) {
@@ -404,6 +413,38 @@ void attemptUpdate(bool preferFullRefresh) {
     return;
   }
   redrawFromCache(preferFullRefresh);
+  if (withOther) fetchOtherStation();
+}
+
+// Getrennte Ansicht (Zentrum/Auswaerts) nur mit einer Station
+bool useDirectionView() {
+  return appSettings.directionView && !settingsHasStation2();
+}
+
+// Stationsnamen holen (Start, neue Einstellungen). Bei Fehler bleibt der
+// Platzhalter stehen.
+void fetchStationNames() {
+  stationName = "Bahnhof";
+  station2Name = "Station 2";
+  if (settingsHasStation()) {
+    fetchStationName(appSettings.stationId.c_str(), stationName);
+  }
+  if (settingsHasStation2()) {
+    fetchStationName(appSettings.station2Id.c_str(), station2Name);
+  }
+}
+
+// Die gerade nicht angezeigte Station abrufen (nur mit zwei Stationen).
+// Ein Fehler aendert die Anzeige nicht - beim Umschalten wird dann neu
+// abgerufen.
+void fetchOtherStation() {
+  if (!settingsHasStation2()) return;
+  int other = 1 - activeStation;
+  if (!fetchStation(other)) {
+    Serial.print("Abruf Station ");
+    Serial.print(other + 1);
+    Serial.println(" (nicht angezeigt) fehlgeschlagen");
+  }
 }
 
 // Laedt die Abfahrten und fuellt den Zwischenspeicher, ohne zu zeichnen.
@@ -411,13 +452,13 @@ void attemptUpdate(bool preferFullRefresh) {
 // Ein misslungener Versuch wird nach API_RETRY_DELAY_MS einmal still
 // wiederholt; bis dahin bleibt die bisherige Anzeige stehen.
 bool fetchDepartures() {
-  bool success = fetchDeparturesOnce();
+  bool success = fetchStation(activeStation);
   // Nur aus dem Normalbetrieb heraus; waehrend einer laufenden Stoerung
   // versucht es loop() ohnehin alle ERROR_RETRY_INTERVAL_MS erneut
   if (!success && currentState != STATE_API_ERROR && WiFi.status() == WL_CONNECTED) {
     Serial.println("Abruf fehlgeschlagen - zweiter Versuch");
     delay(API_RETRY_DELAY_MS);
-    success = fetchDeparturesOnce();
+    success = fetchStation(activeStation);
   }
 
   if (!success) {
@@ -435,17 +476,28 @@ bool fetchDepartures() {
   return true;
 }
 
-// Ein Abrufversuch: Abfahrten der angezeigten Station laden und fuer alle
-// Ansichten auswerten. Aendert den Zwischenspeicher nur bei Erfolg. true
-// bei Erfolg.
-bool fetchDeparturesOnce() {
-  StationConfig station = stationConfig(activeStation);
+// Ein Abrufversuch: Abfahrten einer Station (0 oder 1) laden und fuer alle
+// Ansichten auswerten. Aendert den Zwischenspeicher nur bei Erfolg und
+// setzt cacheValid. true bei Erfolg.
+bool fetchStation(int index) {
+  StationConfig station = stationConfig(index);
   LineSelection lines;
   lines.parse(station.lines);
   JsonDocument doc;
-  if (!downloadDepartures(station, lines, doc)) return false;
+  if (!downloadDepartures(station, lines, doc)) {
+    cacheValid[index] = false;
+    return false;
+  }
 
-  if (appSettings.directionView) {
+  // Richtung der Station (Portal "nur Richtung H/R") gilt zusaetzlich zur
+  // Linienauswahl
+  DirectionFilter filter = DIR_FILTER_ALL;
+  if (station.dir == 'H') filter = DIR_FILTER_H;
+  if (station.dir == 'R') filter = DIR_FILTER_R;
+
+  if (index == 1) {
+    cacheStation2Count = parseDepartures(doc, filter, lines, cacheStation2, MAX_DEPARTURES_SHOWN);
+  } else if (useDirectionView()) {
     // Beide Richtungen aus denselben Daten, damit das Umschalten ohne
     // neuen Abruf auskommt. zentrumIsH legt fest, welcher API-Marker
     // (":H:"/":R:") Richtung Zentrum faehrt.
@@ -455,21 +507,31 @@ bool fetchDeparturesOnce() {
     cacheZentrumCount = parseDepartures(doc, zentrumFilter, lines, cacheZentrum, MAX_DEPARTURES_SHOWN);
     cacheAuswaertsCount = parseDepartures(doc, auswaertsFilter, lines, cacheAuswaerts, MAX_DEPARTURES_SHOWN);
   } else {
-    // Gemischte Anzeige: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8).
-    // Richtung der Station (Portal "nur Richtung H/R") gilt zusaetzlich
-    // zur Linienauswahl.
-    DirectionFilter filter = DIR_FILTER_ALL;
-    if (station.dir == 'H') filter = DIR_FILTER_H;
-    if (station.dir == 'R') filter = DIR_FILTER_R;
+    // Gemischte Anzeige: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
     cacheAllCount = parseDepartures(doc, filter, lines, cacheAll, MAX_DEPARTURES_SHOWN * 2);
   }
+  cacheValid[index] = true;
   return true;
 }
 
 // Zeichnet die aktuelle Ansicht (Richtung bzw. Seite) aus dem
 // Zwischenspeicher - ohne Netzwerkzugriff.
 void redrawFromCache(bool fullRefresh) {
-  if (appSettings.directionView) {
+  if (settingsHasStation2()) {
+    // Zwei Stationen: je 4 Abfahrten, Nummer im Header
+    if (activeStation == 1) {
+      displayShowDepartures(cacheStation2, cacheStation2Count, station2Name,
+                            false, false, false, fullRefresh, 2);
+    } else {
+      int count = cacheAllCount;
+      if (count > MAX_DEPARTURES_SHOWN) count = MAX_DEPARTURES_SHOWN;
+      displayShowDepartures(cacheAll, count, stationName,
+                            false, false, false, fullRefresh, 1);
+    }
+    return;
+  }
+
+  if (useDirectionView()) {
     if (showZentrum) {
       displayShowDepartures(cacheZentrum, cacheZentrumCount, stationName,
                             true, true, false, fullRefresh);
@@ -506,18 +568,19 @@ void applyNewSettings() {
   autoResetPending = false;
   showZentrum = appSettings.defaultViewZentrum;
   showPage2 = false;
+  activeStation = 0;
+  cacheValid[0] = cacheValid[1] = false;
   setupScreenShown = false;
   if (!settingsHasStation()) return;
 
-  stationName = "Bahnhof";
-  fetchStationName(appSettings.stationId.c_str(), stationName);
+  fetchStationNames();
 
   time_t nowRaw = time(nullptr);
   struct tm nowInfo;
   localtime_r(&nowRaw, &nowInfo);
   lastUpdateMinute = nowInfo.tm_min;
   currentState = STATE_NORMAL;   // damit ein Fehler den API-Fehlerbildschirm zeigt
-  attemptUpdate(true);
+  attemptUpdate(true, true);
   updateCounter = 0;
 }
 
@@ -540,7 +603,7 @@ void returnToDepartures() {
 
   if (currentState == STATE_API_ERROR || nowInfo.tm_min != lastUpdateMinute) {
     lastUpdateMinute = nowInfo.tm_min;
-    attemptUpdate(true);
+    attemptUpdate(true, true);
   } else {
     redrawFromCache(true);
   }
@@ -553,8 +616,20 @@ void returnToDepartures() {
 // Werden von handleBootButton()/handleQrButton() (buttons.cpp) aufgerufen
 
 void triggerBootAction() {
+  if (settingsHasStation2()) {
+    // Zwei Stationen: umschalten, nach STATION_AUTO_RESET_MS zurueck zu 1
+    activeStation = 1 - activeStation;
+    Serial.print("Station umgeschaltet: ");
+    Serial.println(activeStation + 1);
+    autoResetPending = (activeStation != 0);
+    autoResetStart = millis();
+    showActiveStation();
+    updateCounter++;
+    return;
+  }
+
   bool leftDefaultView;
-  if (appSettings.directionView) {
+  if (useDirectionView()) {
     // Richtung umschalten (Zentrum <-> Auswaerts)
     showZentrum = !showZentrum;
     Serial.print("Richtung umgeschaltet: ");
@@ -579,9 +654,29 @@ void triggerBootAction() {
   updateCounter++;
 }
 
-// Zurueck zur Standardansicht (vom Auto-Reset in der Loop aufgerufen)
+// Station nach dem Umschalten zeigen: aus dem Zwischenspeicher, wenn ihr
+// letzter Abruf geklappt hat, sonst jetzt abrufen (bei Fehler:
+// Fehlerbildschirm)
+void showActiveStation() {
+  if (cacheValid[activeStation]) {
+    currentState = STATE_NORMAL;
+    redrawFromCache(true);
+  } else {
+    Serial.println("Keine aktuellen Daten - Abruf");
+    attemptUpdate(true, false);
+  }
+}
+
+// Zurueck zu Station 1 bzw. zur Standardansicht und neu zeichnen (vom
+// Auto-Reset in der Loop aufgerufen)
 void resetViewToDefault() {
-  if (appSettings.directionView) {
+  if (settingsHasStation2()) {
+    activeStation = 0;
+    Serial.println("Auto-Reset ausgeloest: zurueck zu Station 1");
+    showActiveStation();
+    return;
+  }
+  if (useDirectionView()) {
     showZentrum = appSettings.defaultViewZentrum;
     Serial.print("Auto-Reset ausgeloest: zurueck zu ");
     Serial.println(showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS);
@@ -589,6 +684,7 @@ void resetViewToDefault() {
     showPage2 = false;
     Serial.println("Auto-Reset ausgeloest: zurueck zu Seite 1");
   }
+  redrawCurrentView();   // kein Abruf, nur aus dem Zwischenspeicher
 }
 
 void triggerQrAction() {
