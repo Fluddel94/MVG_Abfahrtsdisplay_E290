@@ -26,6 +26,11 @@
 
 #define STATION_GLOBAL_ID ""   // z.B. "de:09162:2" = Marienplatz
 
+// Optionale zweite Station (Umschalten per BOOT-Taste), normalerweise leer
+// lassen und im Einstellungsportal waehlen. Linien je Station waehlt man
+// nur im Portal.
+#define STATION2_GLOBAL_ID ""
+
 // ------------------------------------------------------------
 // SCHRITT 2: RICHTUNGSANZEIGE
 // ------------------------------------------------------------
@@ -99,6 +104,10 @@
 // An grossen Stationen mit einem einzelnen Verkehrsmittel reicht 20 daher
 // nicht fuer 4 Zeilen je Richtung.
 #define API_DEPARTURE_LIMIT 60
+// Limit bei gewaehlten Linien (Linienauswahl im Portal): Weil die API ueber
+// alle Verkehrsmittel zaehlt, blieben fuer einzelne Linien sonst zu wenige
+// Fahrten uebrig. 100 ist das Maximum der API (rund 90 Min. am Hbf).
+#define API_DEPARTURE_LIMIT_LINES 100
 // Verfruehte Abfahrten erst ab so vielen Minuten anzeigen ("-3"). Kleinere
 // Werte (-1, -2) entstehen meist durch Rundung/Prognose und werden wie
 // puenktlich behandelt.

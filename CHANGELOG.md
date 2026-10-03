@@ -25,6 +25,16 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   geplante Linienauswahl. Die Antworten werden direkt aus dem Datenstrom
   ausgewertet (spart Arbeitsspeicher); der serielle Monitor zeigt dabei
   Dauer und freien Arbeitsspeicher.
+- Der minütliche Abruf der Abfahrten wird ebenfalls direkt aus dem
+  Datenstrom ausgewertet, statt die ganze Antwort (bis 46 KB) erst als Text
+  zu speichern, und nur noch einmal statt je Richtung eingelesen.
+- Einstellungen für Linienauswahl und zweite Station vorbereitet (neue
+  Werte im Gerätespeicher: `lines1`, `station2`, `types2`, `lines2`).
+  Bestehende Einstellungen bleiben beim Update erhalten und gelten für
+  Station 1. Mit gewählten Linien werden 100 statt 60 Abfahrten abgefragt
+  (`API_DEPARTURE_LIMIT_LINES`), die Verkehrsmittel ergeben sich dann aus
+  den gewählten Linien. Ersatzbusse für Regionalzüge erscheinen, sobald
+  ein Regionalzug gewählt ist (die API nennt nur die Zugnummer).
 
 ### Dokumentation
 - Fotos des Displays oben in der README (neuer Ordner `bilder/`).

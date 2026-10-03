@@ -4,6 +4,9 @@
 // infos-Typen (INCIDENT/EARLY_TERMINATION/INFO) sind empirisch ermittelt.
 #pragma once
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include "settings.h"      // StationConfig
+#include "line_select.h"   // LineSelection
 
 // Eine fertig aufbereitete Abfahrt, wie sie auf dem Display erscheint
 struct Departure {
@@ -29,11 +32,13 @@ enum DirectionFilter {
 // nameOut. Bei Fehler: false, nameOut bleibt unveraendert.
 bool fetchStationName(const char* globalId, String& nameOut);
 
-// Laedt die aktuellen Abfahrten der Station als JSON-Rohdaten (ein
-// HTTPS-Abruf). Die Verkehrsmittel werden gemaess den Einstellungen
-// (appSettings, settings.h) schon per API-Parameter gefiltert. true bei
-// Erfolg (HTTP 200), sonst false.
-bool downloadDepartures(const char* globalId, String& payloadOut);
+// Laedt die aktuellen Abfahrten einer Station (ein HTTPS-Abruf) in docOut -
+// nur die ausgewerteten Felder, direkt aus dem Datenstrom. Die
+// Verkehrsmittel werden schon per API-Parameter gefiltert: aus der
+// Linienauswahl, sonst aus station.types. Mit Linienauswahl wird mehr
+// abgefragt (API_DEPARTURE_LIMIT_LINES). true bei Erfolg.
+bool downloadDepartures(const StationConfig& station, const LineSelection& lines,
+                        JsonDocument& docOut);
 
 // Stationssuche fuer das Portal: Treffer der MVG-Suche (nur Haltestellen,
 // max. 15) als JSON-Array [{"n":Name,"p":Ort,"id":globalId,"t":"S-Bahn, ...",
@@ -53,10 +58,11 @@ bool listDirections(const char* globalId, String& jsonOut);
 // wenigstens die Linienliste abgerufen werden konnte.
 bool listStationLines(const char* globalId, String& jsonOut);
 
-// Wertet heruntergeladene Rohdaten aus: filtert nach Richtung (oder alle),
-// gleicht Stoerungs-Duplikate ab, fasst Fluegelzuege zusammen und fuellt
-// result. Kein Netzwerkzugriff - kann fuer mehrere Filter auf dieselben
-// Rohdaten angewendet werden.
-// Rueckgabe: Anzahl Eintraege in result, oder -1 bei JSON-Fehler.
-int parseDepartures(const String& payload, DirectionFilter filter,
-                    Departure result[], int maxResults);
+// Wertet heruntergeladene Abfahrten (downloadDepartures) aus: filtert nach
+// Richtung (oder alle) und Linienauswahl (leer = alle Linien), gleicht
+// Stoerungs-Duplikate ab, fasst Fluegelzuege zusammen und fuellt result.
+// Kein Netzwerkzugriff - kann fuer mehrere Filter auf dieselben Daten
+// angewendet werden.
+// Rueckgabe: Anzahl Eintraege in result.
+int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
+                    const LineSelection& lines, Departure result[], int maxResults);

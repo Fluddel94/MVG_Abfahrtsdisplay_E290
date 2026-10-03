@@ -22,6 +22,7 @@ struct RawEntry {
   bool realtime;
   bool earlyTermination;
   bool superseded;
+  bool selected;      // Linienauswahl: Fahrt anzeigen (siehe Schritt 1/5)
   bool hasWarning;
   bool isBus;
   bool hasPlatform;   // "platform" nur bei Schienenverkehr vorhanden
@@ -94,19 +95,23 @@ static int splitTrainGroup(const String& line) {
   return -1;
 }
 
-// Wert fuer den API-Parameter "transportTypes" aus den Verkehrsmittel-
-// Einstellungen (appSettings). Ohne diesen Parameter liefert die API
-// (beobachtet, nicht dokumentiert) nur SBAHN, UBAHN, TRAM und BUS -
-// Regionalbusse (REGIONAL_BUS) und Regionalzuege (BAHN) fehlen dann. Die
-// Werte sind empirisch ermittelt. Mindestens ein Verkehrsmittel ist immer
-// eingeschaltet (settings.cpp prueft das).
-static String transportTypesParam() {
+// Wert fuer den API-Parameter "transportTypes": aus den gewaehlten Linien
+// (z.B. nur S2 -> "SBAHN"), sonst aus den Verkehrsmittel-Einstellungen der
+// Station. Ohne diesen Parameter liefert die API (beobachtet, nicht
+// dokumentiert) nur SBAHN, UBAHN, TRAM und BUS - Regionalbusse
+// (REGIONAL_BUS) und Regionalzuege (BAHN) fehlen dann. Die Werte sind
+// empirisch ermittelt. Mindestens ein Verkehrsmittel ist immer
+// eingeschaltet (settings.cpp prueft das). Ersatzbusse (SEV) kommen beim
+// Filter des ersetzten Verkehrsmittels mit.
+static String transportTypesParam(const StationConfig& station,
+                                  const LineSelection& lines) {
+  if (!lines.empty()) return lines.transportTypes();
   String types;
-  if (appSettings.showSbahn) types += ",SBAHN";
-  if (appSettings.showUbahn) types += ",UBAHN";
-  if (appSettings.showTram) types += ",TRAM";
-  if (appSettings.showBus) types += ",BUS,REGIONAL_BUS";
-  if (appSettings.showBahn) types += ",BAHN";
+  if (station.types & TYPE_SBAHN) types += ",SBAHN";
+  if (station.types & TYPE_UBAHN) types += ",UBAHN";
+  if (station.types & TYPE_TRAM) types += ",TRAM";
+  if (station.types & TYPE_BUS) types += ",BUS,REGIONAL_BUS";
+  if (station.types & TYPE_BAHN) types += ",BAHN";
   return types.substring(1);   // fuehrendes Komma weglassen
 }
 
@@ -199,21 +204,23 @@ bool searchStations(const String& query, String& jsonOut) {
 }
 
 bool listDirections(const char* globalId, String& jsonOut) {
-  String payload;
-  if (!downloadDepartures(globalId, payload)) return false;
-
-  JsonDocument filter;
-  filter[0]["lineId"] = true;
-  filter[0]["label"] = true;
-  filter[0]["destination"] = true;
+  // Verkehrsmittel wie bei Station 1, aber ohne Linienauswahl
+  StationConfig station;
+  {
+    SettingsLock lock;
+    station = stationConfig(0);
+  }
+  station.id = globalId;
+  station.lines = "";
+  LineSelection noLines;
   JsonDocument doc;
-  if (deserializeJson(doc, payload, DeserializationOption::Filter(filter))) return false;
+  if (!downloadDepartures(station, noLines, doc)) return false;
 
   JsonDocument out;
   JsonArray list = out.to<JsonArray>();
   for (JsonObject dep : doc.as<JsonArray>()) {
-    String lineId = dep["lineId"] | "";
-    const char* dir = lineId.indexOf(":H:") != -1 ? "H" : (lineId.indexOf(":R:") != -1 ? "R" : "?");
+    char dirCode = lineDirection(dep["lineId"]);
+    const char* dir = dirCode == 'H' ? "H" : (dirCode == 'R' ? "R" : "?");
     const char* line = dep["label"] | "";
     const char* dest = dep["destination"] | "";
     bool known = false;
@@ -463,40 +470,11 @@ bool fetchStationName(const char* globalId, String& nameOut) {
   return success;
 }
 
-bool downloadDepartures(const char* globalId, String& payloadOut) {
-  HTTPClient http;
-  http.setConnectTimeout(HTTP_TIMEOUT_MS);
-  http.setTimeout(HTTP_TIMEOUT_MS);
-
-  String url = "https://www.mvg.de/api/bgw-pt/v3/departures?globalId=";
-  url += globalId;
-  url += "&limit=";
-  url += API_DEPARTURE_LIMIT;
-  url += "&transportTypes=";
-  url += transportTypesParam();
-
-  http.begin(url);
-  int httpCode = http.GET();
-
-  if (httpCode != 200) {
-    // Negative Codes kommen vom ESP32-HTTPClient selbst (z.B. -1 Verbindung
-    // fehlgeschlagen, -11 keine Antwort innerhalb HTTP_TIMEOUT_MS)
-    Serial.print("Fehler beim Abruf, HTTP-Code: ");
-    Serial.println(httpCode);
-    http.end();
-    return false;
-  }
-
-  payloadOut = http.getString();
-  http.end();
-  return true;
-}
-
-int parseDepartures(const String& payload, DirectionFilter filter,
-                    Departure result[], int maxResults) {
+bool downloadDepartures(const StationConfig& station, const LineSelection& lines,
+                        JsonDocument& docOut) {
   // Nur die ausgewerteten Felder einlesen: Die Antwort enthaelt je Fahrt
-  // viele weitere Felder; ohne Filter braucht die Auswertung bei
-  // API_DEPARTURE_LIMIT Fahrten ein Vielfaches an Speicher.
+  // viele weitere Felder; ohne Filter braucht die Auswertung ein Vielfaches
+  // an Speicher. Gelesen wird direkt aus dem Datenstrom (fetchJsonStream).
   JsonDocument fields;
   JsonObject f = fields[0].to<JsonObject>();
   f["lineId"] = true;
@@ -513,22 +491,28 @@ int parseDepartures(const String& payload, DirectionFilter filter,
   f["infos"][0]["type"] = true;
   f["infos"][0]["message"] = true;
 
-  JsonDocument doc;
-  DeserializationError error =
-      deserializeJson(doc, payload, DeserializationOption::Filter(fields));
+  String url = "https://www.mvg.de/api/bgw-pt/v3/departures?globalId=";
+  url += station.id;
+  url += "&limit=";
+  url += lines.empty() ? API_DEPARTURE_LIMIT : API_DEPARTURE_LIMIT_LINES;
+  url += "&transportTypes=";
+  url += transportTypesParam(station, lines);
 
-  if (error) {
-    Serial.print("JSON-Parsing fehlgeschlagen: ");
-    Serial.println(error.c_str());
-    return -1;
-  }
+  // Negative HTTP-Codes im seriellen Monitor kommen vom ESP32-HTTPClient
+  // selbst (z.B. -1 Verbindung fehlgeschlagen, -11 keine Antwort innerhalb
+  // HTTP_TIMEOUT_MS)
+  docOut.clear();
+  return fetchJsonStream(url, docOut, fields);
+}
 
+int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
+                    const LineSelection& lines, Departure result[], int maxResults) {
   // --- Schritt 1: Rohdaten einlesen, relevante infos-Typen erkennen ---
   RawEntry raw[MAX_RAW_ENTRIES];
   int rawCount = 0;
 
-  JsonArray departures = doc.as<JsonArray>();
-  for (JsonObject dep : departures) {
+  JsonArrayConst departures = doc.as<JsonArrayConst>();
+  for (JsonObjectConst dep : departures) {
     if (rawCount >= MAX_RAW_ENTRIES) break;
 
     // Richtung aus der lineId (":H:" / ":R:") - bei DIR_FILTER_H/_R wird
@@ -542,7 +526,28 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     if (filter == DIR_FILTER_H && direction != 'H') continue;
     if (filter == DIR_FILTER_R && direction != 'R') continue;
 
+    const char* transportType = dep["transportType"];
+    if (transportType == nullptr) transportType = dep["product"];
+    bool sev = dep["sev"] | false;
+
+    // Linienauswahl: nur gewaehlte Linien (mit Richtung). Ersatzbusse fuer
+    // S-Bahn/Tram tragen die Linie als Label und passen direkt. Ersatzbusse
+    // fuer Regionalzuege tragen eine Zugnummer - die API sagt nicht, welche
+    // Linie ersetzt wird; sie erscheinen, sobald irgendein Regionalzug
+    // gewaehlt ist. Teile gekoppelter Regionalzuege (SPLIT_TRAIN_GROUPS)
+    // bleiben vorerst drin: Ist ein anderer Zugteil gewaehlt, zeigt
+    // Schritt 4 die ganze Zeile, sonst faellt die Fahrt in Schritt 5 weg.
+    String key = lineKey(dep["label"]);
+    bool selected = true;
+    if (!lines.empty()) {
+      selected = lines.matches(key, direction) ||
+                 (sev && transportType != nullptr && strcmp(transportType, "BAHN") == 0 &&
+                  lines.hasType('Z'));
+      if (!selected && splitTrainGroup(key) < 0) continue;
+    }
+
     RawEntry r;
+    r.selected = selected;
     r.direction = direction;
     r.line = String((const char*)dep["label"]);
     r.destination = utf8ToLatin1(String((const char*)dep["destination"]));
@@ -561,8 +566,6 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     // Rueckfall "product" (aeltere API). Beobachtete Werte: SBAHN, UBAHN,
     // TRAM, BUS, REGIONAL_BUS, BAHN. Fehlt beides, wird das Icon nur
     // anhand des Labels gewaehlt.
-    const char* transportType = dep["transportType"];
-    if (transportType == nullptr) transportType = dep["product"];
     r.isBus = (transportType != nullptr && strstr(transportType, "BUS") != nullptr);
 
     // Regionalzuege: Label kommt als "RB 56" / "RE 5" - ohne Leerzeichen
@@ -577,7 +580,7 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     // Tramnummer ("25", Typ BUS) - einheitlich als "SEV" im Bus-Rahmen.
     // Die API liefert Ersatzbusse beim ersetzten Verkehrsmittel mit
     // (transportTypes=SBAHN enthaelt den S2-Ersatzbus, TRAM den der Tram)
-    if (dep["sev"] | false) {
+    if (sev) {
       r.line = "SEV";
       r.isBus = true;
     }
@@ -589,8 +592,8 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     // Nur diese beiden Typen gelten als fahrtrelevant und loesen ein
     // Warndreieck aus. Andere Typen (z.B. "INFO" - Tarifhinweise etc.)
     // werden bewusst ignoriert. Neue fahrtrelevante Typen hier ergaenzen.
-    JsonArray infos = dep["infos"];
-    for (JsonObject info : infos) {
+    JsonArrayConst infos = dep["infos"];
+    for (JsonObjectConst info : infos) {
       const char* type = info["type"];
       if (type == nullptr) continue;
       String typeStr = String(type);
@@ -723,6 +726,7 @@ int parseDepartures(const String& payload, DirectionFilter filter,
       if (!sameLine) mixedLines = true;
       if (raw[j].realtime && raw[j].delayMin < minRealtimeDelay) minRealtimeDelay = raw[j].delayMin;
       raw[i].hasWarning = raw[i].hasWarning || raw[j].hasWarning;
+      raw[i].selected = raw[i].selected || raw[j].selected;
       raw[i].realtime = raw[i].realtime || raw[j].realtime;
       raw[j].superseded = true;
     }
@@ -769,7 +773,7 @@ int parseDepartures(const String& payload, DirectionFilter filter,
   int count = 0;
   for (int i = 0; i < rawCount; i++) {
     if (count >= maxResults) break;
-    if (raw[i].superseded) continue;
+    if (raw[i].superseded || !raw[i].selected) continue;
 
     Departure d;
     d.line = raw[i].line;

@@ -1,5 +1,5 @@
 // Version: 2.1.0
-// Letzte Änderung: 03.10.2026 13:39
+// Letzte Änderung: 03.10.2026 13:59
 #define FW_VERSION "2.1.0"
 
 // ------------------------------------------------------------
@@ -91,6 +91,9 @@ int lastUpdateMinute = -1;
 bool showZentrum = true;
 // Seite 2 (Abfahrt 5-8) aktiv - nur bei gemischter Anzeige
 bool showPage2 = false;
+// Angezeigte Station: 0 = Station 1, 1 = Station 2 (Umschalten folgt mit
+// der Tastenbelegung; bis dahin immer Station 1)
+int activeStation = 0;
 String stationName = "Bahnhof";
 
 // Zwischenspeicher der zuletzt abgerufenen Abfahrten. Umschalten, Blaettern
@@ -432,35 +435,30 @@ bool fetchDepartures() {
   return true;
 }
 
-// Ein Abrufversuch: Rohdaten laden und fuer alle Ansichten auswerten.
-// Aendert den Zwischenspeicher nur bei Erfolg. true bei Erfolg.
+// Ein Abrufversuch: Abfahrten der angezeigten Station laden und fuer alle
+// Ansichten auswerten. Aendert den Zwischenspeicher nur bei Erfolg. true
+// bei Erfolg.
 bool fetchDeparturesOnce() {
-  String payload;
-  bool success = downloadDepartures(appSettings.stationId.c_str(), payload);
+  StationConfig station = stationConfig(activeStation);
+  LineSelection lines;
+  lines.parse(station.lines);
+  JsonDocument doc;
+  if (!downloadDepartures(station, lines, doc)) return false;
 
-  if (success && appSettings.directionView) {
-    // Beide Richtungen aus denselben Rohdaten, damit das Umschalten ohne
+  if (appSettings.directionView) {
+    // Beide Richtungen aus denselben Daten, damit das Umschalten ohne
     // neuen Abruf auskommt. zentrumIsH legt fest, welcher API-Marker
     // (":H:"/":R:") Richtung Zentrum faehrt.
     bool zentrumIsH = appSettings.zentrumIsH;
     DirectionFilter zentrumFilter = zentrumIsH ? DIR_FILTER_H : DIR_FILTER_R;
     DirectionFilter auswaertsFilter = zentrumIsH ? DIR_FILTER_R : DIR_FILTER_H;
-    int countZ = parseDepartures(payload, zentrumFilter, cacheZentrum, MAX_DEPARTURES_SHOWN);
-    int countA = parseDepartures(payload, auswaertsFilter, cacheAuswaerts, MAX_DEPARTURES_SHOWN);
-    success = (countZ >= 0 && countA >= 0);
-    if (success) {
-      cacheZentrumCount = countZ;
-      cacheAuswaertsCount = countA;
-    }
-  } else if (success) {
+    cacheZentrumCount = parseDepartures(doc, zentrumFilter, lines, cacheZentrum, MAX_DEPARTURES_SHOWN);
+    cacheAuswaertsCount = parseDepartures(doc, auswaertsFilter, lines, cacheAuswaerts, MAX_DEPARTURES_SHOWN);
+  } else {
     // Alle Richtungen gemischt: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
-    int count = parseDepartures(payload, DIR_FILTER_ALL, cacheAll, MAX_DEPARTURES_SHOWN * 2);
-    success = (count >= 0);
-    if (success) {
-      cacheAllCount = count;
-    }
+    cacheAllCount = parseDepartures(doc, DIR_FILTER_ALL, lines, cacheAll, MAX_DEPARTURES_SHOWN * 2);
   }
-  return success;
+  return true;
 }
 
 // Zeichnet die aktuelle Ansicht (Richtung bzw. Seite) aus dem

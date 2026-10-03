@@ -10,6 +10,7 @@
 #include <Preferences.h>
 #include "../config.h"
 #include "settings.h"
+#include "line_select.h"   // LineSelection: Linienauswahl pruefen
 
 // secrets.h ist optional und wird NUR hier eingebunden (die Datei definiert
 // globale Variablen). Andere Dateien greifen bei Bedarf per extern darauf zu.
@@ -38,6 +39,11 @@ static const char* const KEY_QR_ON = "qrOn";
 static const char* const KEY_QR_TITLE = "qrTitle";
 static const char* const KEY_QR_SSID = "qrSsid";
 static const char* const KEY_QR_PASS = "qrPass";
+// Ab 2.2.0 (Linienauswahl, zweite Station)
+static const char* const KEY_LINES1 = "lines1";
+static const char* const KEY_STATION2 = "station2";
+static const char* const KEY_TYPES2 = "types2";
+static const char* const KEY_LINES2 = "lines2";
 
 DeviceSettings appSettings;
 
@@ -68,6 +74,21 @@ static void setTransportDefaults(DeviceSettings& s) {
   s.showBahn = SHOW_BAHN;
 }
 
+// Verkehrsmittel-Standard aus config.h als TYPE_...-Bits
+static uint8_t defaultTypes() {
+  return (SHOW_SBAHN ? TYPE_SBAHN : 0) | (SHOW_UBAHN ? TYPE_UBAHN : 0) |
+         (SHOW_TRAM ? TYPE_TRAM : 0) | (SHOW_BUS ? TYPE_BUS : 0) |
+         (SHOW_BAHN ? TYPE_BAHN : 0);
+}
+
+// Linienauswahl einlesen und normalisiert zurueckgeben (verwirft
+// ungueltige Eintraege, hoechstens LINE_SELECT_MAX)
+static String normalizeLines(const String& text) {
+  LineSelection sel;
+  sel.parse(text);
+  return sel.toString();
+}
+
 static void setDefaults(DeviceSettings& s) {
 #if HAS_SECRETS_H
   s.wifiSsid = ssid;
@@ -81,6 +102,10 @@ static void setDefaults(DeviceSettings& s) {
   s.qrPassword = "";
 #endif
   s.stationId = STATION_GLOBAL_ID;
+  s.lines1 = "";
+  s.station2Id = STATION2_GLOBAL_ID;
+  s.types2 = defaultTypes();
+  s.lines2 = "";
   s.directionView = FEATURE_DIRECTION_VIEW;
   s.zentrumIsH = ZENTRUM_IS_H;
   s.defaultViewZentrum = DEFAULT_VIEW_ZENTRUM;
@@ -96,6 +121,11 @@ static void validate(DeviceSettings& s) {
     Serial.println("Einstellungen: kein Verkehrsmittel gewaehlt, nutze Standardwerte aus config.h");
     setTransportDefaults(s);
   }
+  s.station2Id.trim();
+  s.types2 &= TYPE_ALL;
+  if (s.types2 == 0) s.types2 = defaultTypes();
+  s.lines1 = normalizeLines(s.lines1);
+  s.lines2 = normalizeLines(s.lines2);
 }
 
 // ------------------------------------------------------------
@@ -110,6 +140,10 @@ static void readString(Preferences& prefs, const char* key, String& value) {
 
 static void readBool(Preferences& prefs, const char* key, bool& value) {
   if (prefs.isKey(key)) value = prefs.getBool(key, value);
+}
+
+static void readUChar(Preferences& prefs, const char* key, uint8_t& value) {
+  if (prefs.isKey(key)) value = prefs.getUChar(key, value);
 }
 
 void settingsLoad() {
@@ -137,6 +171,12 @@ void settingsLoad() {
     readString(prefs, KEY_QR_TITLE, appSettings.qrTitle);
     readString(prefs, KEY_QR_SSID, appSettings.qrSsid);
     readString(prefs, KEY_QR_PASS, appSettings.qrPassword);
+    // Fehlen bei Geraeten mit 2.1.0 oder aelter: dann gelten die
+    // Standardwerte (keine Linienauswahl, keine Station 2)
+    readString(prefs, KEY_LINES1, appSettings.lines1);
+    readString(prefs, KEY_STATION2, appSettings.station2Id);
+    readUChar(prefs, KEY_TYPES2, appSettings.types2);
+    readString(prefs, KEY_LINES2, appSettings.lines2);
     prefs.end();
   }
 
@@ -155,6 +195,10 @@ static bool writeString(Preferences& prefs, const char* key, const String& value
 
 static bool writeBool(Preferences& prefs, const char* key, bool value) {
   return prefs.putBool(key, value) == 1;
+}
+
+static bool writeUChar(Preferences& prefs, const char* key, uint8_t value) {
+  return prefs.putUChar(key, value) == 1;
 }
 
 bool settingsSave() {
@@ -180,6 +224,10 @@ bool settingsSave() {
   ok &= writeString(prefs, KEY_QR_TITLE, appSettings.qrTitle);
   ok &= writeString(prefs, KEY_QR_SSID, appSettings.qrSsid);
   ok &= writeString(prefs, KEY_QR_PASS, appSettings.qrPassword);
+  ok &= writeString(prefs, KEY_LINES1, appSettings.lines1);
+  ok &= writeString(prefs, KEY_STATION2, appSettings.station2Id);
+  ok &= writeUChar(prefs, KEY_TYPES2, appSettings.types2);
+  ok &= writeString(prefs, KEY_LINES2, appSettings.lines2);
   prefs.end();
 
   if (ok) storedValuesFound = true;
@@ -226,6 +274,27 @@ bool settingsHasStation() {
   return appSettings.stationId.length() > 0;
 }
 
+bool settingsHasStation2() {
+  return appSettings.station2Id.length() > 0;
+}
+
+StationConfig stationConfig(int index) {
+  const DeviceSettings& s = appSettings;
+  StationConfig c;
+  if (index == 1) {
+    c.id = s.station2Id;
+    c.types = s.types2;
+    c.lines = s.lines2;
+  } else {
+    c.id = s.stationId;
+    c.types = (s.showSbahn ? TYPE_SBAHN : 0) | (s.showUbahn ? TYPE_UBAHN : 0) |
+              (s.showTram ? TYPE_TRAM : 0) | (s.showBus ? TYPE_BUS : 0) |
+              (s.showBahn ? TYPE_BAHN : 0);
+    c.lines = s.lines1;
+  }
+  return c;
+}
+
 static const char* yesNo(bool value) {
   return value ? "ja" : "nein";
 }
@@ -262,6 +331,18 @@ void settingsPrint() {
   if (s.showBus) Serial.print(" Bus");
   if (s.showBahn) Serial.print(" Regionalzug");
   Serial.println();
+  Serial.print("Linien: ");
+  Serial.println(s.lines1.length() ? s.lines1 : String("(alle)"));
+  Serial.print("Station 2: ");
+  if (s.station2Id.length()) {
+    Serial.print(s.station2Id);
+    Serial.print(", Verkehrsmittel-Bits 0x");
+    Serial.print(s.types2, HEX);
+    Serial.print(", Linien: ");
+    Serial.println(s.lines2.length() ? s.lines2 : String("(alle)"));
+  } else {
+    Serial.println("(keine)");
+  }
   Serial.print("WLAN-QR: ");
   if (s.wifiQr) {
     Serial.print("an, Titel \"");

@@ -225,6 +225,10 @@ static void handleRoot() {
     SettingsLock lock;
     const DeviceSettings& s = appSettings;
     doc["station"] = s.stationId;
+    doc["lines1"] = s.lines1;
+    doc["station2"] = s.station2Id;
+    doc["types2"] = s.types2;
+    doc["lines2"] = s.lines2;
     doc["dirView"] = s.directionView;
     doc["zentrumIsH"] = s.zentrumIsH;
     doc["defZentrum"] = s.defaultViewZentrum;
@@ -289,6 +293,35 @@ static void handleSave() {
   if (!(s.showSbahn || s.showUbahn || s.showTram || s.showBus || s.showBahn)) {
     sendMessage(400, "Mindestens ein Verkehrsmittel w&auml;hlen.");
     return;
+  }
+
+  // Linienauswahl und Station 2: nur uebernehmen, wenn die Felder
+  // mitgeschickt werden (sonst bleiben die gespeicherten Werte)
+  if (server->hasArg("lines1")) {
+    LineSelection sel;
+    sel.parse(formArg("lines1", 600));
+    s.lines1 = sel.toString();
+  }
+  if (server->hasArg("station2")) {
+    String station2 = formArg("station2", 40);
+    if (station2.length() > 0 && !validStationId(station2)) {
+      sendMessage(400, "Station 2 ist ung&uuml;ltig.");
+      return;
+    }
+    s.station2Id = station2;
+  }
+  if (server->hasArg("types2")) {
+    int types2 = server->arg("types2").toInt() & TYPE_ALL;
+    if (types2 == 0) {
+      sendMessage(400, "Station 2: mindestens ein Verkehrsmittel w&auml;hlen.");
+      return;
+    }
+    s.types2 = (uint8_t)types2;
+  }
+  if (server->hasArg("lines2")) {
+    LineSelection sel;
+    sel.parse(formArg("lines2", 600));
+    s.lines2 = sel.toString();
   }
 
   s.wifiQr = server->hasArg("qrOn");
