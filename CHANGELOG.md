@@ -24,7 +24,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 - Einstellung **„Richtung“ je Station**: alle Richtungen, nur Richtung H
   oder nur Richtung R (gilt für alle Linien der Station; die
   Richtungswahl je Linie entfällt dann). Bei Station 1 zusätzlich wie bisher die getrennte
-  Ansicht Zentrum/Auswärts. Neue Werte im Gerätespeicher: `dir1`, `dir2`.
+  Ansicht Zentrum/Auswärts (H/R). Ein Hinweis erklärt, dass H und R die
+  Richtungskennungen der MVG sind. Neue Werte im Gerätespeicher: `dir1`, `dir2`.
   „Richtungen anzeigen“ gibt es jetzt für beide Stationen und zeigt nur
   die angehakten Verkehrsmittel (höchstens 15 Einträge).
 - Einstellungsportal: Der Name der eingestellten Station steht in der
@@ -32,6 +33,16 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   wird gemeldet.
 
 ### Geändert
+- Kurze Störungen der MVG-API (z.B. HTTP 503 oder keine Antwort) werden
+  überbrückt: Die bisherigen Abfahrten bleiben stehen (Uhrzeit läuft
+  weiter), alle 10 s gibt es einen neuen Versuch, ohne die Tasten zu
+  blockieren. Der Fehlerbildschirm erscheint erst, wenn 60 s lang kein
+  Abruf geklappt hat (`API_ERROR_SCREEN_DELAY_MS`). Bisher kam er nach
+  zwei Versuchen im Abstand von 2 s.
+- Ebenso bei WLAN-Abbrüchen im Betrieb: Die Abfahrten bleiben 60 s stehen
+  (bisher 20 s, `WIFI_LOST_SCREEN_DELAY_MS`), die Uhrzeit läuft weiter,
+  im Hintergrund wird alle 10 s neu verbunden. Beim Start bleibt es bei
+  20 s (`WIFI_ERROR_SCREEN_DELAY_MS`).
 - Schienenersatzverkehr wird als „SEV“ im Bus-Rahmen angezeigt. Bisher
   erschien je nach Fall die Zugnummer (z.B. „67116“ in Weilheim) oder die
   ersetzte Linie (z.B. „S2“), ohne Hinweis auf den Ersatzbus.

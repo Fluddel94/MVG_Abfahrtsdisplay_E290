@@ -130,15 +130,20 @@
 #define BUTTON_EDGE_STABLE_MS 30UL     // Entprellung: Taste vorher so lange stabil
 #define BUTTON_LATCH_MAX_AGE_MS 15000UL // aeltere gemerkte Druecke verwerfen
 #define ERROR_RETRY_INTERVAL_MS 10000UL
-// Misslingt ein Abruf der Abfahrten, nach dieser Pause einmal still
-// wiederholen - erst wenn auch das scheitert: Fehlerbildschirm + API-Fail
-#define API_RETRY_DELAY_MS 2000UL
+// Misslingt ein Abruf der Abfahrten, bleibt die bisherige Anzeige stehen
+// (Uhrzeit wird weiter aktualisiert) und es wird alle
+// ERROR_RETRY_INTERVAL_MS erneut versucht, ohne die Tasten zu blockieren.
+// Erst wenn so lange kein Abruf geklappt hat: Fehlerbildschirm + API-Fail.
+#define API_ERROR_SCREEN_DELAY_MS 60000UL
 // Startbildschirm (Projektname + Version) mindestens so lange zeigen.
 // WLAN, Uhrzeit und erster Abruf laufen im Hintergrund weiter.
 #define SPLASH_DURATION_MS 5000UL
-// WLAN-Fehlerbildschirm erst, wenn so lange keine Verbindung besteht
-// (beim Start und im Betrieb) - kurze Aussetzer bleiben unsichtbar
+// WLAN-Fehlerbildschirm erst, wenn so lange keine Verbindung besteht -
+// beim Start (noch keine Abfahrten zum Anzeigen) ...
 #define WIFI_ERROR_SCREEN_DELAY_MS 20000UL
+// ... und im Betrieb: bis dahin bleiben die bisherigen Abfahrten stehen
+// (Uhrzeit laeuft weiter), z.B. waehrend eines Router-Neustarts
+#define WIFI_LOST_SCREEN_DELAY_MS 60000UL
 #define HTTP_TIMEOUT_MS 10000        // 5000 fuehrte zu Fehlercode -11 (TLS-Handshake)
 #define DIRECTION_AUTO_RESET_MS 30000UL
 #define PAGE_AUTO_RESET_MS 30000UL   // Seite 2 bei FEATURE_DIRECTION_VIEW 0

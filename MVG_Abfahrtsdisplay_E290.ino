@@ -1,5 +1,5 @@
 // Version: 2.1.0
-// Letzte Änderung: 03.10.2026 16:40
+// Letzte Änderung: 03.10.2026 17:13
 #define FW_VERSION "2.1.0"
 
 // ------------------------------------------------------------
@@ -109,10 +109,18 @@ Departure cacheAll[MAX_DEPARTURES_SHOWN * 2];   // Seite 1 + Seite 2
 int cacheAllCount = 0;
 // Station 2 (immer gemischt bzw. mit ihrer Richtung, ohne Seite 2). Beide
 // Stationen werden jede Minute abgerufen, damit das Umschalten ohne Abruf
-// auskommt. cacheValid: letzter Abruf der Station erfolgreich.
+// auskommt. lastSuccess: Zeitpunkt des letzten erfolgreichen Abrufs je
+// Station (hasData: ueberhaupt schon einer), siehe cacheFresh().
 Departure cacheStation2[MAX_DEPARTURES_SHOWN];
 int cacheStation2Count = 0;
-bool cacheValid[2] = { false, false };
+unsigned long lastSuccess[2] = { 0, 0 };
+bool hasData[2] = { false, false };
+// Abruf misslungen, Anzeige ueberbrueckt (noch kein Fehlerbildschirm):
+// neuer Versuch alle ERROR_RETRY_INTERVAL_MS (ab lastErrorRetry).
+// failSince: erster Fehlschlag der laufenden Serie.
+bool apiRetryPending = false;
+bool apiFailing = false;
+unsigned long failSince = 0;
 
 // Statistik fuer den Log-Screen (API-Stoerungen: siehe stats.cpp)
 int wifiDisconnectCount = 0;
@@ -127,6 +135,10 @@ bool updateScreenShown = false;
 // WLAN-Fehlerbildschirm: seit wann keine Verbindung besteht und welche
 // Ursache zuletzt angezeigt wurde (nullptr = noch kein Fehlerbildschirm)
 unsigned long wifiLostSince = 0;
+// WLAN weg, aber die Abfahrten bleiben noch stehen (bis
+// WIFI_LOST_SCREEN_DELAY_MS): zur vollen Minute aus dem Zwischenspeicher
+// neu zeichnen, damit die Uhrzeit weiterlaeuft
+bool wifiBridging = false;
 const char* wifiErrorShownReason = nullptr;
 
 // Startbildschirm: Zeitpunkt der Anzeige (Abschnitt Startbildschirm)
@@ -271,6 +283,9 @@ void loop() {
   if (WiFi.status() != WL_CONNECTED) {
     if (currentState != STATE_WIFI_ERROR) {
       Serial.println("WLAN-Verbindung verloren!");
+      // Ueberbruecken nur, wenn gerade Abfahrten zu sehen sind
+      wifiBridging = currentState == STATE_NORMAL && hasData[activeStation] &&
+                     !qrModeActive && !logModeActive;
       currentState = STATE_WIFI_ERROR;
       wifiDisconnectCount++;
       wifiLostSince = millis();
@@ -278,10 +293,20 @@ void loop() {
       lastErrorRetry = millis();
     }
 
-    // Fehlerbildschirm erst nach WIFI_ERROR_SCREEN_DELAY_MS - kurze
+    // Fehlerbildschirm erst nach WIFI_LOST_SCREEN_DELAY_MS - kurze
     // Aussetzer bleiben auf dem Display unsichtbar
-    if (millis() - wifiLostSince >= WIFI_ERROR_SCREEN_DELAY_MS) {
+    if (millis() - wifiLostSince >= WIFI_LOST_SCREEN_DELAY_MS) {
+      wifiBridging = false;
       showWifiErrorIfChanged();
+    } else if (wifiBridging) {
+      time_t nowRaw = time(nullptr);
+      struct tm nowInfo;
+      localtime_r(&nowRaw, &nowInfo);
+      if (nowInfo.tm_min != lastUpdateMinute) {
+        lastUpdateMinute = nowInfo.tm_min;
+        Serial.println("Kein WLAN - Anzeige ueberbrueckt");
+        redrawFromCache(false);
+      }
     }
 
     // Neu verbinden alle ERROR_RETRY_INTERVAL_MS - ausser eine Erweiterung
@@ -371,6 +396,18 @@ void loop() {
     return;
   }
 
+  // Abruf misslungen, aber die Daten sind noch keine
+  // API_ERROR_SCREEN_DELAY_MS alt: Anzeige bleibt, leiser neuer Versuch
+  if (apiRetryPending && millis() - lastErrorRetry >= ERROR_RETRY_INTERVAL_MS) {
+    Serial.println("Erneuter Abrufversuch (Anzeige ueberbrueckt)...");
+    if (fetchDepartures()) {
+      redrawFromCache(false);
+      fetchOtherStation();
+    } else if (currentState == STATE_API_ERROR) {
+      displayShowApiError();
+    }
+  }
+
   time_t nowRaw = time(nullptr);
   struct tm nowInfo;
   localtime_r(&nowRaw, &nowInfo);
@@ -407,9 +444,14 @@ void attemptUpdate(bool preferFullRefresh, bool withOther) {
   bool wasApiError = (currentState == STATE_API_ERROR);
 
   if (!fetchDepartures()) {
-    // Fehlerbildschirm nur beim Wechsel normal -> Fehler, nicht bei jedem
-    // Retry waehrend einer laufenden Stoerung
-    if (!wasApiError) displayShowApiError();
+    if (currentState == STATE_API_ERROR) {
+      // Fehlerbildschirm nur beim Wechsel normal -> Fehler, nicht bei
+      // jedem Retry waehrend einer laufenden Stoerung
+      if (!wasApiError) displayShowApiError();
+    } else {
+      // Ueberbrueckt: bisherige Abfahrten mit aktueller Uhrzeit
+      redrawFromCache(preferFullRefresh);
+    }
     return;
   }
   redrawFromCache(preferFullRefresh);
@@ -447,47 +489,57 @@ void fetchOtherStation() {
   }
 }
 
-// Laedt die Abfahrten und fuellt den Zwischenspeicher, ohne zu zeichnen.
-// Setzt currentState (STATE_NORMAL bzw. STATE_API_ERROR). true bei Erfolg.
-// Ein misslungener Versuch wird nach API_RETRY_DELAY_MS einmal still
-// wiederholt; bis dahin bleibt die bisherige Anzeige stehen.
-bool fetchDepartures() {
-  bool success = fetchStation(activeStation);
-  // Nur aus dem Normalbetrieb heraus; waehrend einer laufenden Stoerung
-  // versucht es loop() ohnehin alle ERROR_RETRY_INTERVAL_MS erneut
-  if (!success && currentState != STATE_API_ERROR && WiFi.status() == WL_CONNECTED) {
-    Serial.println("Abruf fehlgeschlagen - zweiter Versuch");
-    delay(API_RETRY_DELAY_MS);
-    success = fetchStation(activeStation);
-  }
+// Daten der Station noch aktuell genug, um sie beim Umschalten ohne Abruf
+// zu zeigen: hoechstens so alt wie beim Ueberbruecken einer Stoerung
+// (Minuten-Takt + API_ERROR_SCREEN_DELAY_MS)
+bool cacheFresh(int index) {
+  return hasData[index] &&
+         millis() - lastSuccess[index] < 60000UL + API_ERROR_SCREEN_DELAY_MS;
+}
 
-  if (!success) {
-    // Nur beim Wechsel von normal -> Fehler zaehlen (neue Stoerung),
-    // nicht bei jedem einzelnen Retry-Versuch waehrend einer laufenden Stoerung
-    if (currentState != STATE_API_ERROR) {
-      recordApiFail();
-      currentState = STATE_API_ERROR;
-      lastErrorRetry = millis();
-    }
+// Laedt die Abfahrten der angezeigten Station und fuellt den
+// Zwischenspeicher, ohne zu zeichnen. true bei Erfolg. Bei einem
+// Fehlschlag bleibt currentState normal und apiRetryPending wird gesetzt -
+// die Anzeige ueberbrueckt die Stoerung -, solange Daten da sind und die
+// Fehlschlaege noch keine API_ERROR_SCREEN_DELAY_MS andauern. Sonst:
+// STATE_API_ERROR (Fehlerbildschirm, API-Fail zaehlen).
+// Blockiert hoechstens einen Abruf lang (bis HTTP_TIMEOUT_MS).
+bool fetchDepartures() {
+  if (fetchStation(activeStation)) {
+    currentState = STATE_NORMAL;
+    apiRetryPending = false;
+    apiFailing = false;
+    return true;
+  }
+  // Laufende Stoerung: loop() versucht es alle ERROR_RETRY_INTERVAL_MS
+  if (currentState == STATE_API_ERROR) return false;
+
+  lastErrorRetry = millis();
+  if (!apiFailing) {
+    apiFailing = true;
+    failSince = millis();
+  }
+  if (hasData[activeStation] && millis() - failSince < API_ERROR_SCREEN_DELAY_MS) {
+    Serial.println("Abruf fehlgeschlagen - Anzeige bleibt, neuer Versuch in 10 s");
+    apiRetryPending = true;
     return false;
   }
-
-  currentState = STATE_NORMAL;
-  return true;
+  // Neue Stoerung zaehlen (nicht jeden einzelnen Retry)
+  recordApiFail();
+  currentState = STATE_API_ERROR;
+  apiRetryPending = false;
+  return false;
 }
 
 // Ein Abrufversuch: Abfahrten einer Station (0 oder 1) laden und fuer alle
 // Ansichten auswerten. Aendert den Zwischenspeicher nur bei Erfolg und
-// setzt cacheValid. true bei Erfolg.
+// merkt sich dann den Zeitpunkt (lastSuccess). true bei Erfolg.
 bool fetchStation(int index) {
   StationConfig station = stationConfig(index);
   LineSelection lines;
   lines.parse(station.lines);
   JsonDocument doc;
-  if (!downloadDepartures(station, lines, doc)) {
-    cacheValid[index] = false;
-    return false;
-  }
+  if (!downloadDepartures(station, lines, doc)) return false;
 
   // Richtung der Station (Portal "nur Richtung H/R") gilt zusaetzlich zur
   // Linienauswahl
@@ -510,7 +562,8 @@ bool fetchStation(int index) {
     // Gemischte Anzeige: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
     cacheAllCount = parseDepartures(doc, filter, lines, cacheAll, MAX_DEPARTURES_SHOWN * 2);
   }
-  cacheValid[index] = true;
+  lastSuccess[index] = millis();
+  hasData[index] = true;
   return true;
 }
 
@@ -569,7 +622,9 @@ void applyNewSettings() {
   showZentrum = appSettings.defaultViewZentrum;
   showPage2 = false;
   activeStation = 0;
-  cacheValid[0] = cacheValid[1] = false;
+  hasData[0] = hasData[1] = false;
+  apiRetryPending = false;
+  apiFailing = false;
   setupScreenShown = false;
   if (!settingsHasStation()) return;
 
@@ -658,7 +713,7 @@ void triggerBootAction() {
 // letzter Abruf geklappt hat, sonst jetzt abrufen (bei Fehler:
 // Fehlerbildschirm)
 void showActiveStation() {
-  if (cacheValid[activeStation]) {
+  if (cacheFresh(activeStation)) {
     currentState = STATE_NORMAL;
     redrawFromCache(true);
   } else {

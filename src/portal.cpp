@@ -118,8 +118,8 @@ function block(n){
  h+='<h3>Verkehrsmittel</h3><div id="ty'+n+'">';
  TY.forEach((t,i)=>{h+='<div class="cb"><input type="checkbox" id="'+t+n+'"'+(n==1?' name="'+t+'"':'')+' onchange="tyc('+n+')"><label for="'+t+n+'">'+TN[i]+'</label></div>';});
  h+='</div><p class="hint" id="tyh'+n+'">Es sind Linien gewählt: Das Display zeigt nur diese Linien. Die Verkehrsmittel legen dann nur fest, welche Linien die Liste anbietet.</p><h3>Richtung</h3><select id="'+(n==1?'dirView" name="dirView':'dir2" name="dir2')+'" onchange="upd()">'+
-  (n==1?'<option value="0">alle Richtungen</option><option value="1">getrennt nach Zentrum / Auswärts (Umschalten per Taste)</option>':'<option value="B">alle Richtungen</option>')+
-  '<option value="H">nur Richtung H</option><option value="R">nur Richtung R</option></select><p class="hint" id="dh'+n+'">Gilt für alle Linien der Station.</p>';
+  (n==1?'<option value="0">alle Richtungen</option><option value="1">getrennt: Zentrum / Auswärts (H/R)</option>':'<option value="B">alle Richtungen</option>')+
+  '<option value="H">nur Richtung H</option><option value="R">nur Richtung R</option></select><p class="hint">H und R sind die Richtungskennungen der MVG'+(n==1?'. „Getrennt“ zeigt Zentrum oder Auswärts, die BOOT-Taste schaltet um. Welche Kennung Richtung Zentrum fährt, legst du dann darunter fest.':'.')+'</p><p class="hint" id="dh'+n+'">Gilt für alle Linien der Station.</p>';
  if(n==1)h+='<p class="hint" id="viewHint">Mit zwei Stationen wechselt die BOOT-Taste die Station, getrennte Ansicht und Seite 2 gibt es dann nicht.</p>'+
   '<div id="dirOpts"><label for="zentrum">Richtung Zentrum hat die Kennung</label><select id="zentrum" name="zentrum"><option value="H">H</option><option value="R">R</option></select>'+
   '<label for="defView">Standardansicht</label><select id="defView" name="defView"><option value="Z">Zentrum</option><option value="A">Auswärts</option></select></div>';
