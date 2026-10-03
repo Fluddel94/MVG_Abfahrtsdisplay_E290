@@ -160,6 +160,12 @@
 // Mehr als 50 Stoerungen in 24h werden als 50 angezeigt.
 #define API_FAIL_HISTORY_SIZE 50
 
+// --- Diagnose ---
+// 1 = zusaetzliche Ausgaben im seriellen Monitor (Antwortgroessen, freier
+// Arbeitsspeicher, Einzelschritte der Linienliste) zur Fehlersuche, siehe
+// src/debug_log.h. Fuer den Alltag und Releases 0.
+#define DEBUG_LOG 0
+
 // --- Zeitzone ---
 // Deutschland inkl. Sommerzeit (POSIX-Format), verwendet in setup().
 #define TIMEZONE_INFO "CET-1CEST,M3.5.0,M10.5.0/3"

@@ -1,5 +1,5 @@
 // Version: 2.1.0
-// Letzte Änderung: 03.10.2026 17:13
+// Letzte Änderung: 03.10.2026 17:27
 #define FW_VERSION "2.1.0"
 
 // ------------------------------------------------------------
@@ -44,6 +44,7 @@
 //   time_utils     Laufzeit, Zeitformate
 //   text_utils     UTF-8 -> Latin-1 fuer echte Umlaute auf dem Display
 //   wifi_diag      Ursache von WLAN-Abbruechen fuer den Fehlerbildschirm
+//   debug_log.h    Zusatz-Diagnose im seriellen Monitor (DEBUG_LOG in config.h)
 //   extras         Andockstellen fuer optionale Erweiterungen (Abschnitt
 //                  Erweiterungen)
 // Startbildschirm: Abschnitt Startbildschirm am Dateiende

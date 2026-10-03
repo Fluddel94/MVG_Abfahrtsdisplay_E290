@@ -55,6 +55,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   kleinste statt der größten Verspätung der Zugteile.
 
 ### Intern
+- Zusätzliche Diagnose im seriellen Monitor (Antwortgrößen, freier
+  Arbeitsspeicher, Einzelschritte der Linienliste) lässt sich mit
+  `DEBUG_LOG` in `config.h` einschalten (neue Datei `src/debug_log.h`),
+  Standard: aus.
 - Einstellungsportal: neue Abfrage `/linien?id=…` liefert alle Linien einer
   Station (MVG-Endpunkt `lines`) mit Beispielzielen je Richtungskennung
   H/R aus den Abfahrten der nächsten rund 12 Stunden – Grundlage für die
@@ -74,6 +78,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ### Dokumentation
 - Fotos des Displays oben in der README (neuer Ordner `bilder/`).
+- README und README_TECHNIK beschreiben Linienauswahl, Richtung je
+  Station, zweite Station und das Überbrücken von Störungen; Bilder vom
+  Einstellungsportal und vom Web-Installer.
+- Englische Fassungen: `README_EN.md`, `README_TECHNIK_EN.md`.
 - README: Link zum Gehäuse auf MakerWorld, kurzer Hinweis zur Entwicklung
   mit Agentic Coding.
 

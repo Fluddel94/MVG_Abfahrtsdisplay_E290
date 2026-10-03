@@ -8,6 +8,7 @@
 #include "../config.h"
 #include "settings.h"
 #include "mvg_api.h"
+#include "debug_log.h"   // DBG_PRINTF: Diagnose nur mit DEBUG_LOG 1
 #include "text_utils.h"   // utf8ToLatin1(): Umlaute fuer die Display-Schriften
 #include "line_select.h"  // LineCollector: Linienliste fuers Portal
 
@@ -265,9 +266,10 @@ static const int LINE_SAMPLE_OFFSETS[] = { 0, 120, 360, 720 };
 // Abfahrten je Abruf (die API liefert hoechstens 100)
 #define LINE_SAMPLE_LIMIT 100
 
-// Freien Heap im seriellen Monitor ausgeben (Messung fuer die Linienliste)
+// Freien Heap im seriellen Monitor ausgeben (nur mit DEBUG_LOG 1)
 static void logHeap(const char* step) {
-  Serial.printf("Heap %s: frei %u, groesster Block %u, Minimum %u\n", step,
+  (void)step;
+  DBG_PRINTF("Heap %s: frei %u, groesster Block %u, Minimum %u\n", step,
                 (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap(),
                 (unsigned)ESP.getMinFreeHeap());
 }
@@ -378,7 +380,8 @@ static bool fetchJsonStream(const String& url, JsonDocument& doc,
   DeserializationError error = deserializeJson(doc, body,
                                                DeserializationOption::Filter(filter));
   http.end();
-  Serial.printf("Antwort: Laenge %d, chunked %d, gelesen %u Bytes%s\n", size,
+  (void)size;
+  DBG_PRINTF("Antwort: Laenge %d, chunked %d, gelesen %u Bytes%s\n", size,
                 chunked ? 1 : 0, (unsigned)body.count(),
                 body.timedOut() ? ", Zeitueberschreitung" : "");
   if (error) {
@@ -415,7 +418,7 @@ bool listStationLines(const char* globalId, uint8_t typeBits, String& jsonOut) {
     if (!typeAllowed(l["transportType"], typeBits)) continue;
     lines->addLine(l["label"], l["transportType"], l["sev"] | false);
   }
-  Serial.printf("Linienliste: %d Linien\n", lines->count());
+  DBG_PRINTF("Linienliste: %d Linien\n", lines->count());
   logHeap("nach lines");
 
   // 2. Beispielziele je Kennung H/R aus Abfahrten (ca. 12 Stunden).
@@ -441,7 +444,7 @@ bool listStationLines(const char* globalId, uint8_t typeBits, String& jsonOut) {
       lines->addDeparture(d["label"], d["transportType"], d["lineId"],
                           d["destination"], d["sev"] | false);
     }
-    Serial.printf("Abfahrten ab +%d Min.: %d\n", offset, (int)doc.size());
+    DBG_PRINTF("Abfahrten ab +%d Min.: %d\n", offset, (int)doc.size());
     logHeap("nach Abfahrten");
   }
 

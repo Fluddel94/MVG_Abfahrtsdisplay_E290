@@ -1,5 +1,7 @@
 # MVG-Abfahrtsdisplay (Heltec Vision Master E290)
 
+**Deutsch** | [English](README_EN.md)
+
 <p align="center">
   <img src="bilder/marienplatz.jpg" width="32%" alt="Display mit Abfahrten am Marienplatz (U-Bahn und S-Bahn mit Verspätungen)">
   <img src="bilder/dachau_seitenansicht.jpg" width="32%" alt="Seitenansicht des Gehäuses, Abfahrten Dachau Bahnhof">
@@ -8,8 +10,9 @@
 
 Ein kleines E-Ink-Display für zu Hause, das die nächsten Abfahrten an deiner
 Münchner Haltestelle zeigt – live, mit Verspätungen, Ausfällen und
-Störungshinweisen. Es läuft dauerhaft am USB-Netzteil und aktualisiert sich
-jede Minute.
+Störungshinweisen. Auf Wunsch nur bestimmte Linien und Richtungen, und mit
+einer zweiten Haltestelle, zwischen denen eine Taste umschaltet. Es läuft
+dauerhaft am USB-Netzteil und aktualisiert sich jede Minute.
 
 **Einrichten geht komplett im Browser**, ohne Programmierkenntnisse:
 Firmware über den
@@ -24,7 +27,8 @@ aufspielen, WLAN eingeben, Haltestelle auswählen – fertig.
 > jederzeit ändern oder abgeschaltet werden. Gedacht ist das Display nur für
 > das MVG-/MVV-Gebiet.
 
-Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](README_TECHNIK.md)**.
+Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](README_TECHNIK.md)**
+(englisch: [README_TECHNIK_EN.md](README_TECHNIK_EN.md)).
 Änderungen je Version: [CHANGELOG.md](CHANGELOG.md).
 
 ---
@@ -33,9 +37,14 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
 
 - **Die nächsten 4 Abfahrten** mit Linie, Ziel, Uhrzeit und Verspätung
   (z.B. `+3`). Pünktliche Abfahrten zeigen nur die Uhrzeit.
-- **Zwei Anzeigearten:** alle Richtungen gemischt (mit einer zweiten Seite
-  für Abfahrt 5–8) oder getrennt nach „Zentrum“ und „Auswärts“.
+- **Richtungen:** alle gemischt (mit einer zweiten Seite für Abfahrt 5–8),
+  getrennt nach „Zentrum“ und „Auswärts“ (per Taste umschalten) oder nur
+  eine Richtung.
 - **Verkehrsmittel auswählbar:** S-Bahn, U-Bahn, Tram, Bus, Regionalzug.
+- **Linienauswahl:** nur die Linien, die dich interessieren – je Linie
+  beide Richtungen oder nur eine (bis zu 16 Linien je Haltestelle).
+- **Zweite Haltestelle:** z.B. Bus vor der Tür und S-Bahn um die Ecke. Die
+  linke Taste schaltet um, nach 30 s geht es zurück zur ersten.
 - **Liniensymbole** wie an der Haltestelle.
 - **Ausfälle und Störungen:** Fällt ein Zug aus, ist die Uhrzeit
   durchgestrichen; bei Störungen erscheint ein Warndreieck. Endet ein Zug
@@ -44,6 +53,9 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
   auch Regionalzüge, deren Zugteile verschiedene Liniennummern haben (z.B.
   BRB RB 55/56/57, Symbol „RB“, Ziele gekürzt: „Lenggri./Tegerns.“).
 - **Ersatzverkehr:** Ersatzbusse für Züge, S-Bahn oder Tram erscheinen als „SEV“.
+- **Kurze Störungen bleiben unsichtbar:** Fällt die MVG-Schnittstelle oder
+  das WLAN kurz aus, bleiben die Abfahrten bis zu einer Minute stehen,
+  erst dann erscheint ein Hinweis.
 - **Alles im Browser einstellbar** – auch vom Handy aus, über das
   [Einstellungsportal](#einstellungsportal).
 - **Updates ohne Datenverlust:** Haltestelle, WLAN und Einstellungen bleiben
@@ -65,6 +77,10 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
 Öffne den **[Web-Installer](https://fluddel94.github.io/MVG_Abfahrtsdisplay_E290/)**.
 Sein Dialog ist englisch – die Knöpfe stehen deshalb unten *kursiv* im
 Original.
+
+<p align="center">
+  <img src="bilder/web_installer.png" width="70%" alt="Startseite des Web-Installers mit dem Knopf Installieren">
+</p>
 
 1. Display per USB an den PC anstecken, auf **Installieren** klicken.
    Firefox fragt vorher, ob die Seite auf serielle Geräte zugreifen darf –
@@ -91,7 +107,7 @@ Klappt etwas nicht? Siehe [Hilfe bei Problemen](#hilfe-bei-problemen).
 
 | Taste | Was passiert |
 |---|---|
-| **Linke Taste** kurz drücken | gemischte Anzeige: Seite 2 (Abfahrt 5–8) · getrennte Anzeige: andere Richtung. Nach 30 s geht es von selbst zurück. |
+| **Linke Taste** kurz drücken | mit zweiter Haltestelle: zur anderen Haltestelle · sonst bei gemischter Anzeige: Seite 2 (Abfahrt 5–8), bei getrennter Anzeige: andere Richtung. Nach 30 s geht es von selbst zurück. |
 | **Mittlere Taste** 3 Sekunden halten | System-Info für 60 s – und das [Einstellungsportal](#einstellungsportal) öffnet sich für 30 Minuten. Nochmal 3 s halten = zurück. |
 | **Mittlere Taste** kurz drücken | QR-Code fürs Gäste-WLAN für 60 s (nur wenn eingeschaltet) |
 
@@ -106,15 +122,31 @@ dann die Adresse (z.B. `http://192.168.178.42`) – diese im Browser eintippen.
 Das Portal bleibt 30 Minuten offen. Bei der ersten Einrichtung führt
 *Visit device* im Web-Installer direkt hin.
 
+<p align="center">
+  <img src="bilder/portal_station.png" width="40%" alt="Einstellungsportal: Station, Verkehrsmittel, Richtung und gewählte Linien">
+  <img src="bilder/portal_linien.png" width="40%" alt="Einstellungsportal: Linienauswahl mit Beispielzielen je Richtung">
+</p>
+
 **Was du einstellen kannst:**
 
-- **Station:** Namen eintippen und *Suchen*. Bei gleichnamigen Haltestellen
-  hilft der Link zur Karte. Mit *Auswählen* übernehmen.
-- **Anzeige:** alle Richtungen gemischt oder getrennt nach Zentrum und
-  Auswärts. Für „getrennt“ zeigt *Richtungen anzeigen*, welche Linien und
-  Ziele zu welcher Kennung (H oder R) gehören – so legst du fest, welche
-  davon Richtung Zentrum fährt.
+- **Station 1:** Namen eintippen und *Suchen*. Bei gleichnamigen
+  Haltestellen hilft der Link zur Karte. Mit *Auswählen* übernehmen. Der
+  Name der eingestellten Station steht danach in der Überschrift.
 - **Verkehrsmittel:** S-Bahn, U-Bahn, Tram, Bus, Regionalzug.
+- **Richtung:** alle Richtungen, getrennt nach Zentrum und Auswärts (H/R)
+  oder nur Richtung H bzw. R. *H* und *R* sind die Richtungskennungen der
+  MVG; *Richtungen anzeigen* zeigt, welche Linien und Ziele zu welcher
+  Kennung gehören. Bei „getrennt“ legst du fest, welche davon Richtung
+  Zentrum fährt.
+- **Linien:** *Linien auswählen* listet alle Linien der angehakten
+  Verkehrsmittel mit Beispielzielen je Richtung (das Laden dauert etwa
+  10 Sekunden). Linien anhaken und je Linie *beide Richtungen*, *nur H*
+  oder *nur R* wählen – bis zu 16 Linien. Ohne Häkchen zeigt das Display
+  alle Linien der gewählten Verkehrsmittel. *Fertig* klappt die Liste zu.
+- **Station 2 (optional):** *Zweite Station hinzufügen* – mit eigenen
+  Verkehrsmitteln, eigener Richtung und eigenen Linien. Die linke Taste
+  schaltet dann zwischen beiden um; im Kopf steht die Nummer der Station.
+  Getrennte Anzeige und Seite 2 gibt es nur mit einer Station.
 - **WLAN-QR-Code:** Überschrift, Name und Passwort des WLANs, das Gäste per
   QR-Code bekommen sollen. Das Passwort steht dann gut lesbar auf dem
   Display – nimm also nur ein WLAN, das du teilen möchtest.
@@ -176,9 +208,15 @@ Es ist noch kein WLAN gespeichert (z.B. nach den Werkseinstellungen): per
 USB im Web-Installer *Connect to Wi-Fi*.
 
 ### Das Display zeigt einen WLAN-Fehler
-Es nennt die vermutete Ursache (z.B. „Passwort falsch?“) und versucht es
-alle 10 Sekunden erneut. Stimmt das Passwort nicht: im Web-Installer
-*Change Wi-Fi*.
+Er erscheint, wenn das WLAN länger als eine Minute weg ist (beim Start nach
+20 Sekunden). Das Display nennt die vermutete Ursache (z.B. „Passwort
+falsch?“) und versucht es alle 10 Sekunden erneut. Stimmt das Passwort
+nicht: im Web-Installer *Change Wi-Fi*.
+
+### Das Display zeigt einen Fehler beim Abruf
+Die MVG-Schnittstelle antwortet seit über einer Minute nicht (z.B.
+Wartung). Das Display versucht es alle 10 Sekunden erneut und zeigt die
+Abfahrten von selbst wieder, sobald es klappt.
 
 ### Das Portal lässt sich nicht öffnen
 Es ist nur 30 Minuten nach dem Öffnen erreichbar: die mittlere Taste
@@ -187,8 +225,15 @@ im selben WLAN sein.
 
 ## Gut zu wissen
 
-- An großen Stationen erscheinen alle Linien der gewählten Verkehrsmittel
-  gemischt – einzelne Linien lassen sich nicht auswählen.
+- Ohne Linienauswahl erscheinen an großen Stationen alle Linien der
+  gewählten Verkehrsmittel gemischt.
+- Selten fahrende Linien an großen Stationen: Die Vorschau reicht etwa
+  90 Minuten. Fährt eine gewählte Linie seltener, bleiben Zeilen leer.
+- Ersatzbusse für Regionalzüge erscheinen, sobald irgendein Regionalzug
+  gewählt ist – die MVG nennt dabei nur die Zugnummer, nicht die Linie.
+- Mit zwei Stationen zeigt das Display je Station vier Abfahrten.
+- Außerhalb Münchens nennt die MVG Haltestellen oft ohne Ort (z.B. „Stadt
+  Busbahnhof“ statt „Wasserburg Stadt Busbahnhof“).
 - Pünktliche Abfahrten sehen genauso aus wie Abfahrten ohne Live-Daten.
 - Ersatzbusse (SEV) erscheinen beim ersetzten Verkehrsmittel – der Ersatzbus
   für die S2 also auch, wenn nur „S-Bahn“ eingeschaltet ist. Live-Daten
