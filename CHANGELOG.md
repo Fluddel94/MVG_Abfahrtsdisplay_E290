@@ -6,6 +6,11 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Geändert
+- Schienenersatzverkehr wird als „SEV“ im Bus-Rahmen angezeigt. Bisher
+  erschien je nach Fall die Zugnummer (z.B. „67116“ in Weilheim) oder die
+  ersetzte Linie (z.B. „S2“), ohne Hinweis auf den Ersatzbus.
+
 ### Dokumentation
 - Fotos des Displays oben in der README (neuer Ordner `bilder/`).
 - README: Link zum Gehäuse auf MakerWorld, kurzer Hinweis zur Entwicklung

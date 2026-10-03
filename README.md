@@ -41,6 +41,7 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
   durchgestrichen; bei Störungen erscheint ein Warndreieck. Endet ein Zug
   früher, steht das tatsächliche Ziel da.
 - **Geteilte Züge** (z.B. S1 Flughafen / Freising) erscheinen als eine Zeile.
+- **Ersatzverkehr:** Ersatzbusse für Züge, S-Bahn oder Tram erscheinen als „SEV“.
 - **Alles im Browser einstellbar** – auch vom Handy aus, über das
   [Einstellungsportal](#einstellungsportal).
 - **Updates ohne Datenverlust:** Haltestelle, WLAN und Einstellungen bleiben
@@ -187,6 +188,9 @@ im selben WLAN sein.
 - An großen Stationen erscheinen alle Linien der gewählten Verkehrsmittel
   gemischt – einzelne Linien lassen sich nicht auswählen.
 - Pünktliche Abfahrten sehen genauso aus wie Abfahrten ohne Live-Daten.
+- Ersatzbusse (SEV) erscheinen beim ersetzten Verkehrsmittel – der Ersatzbus
+  für die S2 also auch, wenn nur „S-Bahn“ eingeschaltet ist. Live-Daten
+  haben sie meist nicht.
 - Lange Stationsnamen werden im Kopf gekürzt („.“ am Ende).
 
 Mehr Details: [README_TECHNIK.md](README_TECHNIK.md#einschränkungen-im-detail).

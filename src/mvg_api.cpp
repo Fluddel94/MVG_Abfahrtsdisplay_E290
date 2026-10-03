@@ -285,6 +285,7 @@ int parseDepartures(const String& payload, DirectionFilter filter,
   f["transportType"] = true;
   f["product"] = true;
   f["platform"] = true;
+  f["sev"] = true;
   f["infos"][0]["type"] = true;
   f["infos"][0]["message"] = true;
 
@@ -343,6 +344,17 @@ int parseDepartures(const String& payload, DirectionFilter filter,
     // passt es in die Pixelschrift der generierten Icons ("RB56")
     if (transportType != nullptr && strcmp(transportType, "BAHN") == 0) {
       r.line.replace(" ", "");
+    }
+
+    // Schienenersatzverkehr ("sev": true, beobachtet 03.10.2026): Ersatzbusse
+    // fuer Zug, S-Bahn oder Tram. Das Label ist je nach Fall die Zugnummer
+    // ("67116", Typ BAHN), die ersetzte Linie ("S2", Typ BUS) oder die
+    // Tramnummer ("25", Typ BUS) - einheitlich als "SEV" im Bus-Rahmen.
+    // Die API liefert Ersatzbusse beim ersetzten Verkehrsmittel mit
+    // (transportTypes=SBAHN enthaelt den S2-Ersatzbus, TRAM den der Tram)
+    if (dep["sev"] | false) {
+      r.line = "SEV";
+      r.isBus = true;
     }
 
     // Gleis (nur S-/U-Bahn und Zuege) - fuer die Erkennung von Fluegelzuegen
