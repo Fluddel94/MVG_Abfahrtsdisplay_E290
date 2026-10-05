@@ -6,6 +6,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.3.0] – 05.10.2026
+
 ### Neu
 - **Richtung je Station mit Bezeichnung:** Station 1 und 2 zeigen bei
   „nur Richtung H/R“ und bei umschaltbarer Richtung im Header
@@ -49,22 +51,17 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 - Während ein WLAN-Ausfall überbrückt wird (bis 60 s), reagieren die
   Tasten weiter (Ansichten aus dem Zwischenspeicher, QR-Code,
   Systeminfo). Bisher waren sie bis zur Rückkehr des WLANs ohne Wirkung.
+- **Update von 2.2.0 und älter:** Die gespeicherten Einstellungen werden
+  beim ersten Start so übernommen, dass Anzeige und Tasten gleich
+  bleiben. Ein Zurückspielen von 2.2.0 funktioniert weiterhin.
+- Station 2 wird nur noch abgerufen, wenn sie einer Taste zugeordnet ist.
+- README und README_TECHNIK (deutsch/englisch) überarbeitet: Bedienung,
+  Einstellungsportal mit neuen Bildern, Hilfe bei WLAN-Abbrüchen; „linke
+  Taste“ statt „BOOT-Taste“.
 
 ### Korrigiert
 - WLAN-Stromsparmodus abgeschaltet (`WiFi.setSleep(false)`): Bei manchen
   Routern führte er zu wiederholten Verbindungsabbrüchen.
-
-### Intern
-- Einstellungen aus 2.2.0 und älter werden beim ersten Start so
-  übernommen, dass Anzeige und Tasten gleich bleiben. Die bisherigen
-  Schlüssel (`dirView`, `zentrumIsH`, `defZentrum`, `qrOn`) werden
-  weiter geschrieben, damit ein Downgrade funktioniert.
-- `Departure.planned`: geplante Abfahrt als Zeitstempel.
-- Station 2 wird nur noch abgerufen, wenn sie einer Taste zugeordnet ist.
-- README und README_TECHNIK (deutsch/englisch) für 2.3.0 überarbeitet
-  (Bedienung, Einstellungsportal, neue Portal-Bilder, Hilfe bei
-  WLAN-Abbrüchen), Kommentare in `config.h` angepasst („linke Taste“ statt
-  „BOOT-Taste“).
 
 ## [2.2.0] – 03.10.2026
 

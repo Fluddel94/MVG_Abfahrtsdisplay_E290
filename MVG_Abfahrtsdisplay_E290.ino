@@ -1,6 +1,6 @@
-// Version: 2.2.0
-// Letzte Änderung: 05.10.2026 16:26
-#define FW_VERSION "2.2.0"
+// Version: 2.3.0
+// Letzte Änderung: 05.10.2026 16:48
+#define FW_VERSION "2.3.0"
 
 // ------------------------------------------------------------
 // Konfiguration
