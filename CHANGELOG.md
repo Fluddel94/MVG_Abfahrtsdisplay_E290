@@ -61,6 +61,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   weiter geschrieben, damit ein Downgrade funktioniert.
 - `Departure.planned`: geplante Abfahrt als Zeitstempel.
 - Station 2 wird nur noch abgerufen, wenn sie einer Taste zugeordnet ist.
+- README und README_TECHNIK (deutsch/englisch) für 2.3.0 überarbeitet
+  (Bedienung, Einstellungsportal, neue Portal-Bilder, Hilfe bei
+  WLAN-Abbrüchen), Kommentare in `config.h` angepasst („linke Taste“ statt
+  „BOOT-Taste“).
 
 ## [2.2.0] – 03.10.2026
 

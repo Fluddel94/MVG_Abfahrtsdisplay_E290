@@ -11,7 +11,7 @@
 Ein kleines E-Ink-Display für zu Hause, das die nächsten Abfahrten an deiner
 Münchner Haltestelle zeigt – live, mit Verspätungen, Ausfällen und
 Störungshinweisen. Auf Wunsch nur bestimmte Linien und Richtungen, und mit
-einer zweiten Haltestelle, zwischen denen eine Taste umschaltet. Es läuft
+einer zweiten Haltestelle, die eine Taste zeigt. Es läuft
 dauerhaft am USB-Netzteil und aktualisiert sich jede Minute.
 
 **Einrichten geht komplett im Browser**, ohne Programmierkenntnisse:
@@ -36,15 +36,18 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
 ## Was das Display kann
 
 - **Die nächsten 4 Abfahrten** mit Linie, Ziel, Uhrzeit und Verspätung
-  (z.B. `+3`). Pünktliche Abfahrten zeigen nur die Uhrzeit.
-- **Richtungen:** alle gemischt (mit einer zweiten Seite für Abfahrt 5–8),
-  getrennt nach „Zentrum“ und „Auswärts“ (per Taste umschalten) oder nur
-  eine Richtung.
+  (z.B. `+3`). Pünktliche Abfahrten zeigen nur die Uhrzeit. Wahlweise
+  Minuten bis zur Abfahrt (**4** min, **jetzt**), Verspätung eingerechnet.
+- **Richtungen:** alle gemischt, umschaltbar zwischen „Zentrum“ und
+  „Auswärts“ (per Taste), nur eine Richtung oder je Linie festgelegt. Im
+  Kopf steht dann z.B. „Pasing → Zentrum“.
 - **Verkehrsmittel auswählbar:** S-Bahn, U-Bahn, Tram, Bus, Regionalzug.
 - **Linienauswahl:** nur die Linien, die dich interessieren – je Linie
   beide Richtungen oder nur eine (bis zu 16 Linien je Haltestelle).
-- **Zweite Haltestelle:** z.B. Bus vor der Tür und S-Bahn um die Ecke. Die
-  linke Taste schaltet um, nach 30 s geht es zurück zur ersten.
+- **Zweite Haltestelle:** z.B. Bus vor der Tür und S-Bahn um die Ecke. Eine
+  Taste zeigt sie, nach 30 s geht es zurück zur ersten.
+- **Zwei Tasten frei belegbar:** Richtung wechseln, zweite Haltestelle,
+  weitere Abfahrten (Seite 2) oder Gäste-WLAN-QR-Code.
 - **Liniensymbole** wie an der Haltestelle.
 - **Ausfälle und Störungen:** Fällt ein Zug aus, ist die Uhrzeit
   durchgestrichen; bei Störungen erscheint ein Warndreieck. Endet ein Zug
@@ -54,8 +57,8 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
   BRB RB 55/56/57, Symbol „RB“, Ziele gekürzt: „Lenggri./Tegerns.“).
 - **Ersatzverkehr:** Ersatzbusse für Züge, S-Bahn oder Tram erscheinen als „SEV“.
 - **Kurze Störungen bleiben unsichtbar:** Fällt die MVG-Schnittstelle oder
-  das WLAN kurz aus, bleiben die Abfahrten bis zu einer Minute stehen,
-  erst dann erscheint ein Hinweis.
+  das WLAN kurz aus, bleiben die Abfahrten bis zu einer Minute stehen
+  (die Tasten funktionieren weiter), erst dann erscheint ein Hinweis.
 - **Alles im Browser einstellbar** – auch vom Handy aus, über das
   [Einstellungsportal](#einstellungsportal).
 - **Updates ohne Datenverlust:** Haltestelle, WLAN und Einstellungen bleiben
@@ -105,11 +108,25 @@ Klappt etwas nicht? Siehe [Hilfe bei Problemen](#hilfe-bei-problemen).
 **links** (auf dem Board „BOOT“), **Mitte** (auf dem Board „21“),
 **rechts** (auf dem Board „RST“ – startet das Display neu).
 
+Linke und mittlere Taste haben je **eine** Funktion, die du im Portal
+unter *Tasten* festlegst:
+
+| Belegung | Was die Taste zeigt |
+|---|---|
+| **Richtung wechseln** | die andere Richtung (nur bei „Umschaltbar per Taste“) |
+| **Station 2** | die zweite Haltestelle |
+| **Weitere Abfahrten (Seite 2)** | Abfahrt 5–8 |
+| **WLAN-QR-Code** (nur Mitte) | QR-Code fürs Gäste-WLAN für 60 s |
+| **Keine Funktion** | – |
+
+Ein Druck zeigt die Ansicht der Taste. Ein weiterer Druck – egal auf
+welche der beiden Tasten – oder 30 Sekunden Warten führt zurück zur
+**Standardansicht** (Station 1 mit ihrer Startrichtung).
+
 | Taste | Was passiert |
 |---|---|
-| **Linke Taste** kurz drücken | mit zweiter Haltestelle: zur anderen Haltestelle · sonst bei gemischter Anzeige: Seite 2 (Abfahrt 5–8), bei getrennter Anzeige: andere Richtung. Nach 30 s geht es von selbst zurück. |
 | **Mittlere Taste** 3 Sekunden halten | System-Info für 60 s – und das [Einstellungsportal](#einstellungsportal) öffnet sich für 30 Minuten. Nochmal 3 s halten = zurück. |
-| **Mittlere Taste** kurz drücken | QR-Code fürs Gäste-WLAN für 60 s (nur wenn eingeschaltet) |
+| **Rechte Taste** | Neustart |
 
 ## Einstellungsportal
 
@@ -122,34 +139,60 @@ dann die Adresse (z.B. `http://192.168.178.42`) – diese im Browser eintippen.
 Das Portal bleibt 30 Minuten offen. Bei der ersten Einrichtung führt
 *Visit device* im Web-Installer direkt hin.
 
+Jede Station stellst du in vier Schritten ein; unter jeder Einstellung
+steht, was das Display danach zeigt. *Speichern* sitzt in der Leiste am
+unteren Rand – sie zeigt auch, ob es ungespeicherte Änderungen gibt.
+Fehlt etwas, ist die Stelle rot markiert.
+
 <p align="center">
-  <img src="bilder/portal_station.png" width="40%" alt="Einstellungsportal: Station, Verkehrsmittel, Richtung und gewählte Linien">
-  <img src="bilder/portal_linien.png" width="40%" alt="Einstellungsportal: Linienauswahl mit Beispielzielen je Richtung">
+  <img src="bilder/portal_station.png" width="32%" alt="Einstellungsportal: Station, Verkehrsmittel, Richtungsanzeige mit Zentrum-Frage und Linien">
+  <img src="bilder/portal_linien.png" width="32%" alt="Einstellungsportal: Linienauswahl mit Beispielzielen je Richtung">
+  <img src="bilder/portal_tasten.png" width="32%" alt="Einstellungsportal: Abfahrtszeit als Uhrzeit oder Minuten, Belegung der Tasten">
 </p>
 
 **Was du einstellen kannst:**
 
-- **Station 1:** Namen eintippen und *Suchen*. Bei gleichnamigen
-  Haltestellen hilft der Link zur Karte. Mit *Auswählen* übernehmen. Der
-  Name der eingestellten Station steht danach in der Überschrift.
-- **Verkehrsmittel:** S-Bahn, U-Bahn, Tram, Bus, Regionalzug.
-- **Richtung:** alle Richtungen, getrennt nach Zentrum und Auswärts (H/R)
-  oder nur Richtung H bzw. R. *H* und *R* sind die Richtungskennungen der
-  MVG; *Richtungen anzeigen* zeigt, welche Linien und Ziele zu welcher
-  Kennung gehören. Bei „getrennt“ legst du fest, welche davon Richtung
-  Zentrum fährt.
-- **Linien:** *Linien auswählen* listet alle Linien der angehakten
-  Verkehrsmittel mit Beispielzielen je Richtung (das Laden dauert etwa
-  10 Sekunden). Linien anhaken und je Linie *beide Richtungen*, *nur H*
-  oder *nur R* wählen – bis zu 16 Linien. Ohne Häkchen zeigt das Display
-  alle Linien der gewählten Verkehrsmittel. *Fertig* klappt die Liste zu.
+1. **Station:** Namen eintippen und *Suchen*. Bei gleichnamigen
+   Haltestellen hilft der Link zur Karte. Mit *Auswählen* übernehmen –
+   die Station erscheint als Karte, *Ändern* sucht eine andere. Die
+   Station-ID lässt sich unter *Station-ID manuell eingeben* auch von
+   Hand eintragen.
+2. **Verkehrsmittel:** S-Bahn, U-Bahn, Tram, Bus, Regionalzug.
+   Gestrichelt = fährt an dieser Station nicht.
+3. **Richtungsanzeige:**
+   - *Alle Richtungen gemischt*
+   - *Umschaltbar per Taste (H/R)* – eine Taste wechselt zwischen den
+     beiden Richtungen (nur Station 1); dazu die *Startansicht*
+   - *Nur Richtung H* bzw. *Nur Richtung R*
+   - *Je Linie wählen* – die Richtung legst du dann je Linie in der
+     Linienauswahl fest
+
+   *H* und *R* sind die Richtungskennungen der MVG; das Portal zeigt dazu
+   Beispielziele. Bei *Umschaltbar* und *Nur H/R* fragt es, **welche
+   Richtung ins Zentrum fährt** – dann steht im Kopf „→ Zentrum“ bzw.
+   „→ Auswärts“. Bei Querverbindungen *Keine* wählen: Bei *Nur H/R* steht
+   dann nur der Stationsname da, bei *Umschaltbar* „→ H“/„→ R“.
+4. **Linien (optional):** *Linien auswählen* listet alle Linien der
+   angehakten Verkehrsmittel mit Beispielzielen je Richtung (das Laden
+   dauert etwa 10 Sekunden). Bis zu 16 Linien anhaken; ohne Häkchen zeigt
+   das Display alle Linien der gewählten Verkehrsmittel. *Fertig* klappt
+   die Liste zu.
+
+Außerdem:
+
 - **Station 2 (optional):** *Zweite Station hinzufügen* – mit eigenen
-  Verkehrsmitteln, eigener Richtung und eigenen Linien. Die linke Taste
-  schaltet dann zwischen beiden um; im Kopf steht die Nummer der Station.
-  Getrennte Anzeige und Seite 2 gibt es nur mit einer Station.
-- **WLAN-QR-Code:** Überschrift, Name und Passwort des WLANs, das Gäste per
-  QR-Code bekommen sollen. Das Passwort steht dann gut lesbar auf dem
-  Display – nimm also nur ein WLAN, das du teilen möchtest.
+  Verkehrsmitteln, eigener Richtung und eigenen Linien, gleiche Schritte
+  wie oben. Im Kopf steht dann die Nummer der Station. Sie wird
+  automatisch einer freien Taste zugeordnet.
+- **Anzeige:** Abfahrtszeit als *Uhrzeit* (10:34 +2) oder *Minuten*
+  (**4** min).
+- **Tasten:** zeigt die Standardansicht und die Belegung der linken und
+  mittleren Taste (siehe [Bedienung](#bedienung)). Ist eine Funktion
+  keiner Taste zugeordnet, erscheint ein Hinweis.
+- **WLAN-QR-Code** (bei Belegung der mittleren Taste): Überschrift, Name
+  und Passwort des WLANs, das Gäste per QR-Code bekommen sollen. Das
+  Passwort steht dann gut lesbar auf dem Display – nimm also nur ein
+  WLAN, das du teilen möchtest.
 - **Firmware aktualisieren:** siehe [Update](#update).
 - **Werkseinstellungen:** löscht alle Einstellungen inklusive WLAN.
 
@@ -213,6 +256,15 @@ Er erscheint, wenn das WLAN länger als eine Minute weg ist (beim Start nach
 falsch?“) und versucht es alle 10 Sekunden erneut. Stimmt das Passwort
 nicht: im Web-Installer *Change Wi-Fi*.
 
+### Das Display verliert immer wieder das WLAN
+Der kleine Funkchip des Displays empfängt deutlich schlechter als Laptop
+oder Handy und kann nur 2,4 GHz. Hilft oft: das Display anders hinstellen
+oder näher an den Router, ein ordentliches USB-Netzteil statt des
+PC-Anschlusses, im Router für 2,4 GHz einen festen Kanal (1, 6 oder 11)
+statt Autokanal und testweise nur WPA2 statt „WPA2 + WPA3“. Die
+Signalstärke steht im Portal unter *Gerät* (schlechter als etwa
+-75 dBm ist knapp).
+
 ### Das Display zeigt einen Fehler beim Abruf
 Die MVG-Schnittstelle antwortet seit über einer Minute nicht (z.B.
 Wartung). Das Display versucht es alle 10 Sekunden erneut und zeigt die
@@ -231,7 +283,9 @@ im selben WLAN sein.
   90 Minuten. Fährt eine gewählte Linie seltener, bleiben Zeilen leer.
 - Ersatzbusse für Regionalzüge erscheinen, sobald irgendein Regionalzug
   gewählt ist – die MVG nennt dabei nur die Zugnummer, nicht die Linie.
-- Mit zwei Stationen zeigt das Display je Station vier Abfahrten.
+- Seite 2 (Abfahrt 5–8) gibt es für Station 1, Station 2 zeigt vier
+  Abfahrten.
+- In der Minuten-Anzeige stehen Abfahrten ab 60 Minuten mit Uhrzeit.
 - Außerhalb Münchens nennt die MVG Haltestellen oft ohne Ort (z.B. „Stadt
   Busbahnhof“ statt „Wasserburg Stadt Busbahnhof“).
 - Pünktliche Abfahrten sehen genauso aus wie Abfahrten ohne Live-Daten.

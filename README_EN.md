@@ -11,7 +11,7 @@
 A small e-ink display for your home that shows the next departures at your
 Munich stop – live, with delays, cancellations and disruption notices.
 Optionally only selected lines and directions, and with a second stop that
-a button switches to. It runs permanently on a USB power supply and updates
+a button shows. It runs permanently on a USB power supply and updates
 every minute.
 
 **Setup works entirely in the browser**, no programming required: flash the
@@ -38,16 +38,19 @@ Changes per version: [CHANGELOG.md](CHANGELOG.md) (German).
 ## What the display does
 
 - **The next 4 departures** with line, destination, time and delay
-  (e.g. `+3`). Departures on time show the time only.
-- **Directions:** all mixed (with a second page for departures 5–8),
-  split into "Zentrum" (towards the city centre) and "Auswärts" (outbound),
-  switched with a button, or one direction only.
+  (e.g. `+3`). Departures on time show the time only. Optionally minutes
+  until departure (**4** min, **jetzt** = now), delay included.
+- **Directions:** all mixed, switchable between "Zentrum" (towards the city
+  centre) and "Auswärts" (outbound) with a button, one direction only, or
+  set per line. The header then reads e.g. "Pasing → Zentrum".
 - **Selectable modes of transport:** S-Bahn, U-Bahn, tram, bus, regional
   train.
 - **Line selection:** only the lines you care about – per line both
   directions or just one (up to 16 lines per stop).
 - **Second stop:** e.g. the bus at your door and the S-Bahn around the
-  corner. The left button switches, after 30 s it returns to the first one.
+  corner. A button shows it, after 30 s it returns to the first one.
+- **Two buttons with a function of your choice:** switch direction, second
+  stop, more departures (page 2) or guest Wi-Fi QR code.
 - **Line symbols** like at the stop.
 - **Cancellations and disruptions:** if a train is cancelled, the time is
   struck through; disruptions show a warning triangle. If a train ends
@@ -58,8 +61,8 @@ Changes per version: [CHANGELOG.md](CHANGELOG.md) (German).
 - **Rail replacement:** replacement buses for trains, S-Bahn or tram appear
   as "SEV".
 - **Short outages stay invisible:** if the MVG interface or the Wi-Fi drops
-  briefly, the departures stay on screen for up to a minute before an error
-  is shown.
+  briefly, the departures stay on screen for up to a minute (the buttons
+  keep working) before an error is shown.
 - **Everything is set up in the browser** – also from your phone, via the
   [settings portal](#settings-portal).
 - **Updates keep your data:** stop, Wi-Fi and settings are preserved.
@@ -108,11 +111,25 @@ There are three buttons side by side above the display. Seen from the
 front: **left** (labelled "BOOT" on the board), **middle** (labelled "21"),
 **right** (labelled "RST" – restarts the display).
 
+The left and middle buttons each have **one** function, which you choose
+in the portal under *Tasten* (buttons):
+
+| Function | What the button shows |
+|---|---|
+| **Richtung wechseln** (switch direction) | the other direction (only with "Umschaltbar per Taste") |
+| **Station 2** | the second stop |
+| **Weitere Abfahrten (Seite 2)** (more departures) | departures 5–8 |
+| **WLAN-QR-Code** (middle only) | QR code for the guest Wi-Fi for 60 s |
+| **Keine Funktion** (none) | – |
+
+A press shows the button's view. Another press – on either button – or
+waiting 30 seconds returns to the **default view** (stop 1 with its start
+direction).
+
 | Button | What happens |
 |---|---|
-| **Left button**, short press | with a second stop: switch to the other stop · otherwise in mixed view: page 2 (departures 5–8), in split view: other direction. After 30 s it returns by itself. |
 | **Middle button**, hold 3 seconds | system info for 60 s – and the [settings portal](#settings-portal) opens for 30 minutes. Hold 3 s again = back. |
-| **Middle button**, short press | QR code for the guest Wi-Fi for 60 s (only if enabled) |
+| **Right button** | restart |
 
 ## Settings portal
 
@@ -124,36 +141,61 @@ then shows the address (e.g. `http://192.168.178.42`) – type it into your
 browser. The portal stays open for 30 minutes. During first setup,
 *Visit device* in the web installer takes you there directly.
 
+Each stop is set up in four steps; below every setting the portal shows
+what the display will show. *Speichern* (save) sits in the bar at the
+bottom, which also shows whether there are unsaved changes. Missing
+entries are marked in red.
+
 <p align="center">
-  <img src="bilder/portal_station.png" width="40%" alt="Settings portal: stop, modes of transport, direction and selected lines">
-  <img src="bilder/portal_linien.png" width="40%" alt="Settings portal: line selection with example destinations per direction">
+  <img src="bilder/portal_station.png" width="32%" alt="Settings portal: stop, modes of transport, direction display with the city-centre question, lines">
+  <img src="bilder/portal_linien.png" width="32%" alt="Settings portal: line selection with example destinations per direction">
+  <img src="bilder/portal_tasten.png" width="32%" alt="Settings portal: departure time as clock time or minutes, button functions">
 </p>
 
 **What you can set** (German labels in *italics*):
 
-- **Station 1:** type a name and click *Suchen* (search). For stops with the
-  same name, the map link helps. Confirm with *Auswählen* (select). The
-  name of the selected stop then appears in the heading.
-- **Verkehrsmittel** (modes of transport): S-Bahn, U-Bahn, Tram, Bus
-  (city and regional bus), Regionalzug (regional train).
-- **Richtung** (direction): all directions, split into Zentrum/Auswärts
-  (H/R), or only direction H or R. *H* and *R* are MVG's direction codes;
-  *Richtungen anzeigen* (show directions) lists which lines and
-  destinations belong to which code. For the split view you choose which
-  of them runs towards the city centre.
-- **Linien** (lines): *Linien auswählen* (select lines) lists all lines of
-  the ticked modes of transport with example destinations per direction
-  (loading takes about 10 seconds). Tick lines and choose per line
-  *beide Richtungen* (both directions), *nur H* or *nur R* – up to 16
-  lines. Without ticks, the display shows all lines of the selected modes
-  of transport. *Fertig* (done) collapses the list.
+1. **Station** (stop): type a name and click *Suchen* (search). For stops
+   with the same name, the map link helps. Confirm with *Auswählen*
+   (select) – the stop appears as a card, *Ändern* (change) searches for
+   another one. The stop ID can also be entered by hand under *Station-ID
+   manuell eingeben*.
+2. **Verkehrsmittel** (modes of transport): S-Bahn, U-Bahn, Tram, Bus
+   (city and regional bus), Regionalzug (regional train). Dashed = not
+   served at this stop.
+3. **Richtungsanzeige** (direction display):
+   - *Alle Richtungen gemischt* – all directions mixed
+   - *Umschaltbar per Taste (H/R)* – a button switches between the two
+     directions (stop 1 only), plus the *Startansicht* (start view)
+   - *Nur Richtung H* / *Nur Richtung R* – one direction only
+   - *Je Linie wählen* – set the direction per line in the line selection
+
+   *H* and *R* are MVG's direction codes; the portal shows example
+   destinations for them. With *Umschaltbar* and *Nur H/R* it asks **which
+   direction runs towards the city centre** – the header then reads
+   "→ Zentrum" or "→ Auswärts". For cross-town lines choose *Keine*
+   (none): with *Nur H/R* only the stop name is shown, with *Umschaltbar*
+   "→ H"/"→ R".
+4. **Linien** (lines, optional): *Linien auswählen* (select lines) lists
+   all lines of the ticked modes of transport with example destinations
+   per direction (loading takes about 10 seconds). Tick up to 16 lines;
+   without ticks, the display shows all lines of the selected modes of
+   transport. *Fertig* (done) collapses the list.
+
+Also:
+
 - **Station 2 (optional):** *Zweite Station hinzufügen* (add second stop) –
-  with its own modes of transport, direction and lines. The left button
-  then switches between both; the header shows the stop's number. Split
-  view and page 2 are only available with a single stop.
-- **WLAN-QR-Code** (Wi-Fi QR code): heading, name and password of the Wi-Fi
-  your guests should get via QR code. The password is shown clearly
-  readable on the display – so only use a network you want to share.
+  with its own modes of transport, direction and lines, same steps as
+  above. The header then shows the stop's number. It is automatically
+  assigned to a free button.
+- **Anzeige** (display): departure time as *Uhrzeit* (clock time,
+  10:34 +2) or *Minuten* (**4** min).
+- **Tasten** (buttons): shows the default view and the functions of the
+  left and middle buttons (see [Operation](#operation)). If a function is
+  not assigned to any button, a notice appears.
+- **WLAN-QR-Code** (Wi-Fi QR code, when assigned to the middle button):
+  heading, name and password of the Wi-Fi your guests should get via QR
+  code. The password is shown clearly readable on the display – so only
+  use a network you want to share.
 - **Firmware aktualisieren** (update firmware): see [Update](#update).
 - **Werkseinstellungen** (factory reset): deletes all settings including
   Wi-Fi.
@@ -216,6 +258,15 @@ at startup). The display names the likely cause (e.g. "Passwort falsch?" –
 wrong password?) and retries every 10 seconds. If the password is wrong:
 *Change Wi-Fi* in the web installer.
 
+### The display keeps losing the Wi-Fi
+The display's small radio receives much worse than a laptop or phone and
+only supports 2.4 GHz. Often helpful: place the display differently or
+closer to the router, use a proper USB power supply instead of the
+computer's port, set a fixed 2.4 GHz channel (1, 6 or 11) instead of
+auto channel in the router, and try WPA2 only instead of "WPA2 + WPA3".
+The signal strength is shown in the portal under *Gerät* (device); worse
+than about -75 dBm is marginal.
+
 ### The display shows an error fetching departures
 The MVG interface hasn't answered for over a minute (e.g. maintenance). The
 display retries every 10 seconds and shows the departures again by itself
@@ -234,7 +285,10 @@ the same Wi-Fi.
   90 minutes. If a selected line runs less often, rows stay empty.
 - Replacement buses for regional trains appear as soon as any regional
   train is selected – MVG only provides the train number, not the line.
-- With two stops, the display shows four departures per stop.
+- Page 2 (departures 5–8) is available for stop 1; stop 2 shows four
+  departures.
+- In minutes mode, departures 60 minutes or more ahead show the clock
+  time.
 - Departures on time look the same as departures without live data.
 - Replacement buses (SEV) appear with the mode of transport they replace –
   the replacement bus for the S2 also shows when only "S-Bahn" is enabled.

@@ -28,20 +28,20 @@
 
 // Optionale zweite Station, normalerweise leer lassen und im
 // Einstellungsportal waehlen. Linien je Station waehlt man nur im Portal.
-// Mit zwei Stationen schaltet die BOOT-Taste zwischen beiden um (statt
-// Richtung/Seite 2), nach STATION_AUTO_RESET_MS (30 s) zurueck zu Station 1.
+// Eine Taste mit der Belegung "Station 2" zeigt sie (Standard: linke Taste),
+// nach STATION_AUTO_RESET_MS (30 s) zurueck zu Station 1.
 #define STATION2_GLOBAL_ID ""
 
 // ------------------------------------------------------------
 // SCHRITT 2: RICHTUNGSANZEIGE
 // ------------------------------------------------------------
-// 0 = gemischt: alle Richtungen in einer Liste, Header nur Stationsname.
-//     Die BOOT-Taste blaettert auf Seite 2 (Abfahrt 5-8), Rueckkehr nach
-//     PAGE_AUTO_RESET_MS (30 s) oder erneutem Druck.
+// 0 = alle Richtungen gemischt, Header nur Stationsname.
 //     -> 2a und 2b ueberspringen.
-// 1 = getrennt: eine Richtung (Zentrum oder Auswaerts), Header
-//     "Station -> Richtung". Die BOOT-Taste schaltet um, nach
-//     DIRECTION_AUTO_RESET_MS (30 s) zurueck zur Standardansicht.
+// 1 = umschaltbar: eine Richtung (Zentrum oder Auswaerts), Header
+//     "Station -> Richtung". Eine Taste mit der Belegung "Richtung
+//     wechseln" (Standard: linke Taste) schaltet um, nach
+//     DIRECTION_AUTO_RESET_MS (30 s) zurueck zur Standardansicht. Gilt nur
+//     ohne STATION2_GLOBAL_ID. "Nur H/R" und "je Linie" gibt es im Portal.
 //     Sinnvoll an Stationen ausserhalb der Innenstadt.
 #define FEATURE_DIRECTION_VIEW 0
 
@@ -84,11 +84,11 @@
 // ============================================================
 
 // --- WLAN-QR-Code ---
-// 1 = kurzer Druck auf die QR-Taste zeigt 60 s lang einen QR-Code zum
+// 1 = kurzer Druck auf die mittlere Taste zeigt 60 s lang einen QR-Code zum
 //     Verbinden mit einem WLAN (z.B. Gast-WLAN) plus SSID/Passwort.
 //     Zugangsdaten (Standardwerte) in secrets.h (qrWlanSsid,
 //     qrWlanPassword).
-// 0 = aus: kurzer Druck ohne Funktion. Der Log-Screen (langer Druck)
+// 0 = aus: mittlere Taste kurz = Seite 2. Der Log-Screen (langer Druck)
 //     bleibt verfuegbar.
 #define FEATURE_WIFI_QR 0
 

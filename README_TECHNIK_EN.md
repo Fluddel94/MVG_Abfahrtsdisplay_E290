@@ -54,8 +54,10 @@ folder gets the right name directly.
 - **`config.h`** contains the defaults of all settings (stop, optional
   second stop, view, modes of transport, Wi-Fi QR). They only apply as long
   as nothing is stored on the device – values saved in the portal always
-  take precedence. Line selection and direction per stop exist only in the
-  portal.
+  take precedence. Line selection, direction per stop (except "switchable"
+  via `FEATURE_DIRECTION_VIEW`), city-centre assignment and button
+  functions exist only in the portal. `SHOW_MINUTES` sets whether the
+  departure time is shown as clock time or in minutes.
 - **Debugging:** `DEBUG_LOG 1` in `config.h` enables additional output in
   the serial monitor (response sizes, free memory, individual steps of the
   line list). Use `0` for everyday use and releases.
@@ -108,8 +110,9 @@ More about the list (columns, source, license): [`haltestellen/README.md`](halte
 
 ### Checking directions
 
-Needed for the split view and for "only direction H/R". Easiest with
-*Richtungen anzeigen* or *Linien auswählen* in the portal. By hand: in the
+Needed for "switchable" and "only direction H/R". Easiest in the portal:
+the direction display shows example destinations per code, in more detail
+under *Linien auswählen*. By hand: in the
 departure list from step 4, compare `lineId` (contains `:H:` or `:R:`) with
 `destination` for a few entries. There is no fixed rule – it depends on
 line and stop.
@@ -195,17 +198,31 @@ folder, the Arduino IDE only compiles this folder.
 - **API requests:** departures are fetched in `fetchStation()` (.ino,
   section Update-Steuerung) – on the minute update, at startup, after Wi-Fi
   returns, when returning from QR/log in a new minute and during a
-  disruption. With two stops, `attemptUpdate()` first fetches and draws the
-  displayed stop, then the other one (`fetchOtherStation()`); switching,
-  paging and auto-reset only draw from the cache (data up to 2 minutes
-  old, otherwise a new request).
+  disruption. If stop 2 is assigned to a button, `attemptUpdate()` first
+  fetches and draws the displayed stop, then the other one
+  (`fetchOtherStation()`); buttons and auto-reset only draw from the cache
+  (data up to 2 minutes old, otherwise a new request).
+- **Buttons:** functions `keyLeft`/`keyMid` (constants `BTN_...` in
+  `settings.h`). `keyPressed()` in the .ino: in the default view, show the
+  button's view (`activeKey`), otherwise – whichever button – return to the
+  default view; no cycling through several views. `handleKeysAndScreens()`
+  handles buttons, QR/log screen and auto-reset, also while a Wi-Fi outage
+  is being bridged (then from the cache only). The view follows from
+  `activeKey` (`viewDirection()`, `headerDirection()` for
+  "→ Zentrum/Auswärts/H/R").
+- **Minutes view:** `Departure.planned` (planned departure, Unix time) plus
+  delay, computed as the difference in minutes like the clock in the
+  header (14:07 → 14:09 = "2 min"); 60 minutes or more shows the clock
+  time.
 - **Bridging disruptions:** if a request fails, the display keeps showing
   the departures (the time is updated on the full minute) and retries
   every `ERROR_RETRY_INTERVAL_MS` (10 s) without blocking. Only when the
   failures last `API_ERROR_SCREEN_DELAY_MS` (60 s) do the error screen and
   the API fail counter appear. Same for Wi-Fi: error screen during
   operation after `WIFI_LOST_SCREEN_DELAY_MS` (60 s), at startup after
-  `WIFI_ERROR_SCREEN_DELAY_MS` (20 s).
+  `WIFI_ERROR_SCREEN_DELAY_MS` (20 s). Wi-Fi power saving is off
+  (`WiFi.setSleep(false)` in `setup()`) – with power saving, some routers
+  kept disconnecting the board.
 - **Responses as a stream:** MVG answers without a length header and not
   chunked. `fetchJsonStream()` reads the response with `HttpBodyStream`
   (waits up to `HTTP_TIMEOUT_MS` for more data) directly into ArduinoJson,
@@ -216,7 +233,9 @@ folder, the Arduino IDE only compiles this folder.
   (`:H:`/`:R:` from `lineId`) against the selection (`LineSelection`, text
   form `S2:H:S,RE80:B:Z` = line : H/R/B : transport code). The stop's
   direction ("only H/R") applies in addition. With a selection,
-  `transportTypes` is derived from the selected lines.
+  `transportTypes` is derived from the selected lines. The portal only
+  stores a direction per line with "Je Linie wählen" (display: like "all
+  directions", `dir` `B`), otherwise always `B`.
 - **Split trains:** the API returns split trains as separate trips.
   `mvg_api.cpp` merges entries with the same line, direction, planned time,
   platform and cancellation status (not for buses or missing platform). For
@@ -230,7 +249,13 @@ folder, the Arduino IDE only compiles this folder.
   namespace `abfahrt`). Added in 2.2.0: `lines1`, `lines2` (line selection
   as text), `station2`, `types2` (modes of transport as bits), `dir1`,
   `dir2` (direction `B`/`H`/`R`). If they are missing (update from 2.1.0),
-  the previous values count as stop 1. Never rename the NVS keys, otherwise
+  the previous values count as stop 1. Added in 2.3.0: `zentrum1`,
+  `zentrum2` (`H`/`R`/`K` = none), `start1` (start view `H`/`R`),
+  `keyLeft`, `keyMid`, `minutes`; "switchable" is `dir1` `U` in memory,
+  stored in NVS as `dirView` + `dir1` `B` (so 2.2.0 still works after a
+  downgrade; `zentrumIsH`, `defZentrum`, `qrOn` are still written too). If
+  the new keys are missing (update from 2.2.0), `settingsLoad()` converts
+  the old values so that display and buttons behave the same. Never rename the NVS keys, otherwise
   stored settings are lost on updates. `appSettings` is only changed in the
   `loop()` context; other tasks read it holding a `SettingsLock`.
 - **Web installer:** the firmware name in the Improv response
@@ -266,9 +291,12 @@ folder, the Arduino IDE only compiles this folder.
   - **How to:** create your own `.cpp` in `src/` and define the same
     functions there; the linker then uses your version.
 - **Portal requests:** `/suche?q=` (stop search), `/name?id=` (stop name),
-  `/richtungen?id=&types=` (lines per code, at most 15 entries),
-  `/linien?id=&types=` (line list, takes a few seconds), `/speichern`,
-  `/update`. `types` = modes of transport as bits like `types2`. The page
+  `/richtungen?id=&types=` (lines and destinations per code, at most 30
+  entries – example destinations for the direction display),
+  `/linien?id=&types=` (line list, takes a few seconds), `/speichern` (the
+  page sends via `fetch` and stays open), `/update`. `types` = modes of
+  transport as bits like `types2`; the stop search returns them per hit as
+  `b` (dashed modes of transport in the portal). The page
   is a raw string in `portal.cpp` (umlauts as entities in the HTML, as
   UTF-8 in the JavaScript).
 - **Don't remove `#include <HTTPClient.h>` from the .ino:** if the library

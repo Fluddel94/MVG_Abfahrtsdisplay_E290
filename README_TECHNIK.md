@@ -51,8 +51,10 @@ arbeitet (`git clone`), bekommt den Ordner direkt mit dem richtigen Namen.
 - **`config.h`** enthält die Standardwerte aller Einstellungen (Station,
   optional zweite Station, Anzeige, Verkehrsmittel, WLAN-QR). Sie gelten
   nur, solange im Gerät noch nichts gespeichert ist – im Portal
-  gespeicherte Werte haben immer Vorrang. Linienauswahl und Richtung je
-  Station gibt es nur im Portal.
+  gespeicherte Werte haben immer Vorrang. Linienauswahl, Richtung je
+  Station (außer „umschaltbar“ über `FEATURE_DIRECTION_VIEW`), Zentrum-
+  Zuordnung und Tastenbelegung gibt es nur im Portal. `SHOW_MINUTES`
+  legt fest, ob die Abfahrtszeit als Uhrzeit oder in Minuten erscheint.
 - **Fehlersuche:** `DEBUG_LOG 1` in `config.h` schaltet zusätzliche
   Ausgaben im seriellen Monitor ein (Antwortgrößen, freier Arbeitsspeicher,
   Einzelschritte der Linienliste). Für den Alltag und Releases `0`.
@@ -107,8 +109,9 @@ Mehr zur Liste (Spalten, Quelle, Lizenz): [`haltestellen/README.md`](haltestelle
 
 ### Richtungen prüfen
 
-Nötig für die getrennte Anzeige und für „nur Richtung H/R“. Am einfachsten
-mit *Richtungen anzeigen* oder *Linien auswählen* im Portal. Von Hand: in der Abfahrtsliste aus Schritt 4 bei
+Nötig für „umschaltbar“ und „nur Richtung H/R“. Am einfachsten im Portal:
+Es zeigt bei der Richtungsanzeige Beispielziele je Kennung, ausführlicher
+unter *Linien auswählen*. Von Hand: in der Abfahrtsliste aus Schritt 4 bei
 einigen Einträgen `lineId` (enthält `:H:` oder `:R:`) mit `destination`
 vergleichen. Eine feste Regel gibt es nicht – das hängt von Linie und
 Station ab.
@@ -196,17 +199,30 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 - **API-Abrufe:** Abfahrten werden in `fetchStation()` (.ino, Abschnitt
   Update-Steuerung) abgerufen – beim Minuten-Update, beim Start, nach
   WLAN-Wiederkehr, bei Rückkehr aus QR/Log in einer neuen Minute und
-  während einer Störung. Mit zwei Stationen ruft `attemptUpdate()` erst
-  die angezeigte Station ab und zeichnet, danach die andere
-  (`fetchOtherStation()`); Umschalten, Blättern und Auto-Reset zeichnen nur
-  aus dem Zwischenspeicher (Daten bis 2 Minuten alt, sonst neuer Abruf).
+  während einer Störung. Ist Station 2 einer Taste zugeordnet, ruft
+  `attemptUpdate()` erst die angezeigte Station ab und zeichnet, danach die
+  andere (`fetchOtherStation()`); Tasten und Auto-Reset zeichnen nur aus
+  dem Zwischenspeicher (Daten bis 2 Minuten alt, sonst neuer Abruf).
+- **Tasten:** Belegung `keyLeft`/`keyMid` (Konstanten `BTN_...` in
+  `settings.h`). `keyPressed()` im .ino: in der Standardansicht die Ansicht
+  der Taste zeigen (`activeKey`), sonst – egal welche Taste – zurück zur
+  Standardansicht; kein Weiterschalten durch mehrere Ansichten.
+  `handleKeysAndScreens()` wertet Tasten, QR-/Log-Screen und Auto-Reset
+  aus, auch während ein WLAN-Ausfall überbrückt wird (dann nur aus dem
+  Zwischenspeicher). Die Ansicht ergibt sich aus `activeKey`
+  (`viewDirection()`, `headerDirection()` für „→ Zentrum/Auswärts/H/R“).
+- **Minuten-Anzeige:** `Departure.planned` (geplante Abfahrt, Unix-Zeit)
+  plus Verspätung, gerechnet als Differenz der Minuten wie die Uhr im Kopf
+  (14:07 → 14:09 = „2 min“); ab 60 Minuten Uhrzeit.
 - **Störungen überbrücken:** Misslingt ein Abruf, bleibt die Anzeige
   stehen (Uhrzeit wird zur vollen Minute aktualisiert) und es wird alle
   `ERROR_RETRY_INTERVAL_MS` (10 s) erneut versucht, ohne zu blockieren.
   Erst wenn die Fehlschläge `API_ERROR_SCREEN_DELAY_MS` (60 s) andauern,
   erscheinen Fehlerbildschirm und API-Fail. Ebenso beim WLAN: Fehlerbildschirm
   im Betrieb nach `WIFI_LOST_SCREEN_DELAY_MS` (60 s), beim Start nach
-  `WIFI_ERROR_SCREEN_DELAY_MS` (20 s).
+  `WIFI_ERROR_SCREEN_DELAY_MS` (20 s). Der WLAN-Stromsparmodus ist aus
+  (`WiFi.setSleep(false)` in `setup()`) – im Sparmodus trennten manche
+  Router das Board immer wieder.
 - **Antworten als Datenstrom:** Die MVG antwortet ohne Längenangabe und
   nicht in Blöcken. `fetchJsonStream()` liest die Antwort mit
   `HttpBodyStream` (wartet bis `HTTP_TIMEOUT_MS` auf weitere Daten) direkt
@@ -217,7 +233,9 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   Kennung (`:H:`/`:R:` aus `lineId`) gegen die Auswahl (`LineSelection`,
   Textform `S2:H:S,RE80:B:Z` = Linie : H/R/B : Verkehrsmittel-Kürzel). Die
   Richtung der Station („nur H/R“) gilt zusätzlich. `transportTypes` ergibt
-  sich bei einer Auswahl aus den gewählten Linien.
+  sich bei einer Auswahl aus den gewählten Linien. Eine Richtung je Linie
+  speichert das Portal nur bei „Je Linie wählen“ (Display: wie „alle
+  Richtungen“, `dir` `B`), sonst immer `B`.
 - **Flügelzüge:** Die API liefert geteilte Züge als getrennte Fahrten.
   `mvg_api.cpp` fasst Einträge mit gleicher Linie, Richtung, geplanter Zeit,
   gleichem Gleis und gleichem Ausfall-Status zusammen (nicht bei Bussen oder
@@ -232,7 +250,14 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   (NVS-Namensraum `abfahrt`). Seit 2.2.0 dazu: `lines1`, `lines2`
   (Linienauswahl als Text), `station2`, `types2` (Verkehrsmittel als Bits),
   `dir1`, `dir2` (Richtung `B`/`H`/`R`). Fehlen sie (Update von 2.1.0),
-  gelten die bisherigen Werte als Station 1. Die NVS-Schlüssel nie
+  gelten die bisherigen Werte als Station 1. Seit 2.3.0: `zentrum1`,
+  `zentrum2` (`H`/`R`/`K` = keine), `start1` (Startansicht `H`/`R`),
+  `keyLeft`, `keyMid`, `minutes`; „umschaltbar“ ist `dir1` `U` im
+  Speicher, im NVS als `dirView` + `dir1` `B` (damit 2.2.0 nach einem
+  Downgrade passt; auch `zentrumIsH`, `defZentrum`, `qrOn` werden weiter
+  geschrieben). Fehlen die neuen Schlüssel (Update von 2.2.0), übernimmt
+  `settingsLoad()` die alten Werte so, dass Anzeige und Tasten gleich
+  bleiben. Die NVS-Schlüssel nie
   umbenennen, sonst gehen gespeicherte Einstellungen bei Updates verloren. `appSettings` wird
   nur im `loop()`-Kontext geändert; andere Tasks lesen mit `SettingsLock`.
 - **Web-Installer:** Der Firmware-Name in der Improv-Antwort
@@ -274,9 +299,12 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   ArduinoHttpClient installiert, bindet die IDE unter Windows sonst deren
   `HttpClient.h` ein (Groß-/Kleinschreibung).
 - **Portal-Abfragen:** `/suche?q=` (Stationssuche), `/name?id=`
-  (Stationsname), `/richtungen?id=&types=` (Linien je Kennung, höchstens 15
-  Einträge), `/linien?id=&types=` (Linienliste, dauert einige Sekunden),
-  `/speichern`, `/update`. `types` = Verkehrsmittel als Bits wie `types2`.
+  (Stationsname), `/richtungen?id=&types=` (Linien und Ziele je Kennung,
+  höchstens 30 Einträge – Beispielziele bei der Richtungsanzeige),
+  `/linien?id=&types=` (Linienliste, dauert einige Sekunden), `/speichern`
+  (die Seite sendet per `fetch` und bleibt offen), `/update`. `types` =
+  Verkehrsmittel als Bits wie `types2`; die Stationssuche liefert sie je
+  Treffer als `b` (gestrichelte Verkehrsmittel im Portal).
   Die Seite ist ein Raw-String in `portal.cpp` (Umlaute im HTML als
   Entities, im JavaScript als UTF-8).
 - **Serielle Ausgabe:** `Serial.setTxTimeoutMs(0)` direkt nach
