@@ -26,6 +26,11 @@ struct DeviceSettings {
   char zentrum1;
   // Startansicht bei dir1 'U': 'H' oder 'R' (Richtungskennung)
   char start1;
+  // Stationsnamen wie von der MVG (UTF-8, "" = unbekannt, dann Abruf beim
+  // Start). Speichert das Portal mit der Station, damit Display und Portal
+  // den Namen ohne MVG-Abfrage kennen.
+  String name1;
+  String name2;
 
   // Optionale Station 2 ("" = keine), erreichbar ueber eine Taste mit
   // BTN_STATION2
@@ -106,6 +111,10 @@ bool settingsSave();
 // Nur die WLAN-Daten speichern (z.B. aus der Einrichtung per Browser), die
 // uebrigen Werte bleiben unveraendert. true bei Erfolg.
 bool settingsSaveWifi(const String& ssid, const String& password);
+
+// Nur die Stationsnamen speichern (nach einem Abruf beim Start, wenn noch
+// keine gespeichert waren). true bei Erfolg.
+bool settingsSaveStationNames(const String& name1, const String& name2);
 
 // Alle gespeicherten Werte loeschen (Werkseinstellungen). Wirksam nach
 // einem Neustart. true bei Erfolg.

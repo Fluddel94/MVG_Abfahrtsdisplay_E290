@@ -1,5 +1,5 @@
 // Version: 2.3.0
-// Letzte Änderung: 05.10.2026 16:48
+// Letzte Änderung: 05.10.2026 17:01
 #define FW_VERSION "2.3.0"
 
 // ------------------------------------------------------------
@@ -70,6 +70,7 @@
 #include "src/buttons.h"
 #include "src/stats.h"
 #include "src/time_utils.h"
+#include "src/text_utils.h"
 #include "src/wifi_diag.h"
 #include "src/extras.h"
 
@@ -488,17 +489,23 @@ char headerDirection(char dir) {
   return 0;
 }
 
-// Stationsnamen holen (Start, neue Einstellungen). Bei Fehler bleibt der
-// Platzhalter stehen.
+// Stationsnamen setzen (Start, neue Einstellungen): gespeicherte Namen
+// (Portal) direkt, fehlende einmal bei der MVG abrufen und speichern (z.B.
+// nach dem Update von 2.2.0). Bei Fehler bleibt der Platzhalter stehen.
 void fetchStationNames() {
-  stationName = "Bahnhof";
-  station2Name = "Station 2";
-  if (settingsHasStation()) {
-    fetchStationName(appSettings.stationId.c_str(), stationName);
+  String name1 = appSettings.name1;
+  String name2 = appSettings.name2;
+  bool fetched = false;
+  if (settingsHasStation() && name1.length() == 0) {
+    fetched |= fetchStationName(appSettings.stationId.c_str(), name1, false);
   }
-  if (settingsHasStation2()) {
-    fetchStationName(appSettings.station2Id.c_str(), station2Name);
+  if (settingsHasStation2() && name2.length() == 0) {
+    fetched |= fetchStationName(appSettings.station2Id.c_str(), name2, false);
   }
+  if (fetched) settingsSaveStationNames(name1, name2);
+
+  stationName = name1.length() ? utf8ToLatin1(name1) : String("Bahnhof");
+  station2Name = name2.length() ? utf8ToLatin1(name2) : String("Station 2");
 }
 
 // Die gerade nicht angezeigte Station abrufen (nur mit zwei Stationen).

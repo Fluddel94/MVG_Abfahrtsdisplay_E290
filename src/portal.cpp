@@ -112,6 +112,7 @@ details{margin-top:6px;font-size:.88em;color:#555}summary{cursor:pointer}details
 <p style="margin-top:14px"><button type="button" class="danger" onclick="show2(0)">Station 2 entfernen</button></p></div></section>
 <input type="hidden" name="lines1" id="lines1"><input type="hidden" name="station2" id="station2">
 <input type="hidden" name="types2" id="types2"><input type="hidden" name="lines2" id="lines2">
+<input type="hidden" name="n1" id="n1"><input type="hidden" name="n2" id="n2">
 <section><h2>Anzeige</h2><h3 style="margin-top:10px">Abfahrtszeit als</h3>
 <div class="seg"><label><input type="radio" name="min" value="0" id="min0"><span>Uhrzeit<small>10:34 +2</small></span></label><label><input type="radio" name="min" value="1" id="min1"><span>Minuten<small>4 min</small></span></label></div></section>
 <section><h2>Tasten</h2>
@@ -248,6 +249,7 @@ function check(){const t=on2(),E=[];document.querySelectorAll('.err').forEach(e=
  if(E.length){E[0].scrollIntoView({block:'center'});bar('fail','Bitte die markierten Angaben ergänzen.');return false;}
  let b=0;TY.forEach((i,x)=>{if($(i+'2').checked)b|=1<<x;});
  $('lines1').value=selStr(1);$('station2').value=t?$('id2').value.trim():'';$('types2').value=b||S.types2;$('lines2').value=t?selStr(2):'';
+ $('n1').value=nmv[1];$('n2').value=t?nmv[2]:'';
  save();return false;}
 function bar(c,m){$('bar').className='bar '+c;$('bst').textContent=m;}
 // Im Hintergrund speichern, die Seite bleibt offen
@@ -333,7 +335,10 @@ document.querySelectorAll('.err').forEach(e=>{e.style.display='none';});
 $('no2').style.display=S.station2?'none':'';$('has2').style.display=S.station2?'':'none';
 [1,2].forEach(n=>{if($('id'+n).value.trim())card(n,'','');else srch(n,1);});
 sum(1);sum(2);upd();
-getName(1).then(()=>{if(S.station2)getName(2);});
+// Gespeicherte Namen sofort zeigen, sonst beim Display abfragen
+const nmP=[1,2].reduce((p,n)=>{const v=n==1?S.name1:S.name2;if(!$('id'+n).value.trim())return p;
+ if(v){nm(n,v);card(n,v);loadAv(n);return p;}return p.then(()=>getName(n));},Promise.resolve());
+upd();
 $('f').addEventListener('change',e=>{if(!/^q\d/.test(e.target.id))setDirty();});$('f').addEventListener('input',e=>{if(!/^q\d/.test(e.target.id))setDirty();});
 $('wifi').textContent=S.wifi;$('rssi').textContent=S.rssi;$('version').textContent=S.version;$('ip').textContent=S.ip;
 $('closes').textContent=S.closes?'Diese Seite ist bis '+S.closes+' Uhr erreichbar (erneut öffnen: mittlere Taste 3 s halten).':'';
@@ -411,6 +416,8 @@ static void handleRoot() {
     const DeviceSettings& s = appSettings;
     doc["station"] = s.stationId;
     doc["lines1"] = s.lines1;
+    doc["name1"] = s.name1;
+    doc["name2"] = s.name2;
     doc["station2"] = s.station2Id;
     doc["types2"] = s.types2;
     doc["lines2"] = s.lines2;
@@ -500,6 +507,9 @@ static void handleSave() {
     sel.parse(formArg("lines1", 600));
     s.lines1 = sel.toString();
   }
+  // Stationsnamen (UTF-8, wie im Portal angezeigt), "" = unbekannt
+  if (server->hasArg("n1")) s.name1 = formArg("n1", 60);
+  if (server->hasArg("n2")) s.name2 = formArg("n2", 60);
   if (server->hasArg("station2")) {
     String station2 = formArg("station2", 40);
     if (station2.length() > 0 && !validStationId(station2)) {

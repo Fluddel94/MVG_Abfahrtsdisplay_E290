@@ -251,7 +251,9 @@ folder, the Arduino IDE only compiles this folder.
   `dir2` (direction `B`/`H`/`R`). If they are missing (update from 2.1.0),
   the previous values count as stop 1. Added in 2.3.0: `zentrum1`,
   `zentrum2` (`H`/`R`/`K` = none), `start1` (start view `H`/`R`),
-  `keyLeft`, `keyMid`, `minutes`; "switchable" is `dir1` `U` in memory,
+  `keyLeft`, `keyMid`, `minutes`, `name1`, `name2` (stop names, UTF-8; if
+  missing, `fetchStationNames()` fetches them once from MVG and stores
+  them); "switchable" is `dir1` `U` in memory,
   stored in NVS as `dirView` + `dir1` `B` (so 2.2.0 still works after a
   downgrade; `zentrumIsH`, `defZentrum`, `qrOn` are still written too). If
   the new keys are missing (update from 2.2.0), `settingsLoad()` converts

@@ -55,6 +55,9 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   beim ersten Start so übernommen, dass Anzeige und Tasten gleich
   bleiben. Ein Zurückspielen von 2.2.0 funktioniert weiterhin.
 - Station 2 wird nur noch abgerufen, wenn sie einer Taste zugeordnet ist.
+- Die Stationsnamen werden im Gerät gespeichert: Das Portal zeigt sie
+  sofort beim Öffnen, das Display braucht beim Start keine Abfrage dafür
+  (bestehende Geräte holen sie einmal nach).
 - README und README_TECHNIK (deutsch/englisch) überarbeitet: Bedienung,
   Einstellungsportal mit neuen Bildern, Hilfe bei WLAN-Abbrüchen; „linke
   Taste“ statt „BOOT-Taste“.

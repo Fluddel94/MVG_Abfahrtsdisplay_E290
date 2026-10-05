@@ -55,6 +55,8 @@ static const char* const KEY_ZENTRUM2 = "zentrum2";
 static const char* const KEY_KEY_LEFT = "keyLeft";
 static const char* const KEY_KEY_MID = "keyMid";
 static const char* const KEY_MINUTES = "minutes";
+static const char* const KEY_NAME1 = "name1";
+static const char* const KEY_NAME2 = "name2";
 
 DeviceSettings appSettings;
 
@@ -122,6 +124,8 @@ static void setDefaults(DeviceSettings& s) {
   s.qrPassword = "";
 #endif
   s.stationId = STATION_GLOBAL_ID;
+  s.name1 = "";
+  s.name2 = "";
   s.lines1 = "";
   s.station2Id = STATION2_GLOBAL_ID;
   s.dir1 = (FEATURE_DIRECTION_VIEW && s.station2Id.length() == 0) ? 'U' : 'B';
@@ -158,6 +162,8 @@ static void validate(DeviceSettings& s) {
     setTransportDefaults(s);
   }
   s.station2Id.trim();
+  if (s.stationId.length() == 0) s.name1 = "";
+  if (s.station2Id.length() == 0) s.name2 = "";
   s.types2 &= TYPE_ALL;
   if (s.types2 == 0) s.types2 = defaultTypes();
   s.lines1 = normalizeLines(s.lines1);
@@ -252,6 +258,8 @@ void settingsLoad() {
     readUChar(prefs, KEY_KEY_LEFT, s.keyLeft);
     readUChar(prefs, KEY_KEY_MID, s.keyMid);
     readBool(prefs, KEY_MINUTES, s.showMinutes);
+    readString(prefs, KEY_NAME1, s.name1);
+    readString(prefs, KEY_NAME2, s.name2);
     prefs.end();
   }
 
@@ -315,6 +323,8 @@ bool settingsSave() {
   ok &= writeUChar(prefs, KEY_KEY_LEFT, appSettings.keyLeft);
   ok &= writeUChar(prefs, KEY_KEY_MID, appSettings.keyMid);
   ok &= writeBool(prefs, KEY_MINUTES, appSettings.showMinutes);
+  ok &= writeString(prefs, KEY_NAME1, appSettings.name1);
+  ok &= writeString(prefs, KEY_NAME2, appSettings.name2);
   prefs.end();
 
   if (ok) storedValuesFound = true;
@@ -336,6 +346,20 @@ bool settingsSaveWifi(const String& ssid, const String& password) {
     storedValuesFound = true;
   }
   Serial.println(ok ? "WLAN-Daten gespeichert" : "Fehler beim Speichern der WLAN-Daten");
+  return ok;
+}
+
+bool settingsSaveStationNames(const String& name1, const String& name2) {
+  Preferences prefs;
+  if (!prefs.begin(NVS_NAMESPACE, false)) return false;
+  bool ok = writeString(prefs, KEY_NAME1, name1) && writeString(prefs, KEY_NAME2, name2);
+  prefs.end();
+  if (ok) {
+    SettingsLock lock;
+    appSettings.name1 = name1;
+    appSettings.name2 = name2;
+  }
+  Serial.println(ok ? "Stationsnamen gespeichert" : "Fehler beim Speichern der Stationsnamen");
   return ok;
 }
 
@@ -403,7 +427,13 @@ void settingsPrint() {
   Serial.print(", Passwort gesetzt: ");
   Serial.println(yesNo(s.wifiPassword.length() > 0));
   Serial.print("Station: ");
-  Serial.println(s.stationId.length() ? s.stationId : String("(keine)"));
+  Serial.print(s.stationId.length() ? s.stationId : String("(keine)"));
+  if (s.name1.length()) {
+    Serial.print(" (");
+    Serial.print(s.name1);
+    Serial.print(")");
+  }
+  Serial.println();
   Serial.print("Richtung: ");
   if (s.dir1 == 'U') {
     Serial.print("umschaltbar, Start ");
@@ -428,6 +458,11 @@ void settingsPrint() {
   Serial.print("Station 2: ");
   if (s.station2Id.length()) {
     Serial.print(s.station2Id);
+    if (s.name2.length()) {
+      Serial.print(" (");
+      Serial.print(s.name2);
+      Serial.print(")");
+    }
     Serial.print(", Verkehrsmittel-Bits 0x");
     Serial.print(s.types2, HEX);
     Serial.print(", Richtung ");

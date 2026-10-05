@@ -252,7 +252,9 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `dir1`, `dir2` (Richtung `B`/`H`/`R`). Fehlen sie (Update von 2.1.0),
   gelten die bisherigen Werte als Station 1. Seit 2.3.0: `zentrum1`,
   `zentrum2` (`H`/`R`/`K` = keine), `start1` (Startansicht `H`/`R`),
-  `keyLeft`, `keyMid`, `minutes`; „umschaltbar“ ist `dir1` `U` im
+  `keyLeft`, `keyMid`, `minutes`, `name1`, `name2` (Stationsnamen, UTF-8;
+  fehlen sie, holt `fetchStationNames()` sie einmal bei der MVG und
+  speichert sie); „umschaltbar“ ist `dir1` `U` im
   Speicher, im NVS als `dirView` + `dir1` `B` (damit 2.2.0 nach einem
   Downgrade passt; auch `zentrumIsH`, `defZentrum`, `qrOn` werden weiter
   geschrieben). Fehlen die neuen Schlüssel (Update von 2.2.0), übernimmt
