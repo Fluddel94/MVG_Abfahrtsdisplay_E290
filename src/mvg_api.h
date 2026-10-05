@@ -5,6 +5,7 @@
 #pragma once
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <time.h>
 #include "settings.h"      // StationConfig
 #include "line_select.h"   // LineSelection
 
@@ -13,6 +14,7 @@ struct Departure {
   String line;          // z.B. "S2", "173", "RB56" (Leerzeichen entfernt)
   String destination;   // Ziel (bereits in Latin-1 fuer die Anzeige)
   String time;          // geplante Abfahrtszeit "HH:MM"
+  time_t planned;       // geplante Abfahrt, Sekunden seit 1970 (Minuten-Anzeige)
   int delayMin;
   bool cancelled;
   bool realtime;
@@ -51,7 +53,7 @@ bool searchStations(const String& query, String& jsonOut);
 // jede Kombination einmal, hoechstens DIRECTION_LIST_MAX Eintraege). Nur
 // Verkehrsmittel in typeBits (TYPE_...-Bits, 0 = alle). Hilft beim
 // Festlegen von "Zentrum = H oder R" bzw. "nur Richtung H/R".
-#define DIRECTION_LIST_MAX 15
+#define DIRECTION_LIST_MAX 30
 bool listDirections(const char* globalId, uint8_t typeBits, String& jsonOut);
 
 // Fuer das Portal (Linienauswahl): alle Linien der Station mit

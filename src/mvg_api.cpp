@@ -201,16 +201,24 @@ bool searchStations(const String& query, String& jsonOut) {
     const char* id = loc["globalId"];
     if (type == nullptr || id == nullptr || strcmp(type, "STATION") != 0) continue;
     String types;
+    uint8_t bits = 0;   // TYPE_...-Bits fuer die Verkehrsmittel-Schalter im Portal
     JsonArray typeList = loc["transportTypes"];
     for (const char* t : typeList) {
+      if (t == nullptr) continue;
       if (types.length()) types += ", ";
       types += transportTypeName(t);
+      if (strcmp(t, "SBAHN") == 0) bits |= TYPE_SBAHN;
+      else if (strcmp(t, "UBAHN") == 0) bits |= TYPE_UBAHN;
+      else if (strcmp(t, "TRAM") == 0) bits |= TYPE_TRAM;
+      else if (strstr(t, "BUS") != nullptr) bits |= TYPE_BUS;
+      else if (strcmp(t, "BAHN") == 0) bits |= TYPE_BAHN;
     }
     JsonObject entry = list.add<JsonObject>();
     entry["n"] = loc["name"] | "";
     entry["p"] = loc["place"] | "";
     entry["id"] = id;
     entry["t"] = types;
+    entry["b"] = bits;
     entry["z"] = loc["tariffZones"] | "";
     if (loc["latitude"].is<float>() && loc["longitude"].is<float>()) {
       entry["lat"] = loc["latitude"];
@@ -807,6 +815,7 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
     d.isBus = raw[i].isBus;
     d.multiDest = raw[i].multiDest;
     d.time = formatTime(raw[i].plannedTime);
+    d.planned = (time_t)(raw[i].plannedTime / 1000);
 
     result[count] = d;
     count++;

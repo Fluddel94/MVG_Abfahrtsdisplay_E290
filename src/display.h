@@ -12,16 +12,18 @@ void displayInit();
 void displayShowSplash(const char* firmwareVersion);
 
 // Abfahrtsansicht zeichnen.
-// showDirection = true: Header "Station -> Zentrum/Auswaerts" (showZentrum
-//   waehlt die Richtung, ggf. Kurzform); false: Header nur Stationsname,
-//   bei isPage2 mit Seitenhinweis "(2/2)".
+// dirLabel: Richtung im Header "Station -> ..." - 'Z' Zentrum, 'A'
+//   Auswaerts (ggf. Kurzform), 'H'/'R' die Kennung, 0 = nur Stationsname.
+// isPage2: Seitenhinweis "(2/2)" hinter dem Header.
+// minutes: Abfahrtszeit als Minuten bis zur Abfahrt ("4 min", "jetzt"),
+//   ab 60 Minuten Uhrzeit; false: Uhrzeit mit Verspaetung.
 // stationNumber = 1 oder 2: Nummer im schwarzen Kaestchen vor dem Namen
 //   (nur bei zwei Stationen), 0 = ohne.
 // fullRefresh = true: sauberer Full Refresh, false: Fast Mode (schneller,
 //   doppeltes Update gegen Grauschleier).
 void displayShowDepartures(const Departure departures[], int found,
-                           const String& stationName, bool showDirection,
-                           bool showZentrum, bool isPage2, bool fullRefresh,
+                           const String& stationName, char dirLabel,
+                           bool isPage2, bool minutes, bool fullRefresh,
                            int stationNumber = 0);
 
 // Fehlerbildschirme

@@ -177,13 +177,14 @@ static void drawWarningTriangle(int x, int yBaseline) {
 // ============================================================
 
 // Zeichnet Header und Abfahrtsliste in den Displayspeicher (ohne
-// display.update()). Header: "Station -> Richtung" (showDirection) oder nur
-// der Stationsname, auf Seite 2 mit Hinweis "(2/2)" (isPage2). Bei
-// stationNumber 1/2 steht die Nummer weiss in einem schwarzen Kaestchen vor
-// dem Namen (zwei Stationen, nicht zusammen mit showDirection).
+// display.update()). Header: Stationsname, bei dirLabel mit "-> Richtung"
+// ('Z' Zentrum, 'A' Auswaerts, 'H'/'R' Kennung, 0 = keine), auf Seite 2
+// mit Hinweis "(2/2)" (isPage2). Bei stationNumber 1/2 steht die Nummer
+// weiss in einem schwarzen Kaestchen vor dem Namen. minutes: Abfahrtszeit
+// als Minuten bis zur Abfahrt.
 static void drawContent(const Departure departures[], int found,
-                        const String& stationName, bool showDirection,
-                        bool showZentrum, bool isPage2, int stationNumber) {
+                        const String& stationName, char dirLabel,
+                        bool isPage2, bool minutes, int stationNumber) {
   display.setTextColor(BLACK);
 
   display.setFont(&FreeSansBold12pt7b);
@@ -219,33 +220,63 @@ static void drawContent(const Departure departures[], int found,
   int headerRightLimit = boxX - HEADER_CLOCK_GAP;
   int availableWidth = headerRightLimit - 5;   // Header-Text beginnt bei x = 5
 
-  if (showDirection) {
-    // "Station -> Richtung" muss vor der Uhr-Box enden. Kuerzung:
-    // 1. passt alles, Richtung in Langform ("Zentrum" / "Auswaerts")
-    // 2. sonst Richtung in Kurzform ("Ztr." / "Ausw.")
-    // 3. reicht auch das nicht, wird zusaetzlich der Stationsname gekuerzt
-    int arrowTotalWidth = ARROW_GAP + ARROW_LENGTH + ARROW_HEAD_SIZE + ARROW_GAP;
+  // Header: [Nummer] Stationsname [-> Richtung] [(2/2)], muss vor der
+  // Uhr-Box enden. Kuerzung:
+  // 1. passt alles, Richtung in Langform ("Zentrum" / "Auswaerts")
+  // 2. sonst Richtung in Kurzform ("Ztr." / "Ausw.")
+  // 3. reicht auch das nicht, wird zusaetzlich der Stationsname gekuerzt
+  // Nummer und Seitenhinweis bleiben immer vollstaendig sichtbar.
+  int nameX = 5;
+  if (stationNumber > 0) {
+    // Kaestchen mit Nummer, vertikal mittig zur Uhr-Box
+    int boxTop = boxCenterY - STATION_BOX_SIZE / 2;
+    display.fillRect(5, boxTop, STATION_BOX_SIZE, STATION_BOX_SIZE, BLACK);
+    String number(stationNumber);
+    int16_t dbx, dby;
+    uint16_t dbw, dbh;
+    display.getTextBounds(number, 0, 0, &dbx, &dby, &dbw, &dbh);
+    display.setTextColor(WHITE);
+    display.setCursor(5 + (STATION_BOX_SIZE - dbw) / 2 - dbx,
+                      boxTop + (STATION_BOX_SIZE - dbh) / 2 - dby);
+    display.print(number);
+    display.setTextColor(BLACK);
+    nameX += STATION_BOX_SIZE + STATION_BOX_GAP;
+    availableWidth -= STATION_BOX_SIZE + STATION_BOX_GAP;
+  }
 
-    String prefix = stationName;
-    String suffix = showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS;
-    if (textWidth(prefix) + arrowTotalWidth + textWidth(suffix) > availableWidth) {
-      suffix = showZentrum ? LABEL_ZENTRUM_SHORT : LABEL_AUSWAERTS_SHORT;
-      prefix = fitText(prefix, availableWidth - arrowTotalWidth - textWidth(suffix));
+  if (isPage2) availableWidth -= HEADER_HINT_SPACE + textWidth(PAGE2_HINT);
+
+  String suffix;
+  if (dirLabel == 'Z') suffix = LABEL_ZENTRUM;
+  else if (dirLabel == 'A') suffix = LABEL_AUSWAERTS;
+  else if (dirLabel == 'H' || dirLabel == 'R') suffix = String(dirLabel);
+  int arrowTotalWidth = ARROW_GAP + ARROW_LENGTH + ARROW_HEAD_SIZE + ARROW_GAP;
+
+  String name = stationName;
+  if (suffix.length() > 0) {
+    if (textWidth(name) + arrowTotalWidth + textWidth(suffix) > availableWidth) {
+      if (dirLabel == 'Z') suffix = LABEL_ZENTRUM_SHORT;
+      if (dirLabel == 'A') suffix = LABEL_AUSWAERTS_SHORT;
     }
+    name = fitText(name, availableWidth - arrowTotalWidth - textWidth(suffix));
+  } else {
+    name = fitText(name, availableWidth);
+  }
 
-    int16_t pbx, pby;
-    uint16_t pbw, pbh;
-    display.getTextBounds(prefix, 0, 0, &pbx, &pby, &pbw, &pbh);
+  // Vertikale Position nur am Namen ausrichten (Klammern des Seitenhinweises
+  // haben Unterlaengen und wuerden den Text verschieben)
+  int16_t nbx, nby;
+  uint16_t nbw, nbh;
+  display.getTextBounds(name, 0, 0, &nbx, &nby, &nbw, &nbh);
+  int headerCursorY = boxCenterY - nby - nbh / 2;
 
-    int headerCursorY = boxCenterY - pby - pbh / 2;
+  display.setCursor(nameX, headerCursorY);
+  display.print(name);
+  int headerX = nameX + nbw;
 
-    display.setCursor(5, headerCursorY);
-    display.print(prefix);
-
-    int prefixEndX = 5 + pbw;
-    int arrowStartX = prefixEndX + ARROW_GAP;
+  if (suffix.length() > 0) {
+    int arrowStartX = headerX + ARROW_GAP;
     int arrowEndX = arrowStartX + ARROW_LENGTH;
-
     display.fillRect(arrowStartX, boxCenterY - ARROW_THICKNESS / 2, ARROW_LENGTH, ARROW_THICKNESS, BLACK);
     display.fillTriangle(
       arrowEndX, boxCenterY - ARROW_HEAD_SIZE,
@@ -253,48 +284,15 @@ static void drawContent(const Departure departures[], int found,
       arrowEndX + ARROW_HEAD_SIZE, boxCenterY,
       BLACK
     );
-
     int suffixStartX = arrowEndX + ARROW_HEAD_SIZE + ARROW_GAP;
     display.setCursor(suffixStartX, headerCursorY);
     display.print(suffix);
-  } else {
-    // Nur der Stationsname, auf Seite 2 mit "(2/2)" dahinter. Gekuerzt wird
-    // nur der Name - der Seitenhinweis bleibt immer vollstaendig sichtbar.
-    int nameX = 5;
-    if (stationNumber > 0) {
-      // Kaestchen mit Nummer, vertikal mittig zur Uhr-Box
-      int boxTop = boxCenterY - STATION_BOX_SIZE / 2;
-      display.fillRect(5, boxTop, STATION_BOX_SIZE, STATION_BOX_SIZE, BLACK);
-      String number(stationNumber);
-      int16_t dbx, dby;
-      uint16_t dbw, dbh;
-      display.getTextBounds(number, 0, 0, &dbx, &dby, &dbw, &dbh);
-      display.setTextColor(WHITE);
-      display.setCursor(5 + (STATION_BOX_SIZE - dbw) / 2 - dbx,
-                        boxTop + (STATION_BOX_SIZE - dbh) / 2 - dby);
-      display.print(number);
-      display.setTextColor(BLACK);
-      nameX += STATION_BOX_SIZE + STATION_BOX_GAP;
-      availableWidth -= STATION_BOX_SIZE + STATION_BOX_GAP;
-    }
+    headerX = suffixStartX + textWidth(suffix);
+  }
 
-    int hintWidth = isPage2 ? HEADER_HINT_SPACE + textWidth(PAGE2_HINT) : 0;
-    String name = fitText(stationName, availableWidth - hintWidth);
-
-    // Vertikale Position nur am Namen ausrichten (die Klammern des
-    // Seitenhinweises haben Unterlaengen und wuerden den Text verschieben)
-    int16_t nbx, nby;
-    uint16_t nbw, nbh;
-    display.getTextBounds(name, 0, 0, &nbx, &nby, &nbw, &nbh);
-    int headerCursorY = boxCenterY - nby - nbh / 2;
-
-    display.setCursor(nameX, headerCursorY);
-    display.print(name);
-
-    if (isPage2) {
-      display.setCursor(nameX + nbw + HEADER_HINT_SPACE, headerCursorY);
-      display.print(PAGE2_HINT);
-    }
+  if (isPage2) {
+    display.setCursor(headerX + HEADER_HINT_SPACE, headerCursorY);
+    display.print(PAGE2_HINT);
   }
 
   int separatorY = boxY + boxH + 3;
@@ -302,6 +300,14 @@ static void drawContent(const Departure departures[], int found,
 
   int rowHeight = 22;
   int yStart = separatorY + 3 + 17;
+
+  // Aktuelle Minute seit 1970 fuer die Minuten-Anzeige (0 = Uhrzeit zeigen,
+  // auch solange die Zeit noch nicht abgeglichen ist)
+  long nowMinute = 0;
+  if (minutes) {
+    time_t now = ::time(nullptr);   // "time" ist oben die Uhrzeit (String)
+    if (now > 1700000000) nowMinute = (long)(now / 60);
+  }
 
   if (found == 0) {
     display.setFont(&FreeSans9pt8b);
@@ -346,32 +352,59 @@ static void drawContent(const Departure departures[], int found,
       display.setCursor(COL_PIPE2, y);
       display.print("|");
 
+      // Verfruehung unter EARLY_DEPARTURE_MIN (config.h) wie puenktlich
+      // behandeln - "-1" verwirrt und ist meist nur Rundung/Prognose
+      int delay = departures[i].delayMin;
+      if (delay < 0 && delay > -EARLY_DEPARTURE_MIN) delay = 0;
+
+      // Minuten-Anzeige: Minuten bis zur tatsaechlichen Abfahrt (geplant +
+      // Verspaetung), gerechnet als Differenz der Minuten wie die Uhr im
+      // Header (14:07 -> 14:09 = "2 min"). Ab 60 Minuten Uhrzeit wie sonst.
+      // Minuten fett, " min" normal ("4 min"), "jetzt" fett
+      String timeText = departures[i].time;
+      String timeSuffix = "";
+      bool asMinutes = false;
+      if (nowMinute > 0) {
+        long diff = (long)((departures[i].planned + (time_t)delay * 60) / 60) - nowMinute;
+        if (diff < 60) {
+          asMinutes = true;
+          timeText = diff <= 0 ? String("jetzt") : String(diff);
+          if (diff > 0) timeSuffix = " min";
+        }
+      }
+
+      // Gezeichnete Ausdehnung des Textes merken (fuer den Strich bei Ausfall)
+      int16_t tbx, tby;
+      uint16_t tbw, tbh;
+      if (asMinutes) display.setFont(&FreeSansBold9pt8b);
+      display.getTextBounds(timeText, COL_TIME, y, &tbx, &tby, &tbw, &tbh);
+      int textLeft = tbx;
+      int textRight = tbx + tbw - 1;
       display.setCursor(COL_TIME, y);
-      display.print(departures[i].time);
+      display.print(timeText);
+      display.setFont(&FreeSans9pt8b);
+      if (timeSuffix.length() > 0) {
+        display.getTextBounds(timeSuffix, display.getCursorX(), y, &tbx, &tby, &tbw, &tbh);
+        textRight = tbx + tbw - 1;
+        display.print(timeSuffix);
+      }
 
       if (departures[i].cancelled) {
-        // Ausfall: Uhrzeit durchstreichen, Warndreieck an die Stelle der
-        // Verspaetung (linke Kante dort, wo sonst "+x" beginnt)
-        int16_t timeBx, timeBy;
-        uint16_t timeBw, timeBh;
-        display.getTextBounds(departures[i].time, 0, 0, &timeBx, &timeBy, &timeBw, &timeBh);
-        int strikeY = y + timeBy + timeBh / 2;
-        // An den tatsaechlich gezeichneten Ziffern ausrichten: die Schrift hat
-        // links einen Vorlauf (timeBx), sonst sitzt der Strich zu weit links
-        int strikeX0 = COL_TIME + timeBx - STRIKE_OVERHANG;
-        int strikeX1 = COL_TIME + timeBx + timeBw - 1 + STRIKE_OVERHANG;
+        // Ausfall: Uhrzeit bzw. Minuten durchstreichen, Warndreieck an die
+        // Stelle der Verspaetung (linke Kante dort, wo sonst "+x" beginnt).
+        // Strich an den tatsaechlich gezeichneten Zeichen ausrichten (die
+        // Schrift hat links einen Vorlauf), Hoehe: Mitte der Ziffern
+        display.getTextBounds("0", COL_TIME, y, &tbx, &tby, &tbw, &tbh);
+        int strikeY = tby + tbh / 2;
+        int strikeX0 = textLeft - STRIKE_OVERHANG;
+        int strikeX1 = textRight + STRIKE_OVERHANG;
         display.drawLine(strikeX0, strikeY, strikeX1, strikeY, BLACK);
 
         display.print(" ");                       // Cursor steht jetzt, wo "+x" begaenne
         int delayStartX = display.getCursorX() + CANCEL_ICON_SHIFT;
         drawWarningTriangle(delayStartX + WARNING_ICON_WIDTH / 2, y);
 
-      } else {
-        // Verfruehung unter EARLY_DEPARTURE_MIN (config.h) wie puenktlich
-        // behandeln - "-1" verwirrt und ist meist nur Rundung/Prognose
-        int delay = departures[i].delayMin;
-        if (delay < 0 && delay > -EARLY_DEPARTURE_MIN) delay = 0;
-
+      } else if (!asMinutes) {
         // Abweichung 0 (auch eine auf 0 gesetzte -1/-2) nie anzeigen: Die API
         // meldet puenktliche Abfahrten nie als realtime (beobachtet), "+0"
         // kam daher nur noch durch die Verfruehungs-Regel zustande
@@ -435,20 +468,20 @@ void displayShowSplash(const char* firmwareVersion) {
 }
 
 void displayShowDepartures(const Departure departures[], int found,
-                           const String& stationName, bool showDirection,
-                           bool showZentrum, bool isPage2, bool fullRefresh,
+                           const String& stationName, char dirLabel,
+                           bool isPage2, bool minutes, bool fullRefresh,
                            int stationNumber) {
   if (fullRefresh) {
     display.fastmodeOff();
     display.clearMemory();
-    drawContent(departures, found, stationName, showDirection, showZentrum, isPage2, stationNumber);
+    drawContent(departures, found, stationName, dirLabel, isPage2, minutes, stationNumber);
     display.update();
   } else {
     // Fast Mode: zweimal hintereinander aktualisieren, verbessert den
     // Kontrast pro Update und wirkt Grauschleier entgegen
     display.fastmodeOn();
     display.clearMemory();
-    drawContent(departures, found, stationName, showDirection, showZentrum, isPage2, stationNumber);
+    drawContent(departures, found, stationName, dirLabel, isPage2, minutes, stationNumber);
     display.update();
     display.update();
   }

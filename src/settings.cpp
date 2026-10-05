@@ -46,6 +46,15 @@ static const char* const KEY_TYPES2 = "types2";
 static const char* const KEY_LINES2 = "lines2";
 static const char* const KEY_DIR1 = "dir1";
 static const char* const KEY_DIR2 = "dir2";
+// Ab 2.3.0 (Richtung je Station, Tastenbelegung, Minuten). dir1 kann jetzt
+// auch 'U' sein; dirView/zentrumIsH/defZentrum/qrOn werden weiter
+// geschrieben, damit eine aeltere Firmware nach einem Downgrade passt.
+static const char* const KEY_ZENTRUM1 = "zentrum1";
+static const char* const KEY_START1 = "start1";
+static const char* const KEY_ZENTRUM2 = "zentrum2";
+static const char* const KEY_KEY_LEFT = "keyLeft";
+static const char* const KEY_KEY_MID = "keyMid";
+static const char* const KEY_MINUTES = "minutes";
 
 DeviceSettings appSettings;
 
@@ -91,6 +100,15 @@ static String normalizeLines(const String& text) {
   return sel.toString();
 }
 
+// Tastenbelegung wie bis 2.2.0: links Station 2, sonst Richtung (bei
+// umschaltbarer Richtung), sonst Seite 2; Mitte WLAN-QR, falls an
+static void setKeyDefaults(DeviceSettings& s, bool wifiQr) {
+  s.keyLeft = s.station2Id.length() ? BTN_STATION2
+              : s.dir1 == 'U'       ? BTN_DIRECTION
+                                    : BTN_PAGE2;
+  s.keyMid = wifiQr ? BTN_WIFI_QR : BTN_PAGE2;
+}
+
 static void setDefaults(DeviceSettings& s) {
 #if HAS_SECRETS_H
   s.wifiSsid = ssid;
@@ -105,17 +123,31 @@ static void setDefaults(DeviceSettings& s) {
 #endif
   s.stationId = STATION_GLOBAL_ID;
   s.lines1 = "";
-  s.dir1 = 'B';
   s.station2Id = STATION2_GLOBAL_ID;
+  s.dir1 = (FEATURE_DIRECTION_VIEW && s.station2Id.length() == 0) ? 'U' : 'B';
+  s.zentrum1 = ZENTRUM_IS_H ? 'H' : 'R';
+  s.start1 = (ZENTRUM_IS_H == DEFAULT_VIEW_ZENTRUM) ? 'H' : 'R';
   s.types2 = defaultTypes();
   s.lines2 = "";
   s.dir2 = 'B';
-  s.directionView = FEATURE_DIRECTION_VIEW;
-  s.zentrumIsH = ZENTRUM_IS_H;
-  s.defaultViewZentrum = DEFAULT_VIEW_ZENTRUM;
+  s.zentrum2 = 'K';
   setTransportDefaults(s);
-  s.wifiQr = FEATURE_WIFI_QR;
   s.qrTitle = QR_SCREEN_TITLE;
+  setKeyDefaults(s, FEATURE_WIFI_QR);
+  s.showMinutes = SHOW_MINUTES;
+}
+
+static bool validKey(uint8_t key, bool middle) {
+  return key <= BTN_PAGE2 || (middle && key == BTN_WIFI_QR);
+}
+
+// Taste mit einer Funktion, die es (nicht mehr) gibt - z.B. Station 2
+// entfernt -: dann weitere Abfahrten (Seite 2)
+static uint8_t usableKey(const DeviceSettings& s, uint8_t key, bool middle) {
+  if (!validKey(key, middle)) return BTN_PAGE2;
+  if (key == BTN_DIRECTION && s.dir1 != 'U') return BTN_PAGE2;
+  if (key == BTN_STATION2 && s.station2Id.length() == 0) return BTN_PAGE2;
+  return key;
 }
 
 // Korrigiert unbrauchbare Werte (z.B. alle Verkehrsmittel aus)
@@ -130,10 +162,13 @@ static void validate(DeviceSettings& s) {
   if (s.types2 == 0) s.types2 = defaultTypes();
   s.lines1 = normalizeLines(s.lines1);
   s.lines2 = normalizeLines(s.lines2);
-  if (s.dir1 != 'H' && s.dir1 != 'R') s.dir1 = 'B';
+  if (s.dir1 != 'H' && s.dir1 != 'R' && s.dir1 != 'U') s.dir1 = 'B';
   if (s.dir2 != 'H' && s.dir2 != 'R') s.dir2 = 'B';
-  // Getrennte Ansicht zeigt ohnehin beide Richtungen nacheinander
-  if (s.directionView) s.dir1 = 'B';
+  if (s.zentrum1 != 'H' && s.zentrum1 != 'R') s.zentrum1 = 'K';
+  if (s.zentrum2 != 'H' && s.zentrum2 != 'R') s.zentrum2 = 'K';
+  if (s.start1 != 'R') s.start1 = 'H';
+  s.keyLeft = usableKey(s, s.keyLeft, false);
+  s.keyMid = usableKey(s, s.keyMid, true);
 }
 
 // ------------------------------------------------------------
@@ -168,29 +203,55 @@ void settingsLoad() {
   // Nur lesen. false = Namensraum existiert noch nicht (nie gespeichert)
   if (prefs.begin(NVS_NAMESPACE, true)) {
     storedValuesFound = true;
-    readString(prefs, KEY_WIFI_SSID, appSettings.wifiSsid);
-    readString(prefs, KEY_WIFI_PASS, appSettings.wifiPassword);
-    readString(prefs, KEY_STATION, appSettings.stationId);
-    readBool(prefs, KEY_DIR_VIEW, appSettings.directionView);
-    readBool(prefs, KEY_ZENTRUM_IS_H, appSettings.zentrumIsH);
-    readBool(prefs, KEY_DEF_ZENTRUM, appSettings.defaultViewZentrum);
-    readBool(prefs, KEY_SBAHN, appSettings.showSbahn);
-    readBool(prefs, KEY_UBAHN, appSettings.showUbahn);
-    readBool(prefs, KEY_TRAM, appSettings.showTram);
-    readBool(prefs, KEY_BUS, appSettings.showBus);
-    readBool(prefs, KEY_BAHN, appSettings.showBahn);
-    readBool(prefs, KEY_QR_ON, appSettings.wifiQr);
-    readString(prefs, KEY_QR_TITLE, appSettings.qrTitle);
-    readString(prefs, KEY_QR_SSID, appSettings.qrSsid);
-    readString(prefs, KEY_QR_PASS, appSettings.qrPassword);
+    DeviceSettings& s = appSettings;
+    readString(prefs, KEY_WIFI_SSID, s.wifiSsid);
+    readString(prefs, KEY_WIFI_PASS, s.wifiPassword);
+    readString(prefs, KEY_STATION, s.stationId);
+    // Bis 2.2.0: getrennte Ansicht als eigener Schalter (nur Station 1,
+    // nur ohne Station 2), Zentrum/Standardansicht als Ja/Nein
+    bool dirView = FEATURE_DIRECTION_VIEW;
+    bool zentrumIsH = ZENTRUM_IS_H;
+    bool defZentrum = DEFAULT_VIEW_ZENTRUM;
+    bool wifiQr = FEATURE_WIFI_QR;
+    readBool(prefs, KEY_DIR_VIEW, dirView);
+    readBool(prefs, KEY_ZENTRUM_IS_H, zentrumIsH);
+    readBool(prefs, KEY_DEF_ZENTRUM, defZentrum);
+    readBool(prefs, KEY_SBAHN, s.showSbahn);
+    readBool(prefs, KEY_UBAHN, s.showUbahn);
+    readBool(prefs, KEY_TRAM, s.showTram);
+    readBool(prefs, KEY_BUS, s.showBus);
+    readBool(prefs, KEY_BAHN, s.showBahn);
+    readBool(prefs, KEY_QR_ON, wifiQr);
+    readString(prefs, KEY_QR_TITLE, s.qrTitle);
+    readString(prefs, KEY_QR_SSID, s.qrSsid);
+    readString(prefs, KEY_QR_PASS, s.qrPassword);
     // Fehlen bei Geraeten mit 2.1.0 oder aelter: dann gelten die
     // Standardwerte (keine Linienauswahl, keine Station 2)
-    readString(prefs, KEY_LINES1, appSettings.lines1);
-    readString(prefs, KEY_STATION2, appSettings.station2Id);
-    readUChar(prefs, KEY_TYPES2, appSettings.types2);
-    readString(prefs, KEY_LINES2, appSettings.lines2);
-    readChar(prefs, KEY_DIR1, appSettings.dir1);
-    readChar(prefs, KEY_DIR2, appSettings.dir2);
+    readString(prefs, KEY_LINES1, s.lines1);
+    readString(prefs, KEY_STATION2, s.station2Id);
+    readUChar(prefs, KEY_TYPES2, s.types2);
+    readString(prefs, KEY_LINES2, s.lines2);
+    s.dir1 = 'B';
+    readChar(prefs, KEY_DIR1, s.dir1);
+    readChar(prefs, KEY_DIR2, s.dir2);
+
+    // Fehlen bei Geraeten mit 2.2.0 oder aelter: aus den alten Werten so
+    // uebernehmen, dass Anzeige und Tasten gleich bleiben
+    if (prefs.isKey(KEY_ZENTRUM1)) {
+      if (dirView) s.dir1 = 'U';   // gespeichert als dir1 'B' + dirView
+    } else {
+      if (dirView && s.station2Id.length() == 0) s.dir1 = 'U';
+      s.zentrum1 = s.dir1 == 'U' ? (zentrumIsH ? 'H' : 'R') : 'K';
+      s.start1 = (zentrumIsH == defZentrum) ? 'H' : 'R';
+      s.zentrum2 = 'K';
+      setKeyDefaults(s, wifiQr);
+    }
+    readChar(prefs, KEY_ZENTRUM1, s.zentrum1);
+    readChar(prefs, KEY_START1, s.start1);
+    readChar(prefs, KEY_ZENTRUM2, s.zentrum2);
+    readUChar(prefs, KEY_KEY_LEFT, s.keyLeft);
+    readUChar(prefs, KEY_KEY_MID, s.keyMid);
+    readBool(prefs, KEY_MINUTES, s.showMinutes);
     prefs.end();
   }
 
@@ -226,15 +287,18 @@ bool settingsSave() {
   ok &= writeString(prefs, KEY_WIFI_SSID, appSettings.wifiSsid);
   ok &= writeString(prefs, KEY_WIFI_PASS, appSettings.wifiPassword);
   ok &= writeString(prefs, KEY_STATION, appSettings.stationId);
-  ok &= writeBool(prefs, KEY_DIR_VIEW, appSettings.directionView);
-  ok &= writeBool(prefs, KEY_ZENTRUM_IS_H, appSettings.zentrumIsH);
-  ok &= writeBool(prefs, KEY_DEF_ZENTRUM, appSettings.defaultViewZentrum);
+  // Fuer aeltere Firmware (Downgrade): getrennte Ansicht wie bis 2.2.0
+  bool dirView = appSettings.dir1 == 'U';
+  bool zentrumIsH = appSettings.zentrum1 != 'R';
+  ok &= writeBool(prefs, KEY_DIR_VIEW, dirView);
+  ok &= writeBool(prefs, KEY_ZENTRUM_IS_H, zentrumIsH);
+  ok &= writeBool(prefs, KEY_DEF_ZENTRUM, (appSettings.start1 == 'H') == zentrumIsH);
   ok &= writeBool(prefs, KEY_SBAHN, appSettings.showSbahn);
   ok &= writeBool(prefs, KEY_UBAHN, appSettings.showUbahn);
   ok &= writeBool(prefs, KEY_TRAM, appSettings.showTram);
   ok &= writeBool(prefs, KEY_BUS, appSettings.showBus);
   ok &= writeBool(prefs, KEY_BAHN, appSettings.showBahn);
-  ok &= writeBool(prefs, KEY_QR_ON, appSettings.wifiQr);
+  ok &= writeBool(prefs, KEY_QR_ON, appSettings.keyMid == BTN_WIFI_QR);
   ok &= writeString(prefs, KEY_QR_TITLE, appSettings.qrTitle);
   ok &= writeString(prefs, KEY_QR_SSID, appSettings.qrSsid);
   ok &= writeString(prefs, KEY_QR_PASS, appSettings.qrPassword);
@@ -242,8 +306,15 @@ bool settingsSave() {
   ok &= writeString(prefs, KEY_STATION2, appSettings.station2Id);
   ok &= writeUChar(prefs, KEY_TYPES2, appSettings.types2);
   ok &= writeString(prefs, KEY_LINES2, appSettings.lines2);
-  ok &= writeUChar(prefs, KEY_DIR1, (uint8_t)appSettings.dir1);
+  // 2.2.0 kennt kein 'U' (dort: dirView)
+  ok &= writeUChar(prefs, KEY_DIR1, (uint8_t)(dirView ? 'B' : appSettings.dir1));
   ok &= writeUChar(prefs, KEY_DIR2, (uint8_t)appSettings.dir2);
+  ok &= writeUChar(prefs, KEY_ZENTRUM1, (uint8_t)appSettings.zentrum1);
+  ok &= writeUChar(prefs, KEY_START1, (uint8_t)appSettings.start1);
+  ok &= writeUChar(prefs, KEY_ZENTRUM2, (uint8_t)appSettings.zentrum2);
+  ok &= writeUChar(prefs, KEY_KEY_LEFT, appSettings.keyLeft);
+  ok &= writeUChar(prefs, KEY_KEY_MID, appSettings.keyMid);
+  ok &= writeBool(prefs, KEY_MINUTES, appSettings.showMinutes);
   prefs.end();
 
   if (ok) storedValuesFound = true;
@@ -333,18 +404,18 @@ void settingsPrint() {
   Serial.println(yesNo(s.wifiPassword.length() > 0));
   Serial.print("Station: ");
   Serial.println(s.stationId.length() ? s.stationId : String("(keine)"));
-  Serial.print("Anzeige: ");
-  if (s.directionView) {
-    Serial.print("getrennt, Zentrum = ");
-    Serial.print(s.zentrumIsH ? ":H:" : ":R:");
-    Serial.print(", Standardansicht ");
-    Serial.println(s.defaultViewZentrum ? "Zentrum" : "Auswaerts");
+  Serial.print("Richtung: ");
+  if (s.dir1 == 'U') {
+    Serial.print("umschaltbar, Start ");
+    Serial.print(s.start1);
   } else if (s.dir1 != 'B') {
-    Serial.print("nur Richtung ");
-    Serial.println(s.dir1);
+    Serial.print("nur ");
+    Serial.print(s.dir1);
   } else {
-    Serial.println("gemischt");
+    Serial.print("alle");
   }
+  Serial.print(", Zentrum: ");
+  Serial.println(s.zentrum1 == 'K' ? String("keine Angabe") : String(s.zentrum1));
   Serial.print("Verkehrsmittel:");
   if (s.showSbahn) Serial.print(" S-Bahn");
   if (s.showUbahn) Serial.print(" U-Bahn");
@@ -361,13 +432,22 @@ void settingsPrint() {
     Serial.print(s.types2, HEX);
     Serial.print(", Richtung ");
     Serial.print(s.dir2 == 'B' ? String("alle") : String(s.dir2));
+    Serial.print(", Zentrum ");
+    Serial.print(s.zentrum2 == 'K' ? String("keine Angabe") : String(s.zentrum2));
     Serial.print(", Linien: ");
     Serial.println(s.lines2.length() ? s.lines2 : String("(alle)"));
   } else {
     Serial.println("(keine)");
   }
+  static const char* const KEY_NAMES[] = { "keine", "Richtung", "Station 2", "Seite 2", "WLAN-QR" };
+  Serial.print("Tasten: links ");
+  Serial.print(KEY_NAMES[s.keyLeft]);
+  Serial.print(", Mitte ");
+  Serial.println(KEY_NAMES[s.keyMid]);
+  Serial.print("Abfahrtszeit: ");
+  Serial.println(s.showMinutes ? "Minuten" : "Uhrzeit");
   Serial.print("WLAN-QR: ");
-  if (s.wifiQr) {
+  if (s.keyMid == BTN_WIFI_QR) {
     Serial.print("an, Titel \"");
     Serial.print(s.qrTitle);
     Serial.print("\", Netz ");

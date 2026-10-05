@@ -1,6 +1,6 @@
 // settings.h
 // Geraete-Einstellungen zur Laufzeit (WLAN, Station, Anzeige,
-// Verkehrsmittel, WLAN-QR). Gespeicherte Werte im Geraetespeicher (NVS)
+// Verkehrsmittel, Tasten, WLAN-QR). Gespeicherte Werte im Geraetespeicher (NVS)
 // haben Vorrang. Fehlt ein Wert, gilt der Standardwert aus config.h bzw.
 // secrets.h (optional).
 #pragma once
@@ -16,20 +16,33 @@ struct DeviceSettings {
   // Linienauswahl Station 1 (Textform siehe LineSelection in
   // line_select.h, "" = alle Linien)
   String lines1;
-  // Richtung Station 1: 'B' alle, 'H' nur ":H:", 'R' nur ":R:" - gilt fuer
-  // alle Linien, zusaetzlich zur Linienauswahl. Nicht mit directionView.
+  // Richtung Station 1: 'B' alle, 'U' umschaltbar (H und R getrennt, eine
+  // Taste mit BTN_DIRECTION wechselt), 'H' nur ":H:", 'R' nur ":R:" - gilt
+  // fuer alle Linien, zusaetzlich zur Linienauswahl
   char dir1;
+  // Welche Kennung faehrt Richtung Zentrum: 'H', 'R' oder 'K' (keine
+  // Zuordnung). Bestimmt den Richtungsnamen im Header: Zentrum/Auswaerts,
+  // bei 'K' und dir1 'U' "H"/"R", sonst keiner.
+  char zentrum1;
+  // Startansicht bei dir1 'U': 'H' oder 'R' (Richtungskennung)
+  char start1;
 
-  // Optionale Station 2 ("" = keine). Umschalten per BOOT-Taste.
+  // Optionale Station 2 ("" = keine), erreichbar ueber eine Taste mit
+  // BTN_STATION2
   String station2Id;
   uint8_t types2;            // Verkehrsmittel Station 2 (TYPE_...-Bits)
   String lines2;             // Linienauswahl Station 2
-  char dir2;                 // Richtung Station 2 ('B', 'H', 'R' wie dir1)
+  char dir2;                 // Richtung Station 2: 'B', 'H', 'R' (kein 'U')
+  char zentrum2;             // wie zentrum1
 
-  // Richtungsanzeige (nur Station 1 und nur ohne Station 2)
-  bool directionView;        // true = getrennt nach Zentrum/Auswaerts, false = gemischt
-  bool zentrumIsH;           // true = ":H:" faehrt Richtung Zentrum
-  bool defaultViewZentrum;   // Standardansicht bei getrennter Anzeige
+  // Tastenbelegung (BTN_...): Jede Taste zeigt eine Ansicht, ein weiterer
+  // Druck auf eine der Tasten oder der Auto-Reset fuehrt zur Standardansicht
+  // zurueck. BTN_WIFI_QR nur auf der mittleren Taste.
+  uint8_t keyLeft;
+  uint8_t keyMid;
+
+  // Abfahrtszeit als Minuten bis zur Abfahrt ("4 min") statt Uhrzeit
+  bool showMinutes;
 
   // Verkehrsmittel Station 1 (mindestens eines ist true)
   bool showSbahn;
@@ -38,8 +51,7 @@ struct DeviceSettings {
   bool showBus;              // Stadt- und Regionalbusse
   bool showBahn;             // Regionalzuege
 
-  // WLAN-QR-Code (kurzer Druck auf die QR-Taste)
-  bool wifiQr;
+  // WLAN-QR-Code (mittlere Taste mit BTN_WIFI_QR)
   String qrTitle;            // UTF-8, Umwandlung fuers Display erst beim Zeichnen
   String qrSsid;
   String qrPassword;
@@ -53,12 +65,20 @@ struct DeviceSettings {
 #define TYPE_BAHN  0x10   // Regionalzuege
 #define TYPE_ALL   0x1F
 
+// Tastenbelegung (DeviceSettings.keyLeft/keyMid)
+#define BTN_NONE      0   // keine Funktion
+#define BTN_DIRECTION 1   // Richtung wechseln (nur bei dir1 'U')
+#define BTN_STATION2  2   // Station 2 zeigen (nur mit Station 2)
+#define BTN_PAGE2     3   // weitere Abfahrten (Seite 2 der Standardansicht)
+#define BTN_WIFI_QR   4   // WLAN-QR-Code (nur mittlere Taste)
+
 // Was fuer den Abruf einer Station gebraucht wird (Station 1 oder 2)
 struct StationConfig {
   String id;       // globalId ("" = nicht eingerichtet)
   uint8_t types;   // TYPE_...-Bits, mindestens eins gesetzt
   String lines;    // Linienauswahl ("" = alle Linien)
-  char dir;        // Richtung: 'B' alle, 'H', 'R' (zusaetzlich zu lines)
+  char dir;        // Richtung: 'B' alle, 'U' H und R getrennt (nur Station 1),
+                   // 'H', 'R' (zusaetzlich zu lines)
 };
 
 // Die aktuell gueltigen Einstellungen (nach settingsLoad()). Geaendert wird

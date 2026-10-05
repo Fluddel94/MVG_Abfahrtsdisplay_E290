@@ -4,6 +4,64 @@ Alle nennenswerten Änderungen am Abfahrtsdisplay. Neueste Version oben.
 Versionierung nach Semantic Versioning (`MAJOR.MINOR.PATCH`): PATCH =
 Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
+## [Unveröffentlicht]
+
+### Neu
+- **Richtung je Station mit Bezeichnung:** Station 1 und 2 zeigen bei
+  „nur Richtung H/R“ und bei umschaltbarer Richtung im Header
+  „Station → Zentrum“ bzw. „→ Auswärts“, je nachdem, welche Kennung (H
+  oder R) Richtung Zentrum fährt. Ohne Zuordnung („Keine“) steht bei
+  umschaltbarer Richtung „→ H“/„→ R“, sonst nur der Stationsname.
+  Umschaltbare Richtung (bisher „getrennt“) geht jetzt auch mit zwei
+  Stationen (nur Station 1).
+- **Tastenbelegung:** Linke und mittlere Taste haben je eine Funktion:
+  Richtung wechseln, Station 2, weitere Abfahrten (Seite 2) oder keine;
+  die mittlere Taste alternativ den WLAN-QR-Code. Ein Druck zeigt die
+  Ansicht der Taste, ein weiterer Druck (auf eine der beiden Tasten) oder
+  30 s später geht es zurück zur Standardansicht. Seite 2 gibt es damit
+  auch mit zwei Stationen und bei umschaltbarer Richtung. Mittlere Taste
+  lang drücken: wie bisher Systeminfo und Einstellportal.
+- **Abfahrtszeit in Minuten** („**4** min“, „**jetzt**“, Zahl fett; ab
+  60 Minuten Uhrzeit) als Alternative zur Uhrzeit, Verspätung eingerechnet (`SHOW_MINUTES`
+  in `config.h`).
+
+### Geändert
+- **Einstellungsportal neu aufgebaut:** Jede Station in vier Schritten
+  (Station, Verkehrsmittel, Richtung, Linien), beide Stationen gleich
+  einzustellen. Die gewählte Station steht als Karte mit „Ändern“, die
+  Station-ID nur noch unter „Station-ID manuell eingeben“.
+  Verkehrsmittel als farbige Schalter; was an der Station nicht fährt,
+  ist gestrichelt. „Richtungsanzeige“: alle Richtungen gemischt,
+  umschaltbar per Taste (H/R), nur H, nur R oder je Linie (nur dann
+  gibt es die Richtung in der Linienauswahl). Bei umschaltbar/nur H/nur R
+  fragt das Portal „Welche Richtung fährt ins Zentrum?“ (H, R oder Keine)
+  und zeigt dazu Beispielziele aus den aktuellen Abfahrten, auch direkt
+  in der Auswahl (ersetzt „Richtungen anzeigen“). Unter jeder Einstellung
+  steht, was das Display zeigt.
+- Neue Bereiche „Anzeige“ (Uhrzeit oder Minuten) und „Tasten“
+  (Standardansicht, Belegung links/Mitte mit Vorschau, WLAN-QR-Code bei
+  der mittleren Taste). Eine neue Funktion (Station 2, umschaltbare
+  Richtung) wird automatisch einer freien Taste zugeordnet, sonst
+  erscheint ein Hinweis.
+- „Speichern“ steht in einer Leiste am unteren Rand, die ungespeicherte
+  Änderungen anzeigt. Gespeichert wird ohne Seitenwechsel; fehlende
+  Angaben werden direkt am Feld gemeldet statt per Hinweisfenster.
+- Während ein WLAN-Ausfall überbrückt wird (bis 60 s), reagieren die
+  Tasten weiter (Ansichten aus dem Zwischenspeicher, QR-Code,
+  Systeminfo). Bisher waren sie bis zur Rückkehr des WLANs ohne Wirkung.
+
+### Korrigiert
+- WLAN-Stromsparmodus abgeschaltet (`WiFi.setSleep(false)`): Bei manchen
+  Routern führte er zu wiederholten Verbindungsabbrüchen.
+
+### Intern
+- Einstellungen aus 2.2.0 und älter werden beim ersten Start so
+  übernommen, dass Anzeige und Tasten gleich bleiben. Die bisherigen
+  Schlüssel (`dirView`, `zentrumIsH`, `defZentrum`, `qrOn`) werden
+  weiter geschrieben, damit ein Downgrade funktioniert.
+- `Departure.planned`: geplante Abfahrt als Zeitstempel.
+- Station 2 wird nur noch abgerufen, wenn sie einer Taste zugeordnet ist.
+
 ## [2.2.0] – 03.10.2026
 
 ### Neu

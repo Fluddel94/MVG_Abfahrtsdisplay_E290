@@ -71,6 +71,14 @@
 #define SHOW_BUS   1   // Stadtbusse (MVG) und Regionalbusse (MVV)
 #define SHOW_BAHN  0   // Regionalzuege, angezeigt z.B. als "RB56" / "RE5"
 
+// ------------------------------------------------------------
+// SCHRITT 4: ABFAHRTSZEIT
+// ------------------------------------------------------------
+// 0 = Uhrzeit mit Verspaetung ("10:34 +2")
+// 1 = Minuten bis zur Abfahrt, Verspaetung eingerechnet ("4 min", "jetzt";
+//     ab 60 Minuten Uhrzeit)
+#define SHOW_MINUTES 0
+
 // ============================================================
 // ZUSATZFUNKTIONEN (optional, standardmaessig aus)
 // ============================================================
@@ -93,8 +101,8 @@
 // ============================================================
 
 // --- Pins ---
-#define BOOT_BUTTON 0     // Richtung umschalten bzw. blaettern
-#define QR_BUTTON 21      // kurz: WLAN-QR, lang: Log-Screen
+#define BOOT_BUTTON 0     // linke Taste: Belegung im Portal
+#define QR_BUTTON 21      // mittlere Taste: kurz Belegung im Portal, lang Log-Screen
 
 // --- Abfahrten ---
 #define MAX_DEPARTURES_SHOWN 4
@@ -146,7 +154,7 @@
 #define WIFI_LOST_SCREEN_DELAY_MS 60000UL
 #define HTTP_TIMEOUT_MS 10000        // 5000 fuehrte zu Fehlercode -11 (TLS-Handshake)
 #define DIRECTION_AUTO_RESET_MS 30000UL
-#define PAGE_AUTO_RESET_MS 30000UL   // Seite 2 bei FEATURE_DIRECTION_VIEW 0
+#define PAGE_AUTO_RESET_MS 30000UL   // Seite 2 -> zurueck zur Standardansicht
 #define STATION_AUTO_RESET_MS 30000UL   // Station 2 -> zurueck zu Station 1
 #define QR_DISPLAY_DURATION_MS 60000UL
 #define LOG_DISPLAY_DURATION_MS 60000UL

@@ -2,8 +2,8 @@
 // Einstellungsportal (siehe portal.h).
 //
 // Seiten: "/" Formular, "/speichern" (POST), "/werkseinstellungen" (POST),
-// "/suche?q=" Stationssuche (JSON), "/richtungen?id=&types=" Linien je
-// Richtungskennung (JSON, max. 15), "/name?id=" Stationsname (JSON),
+// "/suche?q=" Stationssuche (JSON), "/richtungen?id=&types=" Linien und Ziele
+// je Richtungskennung (JSON, Beispielziele bei der Richtungswahl), "/name?id=" Stationsname (JSON),
 // "/linien?id=&types=" Linien der Station
 // (Verkehrsmittel als TYPE_...-Bits) mit Beispielzielen (JSON), "/update" (POST) Firmware-Upload. Die aktuellen
 // Werte bekommt die Seite als JSON-Objekt S, das Formular fuellt sich per
@@ -39,53 +39,93 @@ static const char PAGE_HEAD[] = R"HTML(<!DOCTYPE html><html lang="de"><head><met
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Abfahrtsdisplay</title><style>
 body{font-family:system-ui,sans-serif;margin:0;background:#f2f2f2;color:#111}
-main{max-width:560px;margin:auto;padding:12px}
+main{max-width:560px;margin:auto;padding:12px 12px 80px}
 h1{font-size:1.4em;margin:8px 0}
 section{background:#fff;border-radius:8px;padding:12px;margin:12px 0}
-h2{font-size:1.1em;margin:0 0 8px}h3{font-size:1em;margin:16px 0 4px}
+h2{font-size:1.1em;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+h3{font-size:1em;margin:2px 0 6px}h3 small{font-weight:normal;color:#666}
 label{display:block;margin:8px 0 4px}
-input[type=text],select{width:100%;box-sizing:border-box;padding:8px;font-size:1em}
+input[type=text],select{width:100%;box-sizing:border-box;padding:8px;font-size:1em;border:1px solid #999;border-radius:6px;background:#fff;color:#111}
 .row{display:flex;gap:8px}.row input{flex:1}
-button{padding:9px 14px;font-size:1em;border-radius:6px;border:1px solid #888;background:#eee}
-button.main{background:#0a5;color:#fff;border-color:#0a5;width:100%;padding:12px}
+button{padding:9px 14px;font-size:1em;border-radius:6px;border:1px solid #888;background:#eee;color:#111}
 button.danger{background:#fff;color:#b00;border-color:#b00}
-.hint{color:#555;font-size:.9em}
+button.link{border:0;background:none;color:#06c;text-decoration:underline;padding:4px 0}
+.hint{color:#555;font-size:.88em;margin:6px 0}
+.warn{color:#a60;font-weight:600}
+.no{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#111;color:#fff;border-radius:3px;font-size:.85em}
+.step{display:flex;gap:10px;margin-top:14px}
+.sn{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #0a5;color:#0a5;font-weight:bold;font-size:.8em;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.sb{flex:1;min-width:0}
+.chosen{display:flex;align-items:center;gap:8px;border:1px solid #0a5;background:#f1faf4;border-radius:6px;padding:8px}.chosen div{flex:1}
+details{margin-top:6px;font-size:.88em;color:#555}summary{cursor:pointer}details input[type=text]{margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{margin:0;position:relative}.chip input,.seg input{position:absolute;opacity:0}
+.chip span{display:inline-block;border:1.5px solid #999;border-radius:16px;padding:5px 11px;font-size:.92em;background:#fff;color:#333;cursor:pointer}
+.chip input:checked+span{color:#fff;font-weight:600}.chip input:checked+span::before{content:"\2713  "}
+.chip input:focus-visible+span,.seg input:focus-visible+span{outline:2px solid #06c}
+.cS input:checked+span{background:#408335;border-color:#408335}.cU input:checked+span{background:#0065ae;border-color:#0065ae}
+.cT input:checked+span{background:#d82020;border-color:#d82020}.cB input:checked+span{background:#00586a;border-color:#00586a}
+.cZ input:checked+span{background:#555;border-color:#555}
+.box{border:1px solid #ddd;border-radius:6px;padding:8px 10px;margin-top:8px;background:#fafafa}
+.q{font-weight:600;margin:2px 0 4px;font-size:.95em}
+.rad{display:flex;gap:8px;align-items:flex-start;margin:0;padding:5px 0}
+.rad input{margin-top:3px;width:18px;height:18px;flex:none}
+.dst{color:#555;font-size:.88em}
+.seg{display:flex;border:1px solid #888;border-radius:6px;overflow:hidden}
+.seg label{flex:1;margin:0;position:relative}
+.seg span{display:block;text-align:center;padding:7px 4px;font-size:.92em;background:#fff;border-left:1px solid #888;cursor:pointer}
+.seg label:first-child span{border-left:0}
+.seg input:checked+span{background:#111;color:#fff;font-weight:600}
+.seg small{display:block;font-weight:normal;opacity:.8;font-size:.82em}
+.disp{font-family:ui-monospace,monospace;border:1.5px solid #111;border-radius:3px;padding:0 5px;font-size:.9em;white-space:nowrap;color:#111}
+.add{width:100%;border-style:dashed;background:#fff;padding:12px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #ccc;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.bar div{max-width:560px;margin:auto;padding:10px 12px;display:flex;align-items:center;gap:10px;box-sizing:border-box}
+.bar span{flex:1;font-size:.92em;color:#555}.bar.dirty span{color:#a60;font-weight:600}
+.bar button{background:#ccc;border-color:#ccc;color:#555;padding:10px 22px;font-weight:600}
+.bar.dirty button,.bar.fail button{background:#0a5;border-color:#0a5;color:#fff}
+.bar.saved span{color:#0a5;font-weight:600}.bar.fail span{color:#b00;font-weight:600}
+.err{color:#b00;font-size:.9em;font-weight:600;margin:6px 0}
+.box.need{border-color:#a60;background:#fff8e8}.box.need .zq::after{content:" – bitte auswählen";color:#a60}
+.chip.na span{border-style:dashed;color:#999;background:#f4f4f4}.chip.na input:checked+span{opacity:.55}
 .cb{display:flex;align-items:center;gap:8px;margin:6px 0}.cb input{width:20px;height:20px;flex:none}.cb label{margin:0}
-
 .hit{border:1px solid #bbb;border-radius:6px;padding:8px;margin:6px 0;background:#fff;color:#111;font-size:1rem}
 .hit .acts{display:flex;gap:12px;align-items:center;margin-top:6px}
-table{border-collapse:collapse;width:100%;font-size:.9em}td,th{border-bottom:1px solid #ddd;padding:4px;text-align:left}
 .grp{font-weight:bold;margin:12px 0 2px;padding-bottom:2px;border-bottom:1px solid #ccc}
 .ln{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
 .ln .cb{margin:0}.ln select{width:auto;padding:4px;font-size:.9em}.ln select:disabled{visibility:hidden}.nod .ln select{display:none}
-.ln .dst{grid-column:1/3;padding-left:28px;color:#555;font-size:.85em}
+.ln .dst{grid-column:1/3;padding-left:28px}
 .ln.old{background:#fff6e0}
 .lb{display:inline-block;min-width:2.2em;padding:1px 5px;border-radius:4px;color:#fff;font-weight:bold;text-align:center}
 .tS{background:#408335}.tU{background:#0065ae}.tT{background:#d82020}.tB,.tR{background:#00586a}.tZ{background:#555}
-.sum{margin:4px 0}
+.sum{margin:0 0 8px}
 .spin{display:inline-block;width:12px;height:12px;border:2px solid #999;border-top-color:transparent;border-radius:50%;animation:r 1s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes r{to{transform:rotate(360deg)}}
 </style></head><body><main>
 <h1>Abfahrtsdisplay</h1>
 <p class="hint">Hilfe zu allen Einstellungen: <a id="help" href="#" target="_blank">Anleitung (README)</a></p>
-<form method="post" action="/speichern" onsubmit="return check()">
-<section><h2>Station 1<span id="hn1"></span></h2><div id="st1"></div></section>
-<section><h2>Station 2<span id="hn2"></span> <span class="hint" id="opt2">(optional)</span></h2>
-<div id="no2"><p class="hint">Mit einer zweiten Station wechselt die BOOT-Taste zwischen beiden Stationen (nach 30&nbsp;s zur&uuml;ck zu Station 1).</p>
-<button type="button" onclick="show2(1)">Zweite Station hinzuf&uuml;gen</button></div>
-<div id="has2"><div id="st2"></div><p><button type="button" class="danger" onclick="show2(0)">Station 2 entfernen</button></p></div>
-</section>
+<form id="f" method="post" action="/speichern" onsubmit="return check()">
+<section><h2><span class="no" id="no1">1</span><span>Station 1<span id="hn1"></span></span></h2><div id="st1"></div></section>
+<section><div id="no2"><button type="button" class="add" onclick="show2(1)">+ Zweite Station hinzuf&uuml;gen</button>
+<p class="hint">Eine Taste kann dann Station 2 zeigen.</p></div>
+<div id="has2"><h2><span class="no">2</span><span>Station 2<span id="hn2"></span></span></h2><div id="st2"></div>
+<p style="margin-top:14px"><button type="button" class="danger" onclick="show2(0)">Station 2 entfernen</button></p></div></section>
 <input type="hidden" name="lines1" id="lines1"><input type="hidden" name="station2" id="station2">
 <input type="hidden" name="types2" id="types2"><input type="hidden" name="lines2" id="lines2">
-<section><h2>WLAN-QR-Code</h2>
-<div class="cb"><input type="checkbox" id="qrOn" name="qrOn" onchange="upd()"><label for="qrOn">Kurzer Tastendruck zeigt einen QR-Code f&uuml;r ein WLAN (z.B. G&auml;ste-WLAN)</label></div>
-<div id="qrOpts">
+<section><h2>Anzeige</h2><h3 style="margin-top:10px">Abfahrtszeit als</h3>
+<div class="seg"><label><input type="radio" name="min" value="0" id="min0"><span>Uhrzeit<small>10:34 +2</small></span></label><label><input type="radio" name="min" value="1" id="min1"><span>Minuten<small>4 min</small></span></label></div></section>
+<section><h2>Tasten</h2>
+<div class="box"><div class="q">Standardansicht</div><span id="std"></span><p class="hint" style="margin:4px 0 0">ergibt sich aus Station 1</p></div>
+<h3 style="margin-top:14px">Linke Taste</h3><select id="keyL" name="keyL" onchange="K.L=+this.value;upd()"></select><p class="hint" id="resL"></p>
+<h3 style="margin-top:14px">Mittlere Taste</h3><select id="keyM" name="keyM" onchange="K.M=+this.value;upd()"></select><p class="hint" id="resM"></p>
+<div id="qrOpts" class="box"><div class="q">WLAN-QR-Code <small style="font-weight:normal">(z.B. G&auml;ste-WLAN)</small></div>
 <label for="qrTitle">&Uuml;berschrift</label><input type="text" id="qrTitle" name="qrTitle" maxlength="40">
 <label for="qrSsid">WLAN-Name</label><input type="text" id="qrSsid" name="qrSsid" maxlength="32">
 <label for="qrPass">Passwort</label><input type="text" id="qrPass" name="qrPass" maxlength="63" autocomplete="off">
-<p class="hint">Das Passwort steht f&uuml;r alle lesbar auf dem Display. Leer lassen = unver&auml;ndert.</p>
-</div></section>
-<button class="main" type="submit">Speichern</button>
+<p class="err" id="eq"></p><p class="hint">Das Passwort steht f&uuml;r alle lesbar auf dem Display. Leer lassen = unver&auml;ndert.</p></div>
+<p class="hint">Nochmal dr&uuml;cken (eine der beiden Tasten) oder nach 30&nbsp;s: zur&uuml;ck zur Standardansicht. Mittlere Taste 3&nbsp;s halten: Systeminfo und Einstellportal.</p>
+<p class="hint warn" id="kw"></p></section>
+<div class="bar" id="bar"><div><span id="bst">Alles gespeichert</span><button type="submit">Speichern</button></div></div>
 </form>
 <section><h2>Ger&auml;t</h2>
 <p>WLAN: <b id="wifi"></b> (Signal <span id="rssi"></span> dBm)<br>
@@ -104,61 +144,118 @@ table{border-collapse:collapse;width:100%;font-size:.9em}td,th{border-bottom:1px
 static const char PAGE_SCRIPT[] = R"HTML(<script>
 const $=i=>document.getElementById(i);
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-const TY=['sbahn','ubahn','tram','bus','bahn'],TN=['S-Bahn','U-Bahn','Tram','Bus (Stadt- und Regionalbus)','Regionalzug'];
+const TY=['sbahn','ubahn','tram','bus','bahn'],TN=['S-Bahn','U-Bahn','Tram','Bus','Regionalzug'],TK='SUTBZ';
 const TC={SBAHN:'S',UBAHN:'U',TRAM:'T',BUS:'B',REGIONAL_BUS:'R',BAHN:'Z'},TB={S:0,U:1,T:2,B:3,R:3,Z:4};
 const GN={S:'S-Bahn',U:'U-Bahn',T:'Tram',B:'Bus',R:'Regionalbus',Z:'Regionalzug'},DN={B:'beide',H:'nur H',R:'nur R'};
 const MAX=16,NO='keine Fahrt in den nächsten 12 h';
-const sel=[0,new Map(),new Map()],lst=[0,0,0],lt=[0,0,0],sid=['','',''];
-function sd(n){const v=$(n==1?'dirView':'dir2').value;return'HR'.includes(v)?v:'B';}
-function tb(n){let b=0;TY.forEach((t,i)=>{if($(t+n).checked)b|=1<<i;});sel[n].forEach(v=>{b|=1<<TB[v.c];});return b;}
+const sel=[0,new Map(),new Map()],lst=[0,0,0],lt=[0,0,0],sid=['','',''],nmv=['','',''],EX=[0,{},{}],K={L:0,M:0},AV=[0,null,null],PM=['','',''];
+let dirty=false;
+function setDirty(){if(dirty)return;dirty=true;bar('dirty','Ungespeicherte Änderungen');}
+function dv(n){return $('d'+n).value;}
+function sd(n){const v=dv(n);return v=='H'||v=='R'?v:'B';}
+function zv(n){const r=document.querySelector('input[name=z'+n+']:checked');return r?r.value:'';}
+function per(n){return dv(n)=='I';}
+function needZ(n){return'UHR'.includes(dv(n));}
+function sv(){const r=document.querySelector('input[name=s1]:checked');return r?r.value:'H';}
+function oth(d){return d=='H'?'R':'H';}
 function block(n){
- let h='<label for="q'+n+'">Station suchen</label><div class="row"><input type="text" id="q'+n+'" placeholder="z.B. Marienplatz"><button type="button" onclick="search('+n+')">Suchen</button></div><div id="res'+n+'" class="hint"></div>'+
-  '<label for="id'+n+'">Station-ID (globalId)</label><input type="text" id="id'+n+'"'+(n==1?' name="station"':'')+' placeholder="z.B. de:09162:2" onchange="setSt('+n+')"><p class="hint" id="nm'+n+'"></p>';
- if(n==1)h+='<p class="hint">Die Suche nutzt die inoffizielle MVG-API. Klappt sie nicht, die ID aus der Haltestellenliste eintragen (siehe Anleitung).</p>';
- h+='<h3>Verkehrsmittel</h3><div id="ty'+n+'">';
- TY.forEach((t,i)=>{h+='<div class="cb"><input type="checkbox" id="'+t+n+'"'+(n==1?' name="'+t+'"':'')+' onchange="tyc('+n+')"><label for="'+t+n+'">'+TN[i]+'</label></div>';});
- h+='</div><p class="hint" id="tyh'+n+'">Es sind Linien gewählt: Das Display zeigt nur diese Linien. Die Verkehrsmittel legen dann nur fest, welche Linien die Liste anbietet.</p><h3>Richtung</h3><select id="'+(n==1?'dirView" name="dirView':'dir2" name="dir2')+'" onchange="upd()">'+
-  (n==1?'<option value="0">alle Richtungen</option><option value="1">getrennt: Zentrum / Auswärts (H/R)</option>':'<option value="B">alle Richtungen</option>')+
-  '<option value="H">nur Richtung H</option><option value="R">nur Richtung R</option></select><p class="hint">H und R sind die Richtungskennungen der MVG.'+(n==1?'<span id="gh"> „Getrennt“ zeigt Zentrum oder Auswärts, die BOOT-Taste schaltet um. Welche Kennung Richtung Zentrum fährt, legst du dann darunter fest.</span>':'')+'</p><p class="hint" id="dh'+n+'">Gilt für alle Linien der Station.</p>';
- if(n==1)h+='<p class="hint" id="viewHint">Mit zwei Stationen wechselt die BOOT-Taste die Station, getrennte Ansicht und Seite 2 gibt es dann nicht.</p>'+
-  '<div id="dirOpts"><label for="zentrum">Richtung Zentrum hat die Kennung</label><select id="zentrum" name="zentrum"><option value="H">H</option><option value="R">R</option></select>'+
-  '<label for="defView">Standardansicht</label><select id="defView" name="defView"><option value="Z">Zentrum</option><option value="A">Auswärts</option></select></div>';
- h+='<p><button type="button" onclick="dirs('+n+')">Richtungen anzeigen</button></p><div id="dl'+n+'" class="hint"></div>'+
-  '<h3>Linien</h3><p class="sum" id="sum'+n+'"></p><p><button type="button" id="lb'+n+'" onclick="lines('+n+')">Linien auswählen</button></p><div id="ls'+n+'"></div>';
+ let h='<div class="step"><span class="sn">1</span><div class="sb"><h3>Station</h3>'+
+  '<div class="chosen" id="card'+n+'"><div><b id="cn'+n+'"></b><br><span class="hint" id="cp'+n+'"></span></div><button type="button" class="link" onclick="srch('+n+',1)">Ändern</button></div>'+
+  '<div id="sr'+n+'"><div class="row"><input type="text" id="q'+n+'" placeholder="Name der Haltestelle, z.B. Marienplatz"><button type="button" onclick="search('+n+')">Suchen</button></div><div id="res'+n+'" class="hint"></div></div>'+
+  '<details id="man'+n+'"><summary>Station-ID manuell eingeben</summary><input type="text" id="id'+n+'"'+(n==1?' name="station"':'')+' placeholder="z.B. de:09162:2" onchange="setSt('+n+')"><p class="hint" id="nm'+n+'"></p>'+
+  '<p class="hint">Die Suche nutzt die inoffizielle MVG-API. Klappt sie nicht, die ID aus der Haltestellenliste eintragen (siehe Anleitung).</p></details><p class="err" id="es'+n+'"></p></div></div>'+
+  '<div id="more'+n+'"><div class="step"><span class="sn">2</span><div class="sb"><h3>Verkehrsmittel</h3><div class="chips">';
+ TY.forEach((t,i)=>{h+='<label class="chip c'+TK[i]+'" id="ch'+t+n+'"><input type="checkbox" id="'+t+n+'"'+(n==1?' name="'+t+'"':'')+' onchange="tyc('+n+')"><span>'+TN[i]+'</span></label>';});
+ h+='</div><p class="hint" id="tna'+n+'">Gestrichelt: fährt an dieser Station nicht.</p><p class="err" id="et'+n+'"></p><p class="hint" id="tyh'+n+'">Mit Linienauswahl zeigt das Display nur die gewählten Linien.</p></div></div>'+
+  '<div class="step"><span class="sn">3</span><div class="sb"><h3>Richtungsanzeige</h3><select id="d'+n+'" name="'+(n==1?'d1':'dir2')+'" onchange="dirc('+n+')"><option value="B">Alle Richtungen gemischt</option>'+
+  (n==1?'<option value="U">Umschaltbar per Taste (H/R)</option>':'')+'<option value="H" id="oH'+n+'">Nur Richtung H</option><option value="R" id="oR'+n+'">Nur Richtung R</option><option value="I">Je Linie wählen (in der Linienauswahl)</option></select>'+
+  '<div class="box" id="zb'+n+'"><div class="q zq">Welche Richtung fährt ins Zentrum?</div>';
+ ['H','R'].forEach(d=>{h+='<label class="rad"><input type="radio" name="z'+n+'" value="'+d+'" onchange="upd()"><span><b>'+d+'</b> <span class="dst" id="ex'+d+n+'"></span></span></label>';});
+ h+='<label class="rad"><input type="radio" name="z'+n+'" value="K" onchange="upd()"><span><b>Keine</b> <span class="dst">– ohne Richtungsanzeige im Display (z.B. Querverbindung)</span></span></label>';
+ if(n==1)h+='<div id="sb1"><div class="q" style="margin-top:8px">Startansicht</div><div class="seg">'+
+  ['H','R'].map(d=>'<label><input type="radio" name="s1" value="'+d+'" onchange="upd()"><span id="sl'+d+'"></span></label>').join('')+'</div></div>';
+ h+='<p class="err" id="ez'+n+'"></p></div><p class="hint" id="pv'+n+'"></p></div></div>'+
+  '<div class="step"><span class="sn">4</span><div class="sb"><h3>Linien <small>(optional)</small></h3><p class="sum" id="sum'+n+'"></p><p><button type="button" id="lb'+n+'" onclick="lines('+n+')">Linien auswählen</button></p><div id="ls'+n+'"></div></div></div></div>';
  $('st'+n).innerHTML=h;
  $('q'+n).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();search(n);}});}
+function srch(n,on){$('sr'+n).style.display=on?'':'none';$('card'+n).style.display=on||!$('id'+n).value.trim()?'none':'';if(on)$('q'+n).focus();}
+function card(n,name,place){$('cn'+n).textContent=name||$('id'+n).value.trim();$('cp'+n).textContent=place||('ID '+$('id'+n).value.trim());srch(n,0);}
 function parseSel(n,t){sel[n].clear();(t||'').split(',').forEach(e=>{const p=e.split(':');if(p.length==3)sel[n].set(p[0],{d:p[1],c:p[2],n:p[0]});});}
-function selStr(n){const d=sd(n);return[...sel[n]].map(([k,v])=>k+':'+(d=='B'?v.d:'B')+':'+v.c).join(',');}
+function selStr(n){return[...sel[n]].map(([k,v])=>k+':'+(per(n)?v.d:'B')+':'+v.c).join(',');}
 function on2(){return $('has2').style.display!='none';}
-function upd(){const t=on2(),v=$('dirView'),o=v.options[1];o.hidden=o.disabled=t;if(t&&v.value=='1')v.value='0';
- $('viewHint').style.display=t?'':'none';$('gh').style.display=t?'none':'';$('opt2').style.display=t?'none':'';$('dirOpts').style.display=v.value=='1'?'':'none';
- $('dh1').style.display='HR'.includes(v.value)?'':'none';$('dh2').style.display=$('dir2').value!='B'?'':'none';
- $('qrOpts').style.display=$('qrOn').checked?'':'none';
- [1,2].forEach(n=>{if($('ls'+n).querySelector('.ln'))draw(n);else sum(n);});}
-function sum(n,note){const s=sel[n],d=sd(n);
- $('sum'+n).innerHTML=(s.size?'<b>'+s.size+' von max. '+MAX+' Linien'+(d=='B'?'':', nur Richtung '+d)+':</b> '+[...s.values()].map(v=>'<span class="lb t'+v.c+'">'+esc(v.n)+'</span>'+(d=='B'?' '+DN[v.d]:'')).join(d=='B'?', ':' '):'Keine Auswahl: alle Linien der gewählten Verkehrsmittel.')+(note?' <i>'+note+'</i>':'');
+// Richtungsname im Header: Zentrum/Auswärts, ohne Zuordnung bei umschaltbarer Richtung H/R
+function lab(n,d){if(d!='H'&&d!='R')return'';const z=zv(n);if(z=='H'||z=='R')return d==z?'Zentrum':'Auswärts';return n==1&&dv(1)=='U'?d:'';}
+function view(n,d,p2){const l=lab(n,d);return'<span class="disp">'+(on2()?n+' ':'')+esc(nmv[n]||'Station '+n)+(l?' → '+l:'')+(p2?' (2/2)':'')+'</span>';}
+function startDir(){return dv(1)=='U'?sv():sd(1);}
+function keyOpts(id,mid,v){const o=[];if(dv(1)=='U')o.push([1,'Richtung wechseln']);if(on2())o.push([2,'Station 2']);o.push([3,'Weitere Abfahrten (Seite 2)']);
+ if(mid)o.push([4,'WLAN-QR-Code']);o.push([0,'Keine Funktion']);if(!o.some(x=>x[0]==v))v=3;
+ $(id).innerHTML=o.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join('');$(id).value=v;return v;}
+function keyRes(v){if(v==1)return'zeigt '+view(1,oth(sv()));if(v==2)return'zeigt '+view(2,sd(2));if(v==3)return'zeigt '+view(1,startDir(),1)+', Abfahrten 5–8';
+ if(v==4)return'zeigt den WLAN-QR-Code (60 s)';return'ohne Funktion';}
+// Freie Taste (Seite 2 oder ohne Funktion) mit einer neuen Funktion belegen
+function assign(v){if(K.L==v||K.M==v)return;if(K.L==3||K.L==0)K.L=v;else if(K.M==3||K.M==0)K.M=v;}
+function upd(){const t=on2();
+ $('no1').style.display=t?'':'none';
+ [1,2].forEach(n=>{const d=dv(n),has=!!$('id'+n).value.trim();$('more'+n).style.display=has?'':'none';
+  $('zb'+n).style.display=needZ(n)?'':'none';$('zb'+n).classList.toggle('need',needZ(n)&&!zv(n));
+  const l=d=='U'?lab(1,sv()):lab(n,d);
+  $('pv'+n).innerHTML=!has?'':d=='B'?'Display: '+view(n,'B')+', alle Richtungen gemischt.':
+   d=='I'?'Display: '+view(n,'B')+', Richtung je Linie wie in der Linienauswahl.':
+   d=='U'?'Display: '+view(1,sv())+', eine Taste wechselt auf '+view(1,oth(sv()))+'.':
+   'Display: '+view(n,d)+' (nur Fahrten Richtung '+d+(l?'':', ohne Richtungsanzeige')+').';
+  if(has)ex(n);av(n);
+  if($('ls'+n).querySelector('.ln'))draw(n);else sum(n);});
+ $('sb1').style.display=dv(1)=='U'?'':'none';
+ ['H','R'].forEach(d=>{const l=lab(1,d);$('sl'+d).textContent=l||d;});
+ K.L=keyOpts('keyL',0,K.L);K.M=keyOpts('keyM',1,K.M);
+ $('std').innerHTML=view(1,startDir());$('resL').innerHTML=keyRes(K.L);$('resM').innerHTML=keyRes(K.M);
+ $('qrOpts').style.display=K.M==4?'':'none';
+ const w=[];if(dv(1)=='U'&&K.L!=1&&K.M!=1)w.push('Station 1 ist umschaltbar, aber keine Taste wechselt die Richtung.');
+ if(t&&K.L!=2&&K.M!=2)w.push('Station 2 ist keiner Taste zugeordnet.');
+ $('kw').innerHTML=w.map(x=>'⚠ '+x).join('<br>');}
+// Neue Richtungsanzeige: Zentrum-Frage offen lassen, wenn sie vorher nicht gestellt war
+function dirc(n){const d=dv(n);if(needZ(n)&&!'UHR'.includes(PM[n])&&zv(n)=='K')document.querySelectorAll('input[name=z'+n+']').forEach(r=>{r.checked=false;});
+ PM[n]=d;if(n==1&&d=='U')assign(1);setDirty();upd();}
+// Verkehrsmittel, die an der Station nicht fahren (aus der Suche), gestrichelt
+function av(n){const b=AV[n];let any=0;TY.forEach((t,i)=>{const na=b!=null&&!(b&(1<<i));any|=na;$('ch'+t+n).classList.toggle('na',na);});$('tna'+n).style.display=any?'':'none';}
+function loadAv(n){if(!nmv[n])return;const id=$('id'+n).value.trim();
+ fetch('/suche?q='+encodeURIComponent(nmv[n])).then(r=>r.json()).then(l=>{const s=l.find(x=>x.id==id);if(s&&s.b!=null&&$('id'+n).value.trim()==id){AV[n]=s.b;av(n);}}).catch(()=>{});}
+function sum(n,note){const s=sel[n],d=sd(n),p=per(n);
+ $('sum'+n).innerHTML=(s.size?'<b>'+s.size+' von max. '+MAX+' Linien'+(d=='B'?'':', nur Richtung '+d)+':</b> '+[...s.values()].map(v=>'<span class="lb t'+v.c+'">'+esc(v.n)+'</span>'+(p?' '+DN[v.d]:'')).join(p?', ':' '):'Keine Auswahl: alle Linien der gewählten Verkehrsmittel.')+(note?' <i>'+note+'</i>':'');
  $('tyh'+n).style.display=s.size?'':'none';
  $('ls'+n).querySelectorAll('.ln input').forEach(c=>{c.disabled=!c.checked&&s.size>=MAX;});
  const f=$('full'+n);if(f)f.style.display=s.size>=MAX?'':'none';}
-function nm(n,t){$('hn'+n).textContent=t?': '+t:'';}
+function nm(n,t){nmv[n]=t||'';$('hn'+n).textContent=t?': '+t:'';}
 function getName(n){const id=$('id'+n).value.trim();nm(n,'');if(!id)return Promise.resolve();
- return fetch('/name?id='+encodeURIComponent(id)).then(r=>r.json()).then(j=>{if(!j.n)throw 0;nm(n,j.n);})
- .catch(()=>{$('nm'+n).textContent='Name nicht gefunden – ID prüfen.';});}
-function setSt(n,name){const v=$('id'+n).value.trim();if(v==sid[n])return;sid[n]=v;$('nm'+n).textContent='';if(name!==undefined)nm(n,name);else getName(n);
- const had=sel[n].size>0;sel[n].clear();lst[n]=0;$('ls'+n).innerHTML='';
- sum(n,had?'(Auswahl gelöscht: andere Station)':'');$('dl'+n).textContent='';}
+ return fetch('/name?id='+encodeURIComponent(id)).then(r=>r.json()).then(j=>{if(!j.n)throw 0;nm(n,j.n);card(n,j.n);upd();if(AV[n]==null)loadAv(n);})
+ .catch(()=>{$('nm'+n).textContent='Name nicht gefunden – ID prüfen.';card(n,'',('ID '+id+' (Name nicht gefunden)'));});}
+function setSt(n,name,place,bits){const v=$('id'+n).value.trim();if(v==sid[n])return;sid[n]=v;$('nm'+n).textContent='';setDirty();
+ AV[n]=bits==null?null:bits;if(bits!=null)TY.forEach((t,i)=>{if(!(bits&(1<<i)))$(t+n).checked=false;});
+ if(name!==undefined){nm(n,name);card(n,name,place);}else if(v)getName(n);else{nm(n,'');srch(n,1);}
+ const had=sel[n].size>0;sel[n].clear();lst[n]=0;$('ls'+n).innerHTML='';EX[n]={};
+ sum(n,had?'(Auswahl gelöscht: andere Station)':'');upd();}
 function show2(on){$('no2').style.display=on?'none':'';$('has2').style.display=on?'':'none';
- if(!on){$('id2').value='';$('dir2').value='B';$('res2').innerHTML='';$('nm2').textContent='';setSt(2);}upd();}
-function check(){const t=on2();
- if(!$('id1').value.trim()){alert('Bitte Station 1 wählen.');return false;}
- if(t&&!$('id2').value.trim()){alert('Bitte Station 2 wählen oder entfernen.');return false;}
- for(const n of t?[1,2]:[1]){if(!TY.some(i=>$(i+n).checked)){
-  if(!sel[n].size){alert('Station '+n+': mindestens ein Verkehrsmittel wählen.');return false;}
-  sel[n].forEach(v=>{$(TY[TB[v.c]]+n).checked=true;});}}
- if($('qrOn').checked&&!$('qrSsid').value.trim()){alert('WLAN-Name für den QR-Code fehlt.');return false;}
+ if(on){if(!$('id2').value.trim())srch(2,1);assign(2);}
+ else{$('id2').value='';$('d2').value='B';$('res2').innerHTML='';$('nm2').textContent='';setSt(2);}setDirty();upd();}
+// Fehler direkt am Feld zeigen (erster Fehler wird angesprungen)
+function err(id,msg){const e=$(id);e.textContent=msg;e.style.display='';return e;}
+function check(){const t=on2(),E=[];document.querySelectorAll('.err').forEach(e=>{e.style.display='none';});
+ for(const n of t?[1,2]:[1]){
+  if(!$('id'+n).value.trim()){E.push(err('es'+n,'Bitte eine Station wählen.'));continue;}
+  if(!TY.some(i=>$(i+n).checked)){if(sel[n].size)sel[n].forEach(v=>{$(TY[TB[v.c]]+n).checked=true;});else E.push(err('et'+n,'Mindestens ein Verkehrsmittel wählen.'));}
+  if(needZ(n)&&!zv(n))E.push(err('ez'+n,'Bitte wählen, welche Richtung ins Zentrum fährt (oder „Keine“).'));}
+ if(K.M==4&&!$('qrSsid').value.trim())E.push(err('eq','WLAN-Name für den QR-Code fehlt.'));
+ if(E.length){E[0].scrollIntoView({block:'center'});bar('fail','Bitte die markierten Angaben ergänzen.');return false;}
  let b=0;TY.forEach((i,x)=>{if($(i+'2').checked)b|=1<<x;});
  $('lines1').value=selStr(1);$('station2').value=t?$('id2').value.trim():'';$('types2').value=b||S.types2;$('lines2').value=t?selStr(2):'';
- return true;}
+ save();return false;}
+function bar(c,m){$('bar').className='bar '+c;$('bst').textContent=m;}
+// Im Hintergrund speichern, die Seite bleibt offen
+function save(){const B=$('bar').querySelector('button');B.disabled=true;bar('dirty','Speichert …');
+ fetch('/speichern',{method:'POST',body:new URLSearchParams(new FormData($('f')))}).then(r=>r.text().then(x=>{
+  const p=new DOMParser().parseFromString(x,'text/html').querySelector('p');
+  if(r.ok){dirty=false;bar('saved','✓ Gespeichert – das Display übernimmt die Einstellungen.');}else bar('fail',(p&&p.textContent)||'Speichern fehlgeschlagen.');}))
+ .catch(()=>{bar('fail','Keine Verbindung zum Display – bitte erneut versuchen.');}).finally(()=>{B.disabled=false;});}
 function search(n){
  const q=$('q'+n).value.trim(),R=$('res'+n); if(q.length<2)return;
  R.textContent='Suche ...';
@@ -166,13 +263,22 @@ function search(n){
   if(!l.length){R.textContent='Keine Station gefunden.';return;}
   R.innerHTML='';
   l.forEach(s=>{const d=document.createElement('div');d.className='hit';
-   let h='<b>'+esc(s.n)+'</b><br>Ort: '+esc(s.p)+(s.z?' &middot; Zone '+esc(s.z.toUpperCase()):'')+
-    '<br>'+esc(s.t)+'<br><span class="hint">ID '+esc(s.id)+'</span><div class="acts"><button type="button">Ausw&auml;hlen</button>';
+   let h='<b>'+esc(s.n)+'</b><br>'+esc(s.p)+(s.z?' &middot; Zone '+esc(s.z.toUpperCase()):'')+'<br><span class="hint">'+esc(s.t)+'</span><div class="acts"><button type="button">Ausw&auml;hlen</button>';
    if(s.lat&&s.lon)h+='<a target="_blank" href="https://www.openstreetmap.org/?mlat='+s.lat+'&mlon='+s.lon+'#map=17/'+s.lat+'/'+s.lon+'">Auf Karte zeigen</a>';
    d.innerHTML=h+'</div>';
-   d.querySelector('button').onclick=()=>{$('id'+n).value=s.id;R.innerHTML='';setSt(n,s.n);$('nm'+n).textContent='Gewählt: '+s.n+', '+s.p+' ('+s.id+')';};
+   d.querySelector('button').onclick=()=>{$('id'+n).value=s.id;R.innerHTML='';$('q'+n).value='';setSt(n,s.n,s.p+' · '+s.t,s.b);};
    R.appendChild(d);});
  }).catch(()=>{R.textContent='Suche fehlgeschlagen (MVG-API nicht erreichbar).';});}
+function tb(n){let b=0;TY.forEach((t,i)=>{if($(t+n).checked)b|=1<<i;});sel[n].forEach(v=>{b|=1<<TB[v.c];});return b;}
+// Beispielziele je Richtungskennung (aktuelle Abfahrten, bei Linienauswahl nur diese Linien)
+function ex(n){const id=$('id'+n).value.trim(),b=tb(n);if(!id||!b)return;const k=id+'|'+b;
+ if(EX[n].k==k){exShow(n);return;}EX[n]={k:k};['H','R'].forEach(d=>{$('ex'+d+n).textContent='→ Ziele werden geladen …';});
+ fetch('/richtungen?id='+encodeURIComponent(id)+'&types='+b).then(r=>r.json()).then(l=>{if(EX[n].k!=k)return;if(!Array.isArray(l))throw 0;EX[n].l=l;exShow(n);})
+ .catch(()=>{if(EX[n].k!=k)return;EX[n]={};['H','R'].forEach(d=>{$('ex'+d+n).textContent='→ (Ziele nicht abrufbar)';});});}
+function exShow(n){const l=EX[n].l;if(!l)return;const s=sel[n];
+ ['H','R'].forEach(d=>{let m=l.filter(e=>e.d==d);if(s.size){const f=m.filter(e=>s.has(e.l.replace(/ /g,'').toUpperCase()));if(f.length)m=f;}
+  const z=[...new Set(m.map(e=>e.z))].slice(0,3);$('ex'+d+n).textContent='→ '+(z.length?z.join(', '):'gerade keine Fahrt');
+  $('o'+d+n).textContent='Nur Richtung '+d+(z.length?' → '+z.slice(0,2).join(', '):'');});}
 function lines(n){
  const id=$('id'+n).value.trim(),B=$('lb'+n),D=$('ls'+n),b=tb(n); if(!id){alert('Erst eine Station wählen.');return;}
  if(!b){alert('Erst Verkehrsmittel wählen.');return;}
@@ -183,12 +289,12 @@ function lines(n){
  .finally(()=>{B.disabled=false;});}
 function sk(k){const m=k.match(/\d+/),c=/^N\d/.test(k)?2:/^X\d/.test(k)?1:0;return[c,m?+m[0]:1e9,k];}
 function cmp(a,b){const x=sk(a.k),y=sk(b.k);for(let i=0;i<3;i++)if(x[i]!=y[i])return x[i]<y[i]?-1:1;return 0;}
-function tyc(n){if($('ls'+n).querySelector('.ln'))$('ls'+n).innerHTML='<p class="hint">Verkehrsmittel geändert – „Linien auswählen“ lädt die Liste neu.</p>';}
-function done(n){$('ls'+n).innerHTML='';$('sum'+n).scrollIntoView({block:'center'});}
+function tyc(n){if($('ls'+n).querySelector('.ln'))$('ls'+n).innerHTML='<p class="hint">Verkehrsmittel geändert – „Linien auswählen“ lädt die Liste neu.</p>';upd();}
+function done(n){$('ls'+n).innerHTML='';$('sum'+n).scrollIntoView({block:'center'});exShow(n);}
 function draw(n){
  const d=sd(n),s=sel[n],L=lst[n].map(x=>({k:x.k,n:x.n,c:TC[x.t]||'B',H:x.H,R:x.R}));
  s.forEach((v,k)=>{const x=L.find(y=>y.k==k);if(x){v.n=x.n;v.c=x.c;}else L.push({k:k,n:v.n,c:v.c,old:1});});
- let h='<p class="hint">Linien anhaken, die das Display zeigen soll (max. '+MAX+'). Keine angehakt = alle Linien. Gezeigt werden die Linien der angehakten Verkehrsmittel'+(d=='B'?'. H und R sind die Richtungskennungen der MVG, darunter Beispielziele.':', darunter Beispielziele in Richtung '+d+'.')+'</p><p class="hint" id="full'+n+'"><b>Maximum von '+MAX+' Linien erreicht.</b></p>';
+ let h='<p class="hint">Linien anhaken, die das Display zeigen soll (max. '+MAX+'). Keine angehakt = alle Linien'+(d=='B'?'. Darunter Beispielziele je Richtungskennung H/R'+(per(n)?', rechts die Richtung je Linie.':'.'):', darunter Beispielziele in Richtung '+d+'.')+'</p><p class="hint" id="full'+n+'"><b>Maximum von '+MAX+' Linien erreicht.</b></p>';
  'SUTBRZ'.split('').forEach(c=>{const g=L.filter(x=>x.c==c).sort(cmp);if(!g.length)return;
   h+='<div class="grp">'+GN[c]+'</div>';
   g.forEach(x=>{const i=esc('l'+n+x.k);
@@ -196,22 +302,12 @@ function draw(n){
     '<select><option value="B">beide Richtungen</option><option value="H">nur H</option><option value="R">nur R</option></select><div class="dst">'+
     (x.old?'Nicht mehr im Fahrplan dieser Station. Haken entfernen zum Löschen.':d!='B'?d+' &rarr; '+esc(x[d]||NO):x.H||x.R?'H &rarr; '+esc(x.H||NO)+'<br>R &rarr; '+esc(x.R||NO):NO)+'</div></div>';});});
  h+='<p><button type="button" onclick="done('+n+')">Fertig</button></p>';
- const D=$('ls'+n);D.innerHTML=h;D.className=d=='B'?'':'nod';
- D.querySelectorAll('.ln').forEach(r=>{const k=r.dataset.k,x=L.find(y=>y.k==k),c=r.querySelector('input'),d=r.querySelector('select');
-  c.checked=s.has(k);d.disabled=!c.checked;if(c.checked)d.value=s.get(k).d;
-  c.onchange=()=>{d.disabled=!c.checked;if(c.checked)s.set(k,{d:d.value,c:x.c,n:x.n});else s.delete(k);sum(n);};
-  d.onchange=()=>{if(s.has(k))s.get(k).d=d.value;sum(n);};});
+ const D=$('ls'+n);D.innerHTML=h;D.className=per(n)?'':'nod';
+ D.querySelectorAll('.ln').forEach(r=>{const k=r.dataset.k,x=L.find(y=>y.k==k),c=r.querySelector('input'),e=r.querySelector('select');
+  c.checked=s.has(k);e.disabled=!c.checked;if(c.checked)e.value=s.get(k).d;
+  c.onchange=()=>{e.disabled=!c.checked;if(c.checked)s.set(k,{d:e.value,c:x.c,n:x.n});else s.delete(k);sum(n);};
+  e.onchange=()=>{if(s.has(k))s.get(k).d=e.value;sum(n);};});
  sum(n);}
-function dirs(n){
- const id=$('id'+n).value.trim(),D=$('dl'+n); if(!id){alert('Erst eine Station wählen.');return;}
- const b=tb(n);if(!b){alert('Erst Verkehrsmittel wählen.');return;}
- D.textContent='Lade Abfahrten ...';
- fetch('/richtungen?id='+encodeURIComponent(id)+'&types='+b).then(r=>r.json()).then(l=>{
-  if(!l.length){D.textContent='Keine Abfahrten gefunden.';return;}
-  let h='<table><tr><th>Kennung</th><th>Linie</th><th>Ziel</th></tr>';
-  l.forEach(d=>{h+='<tr><td>'+esc(d.d)+'</td><td>'+esc(d.l)+'</td><td>'+esc(d.z)+'</td></tr>';});
-  D.innerHTML=h+'</table>';
- }).catch(()=>{D.textContent='Abruf fehlgeschlagen.';});}
 function upload(){
  const f=$('fw').files[0]; if(!f){alert('Bitte eine .bin-Datei wählen.');return;}
  if(f.size>S.fwMax){alert('Die Datei ist zu groß. Bitte die Firmware-Datei nehmen, nicht das Gesamtabbild (merged).');return;}
@@ -225,13 +321,22 @@ function upload(){
  $('fwBtn').disabled=true;$('fwBar').style.display='';$('fwBar').value=0;$('fwMsg').textContent='Lade hoch ...';x.send(fd);}
 block(1);block(2);
 $('help').href=S.help;$('id1').value=sid[1]=S.station;$('id2').value=sid[2]=S.station2;
-$('dirView').value=S.dir1!='B'?S.dir1:S.dirView?'1':'0';$('dir2').value=S.dir2;$('zentrum').value=S.zentrumIsH?'H':'R';$('defView').value=S.defZentrum?'Z':'A';
+$('d1').value=S.d1;$('d2').value=S.dir2;
+[['z1',S.z1],['z2',S.z2],['s1',S.s1],['min',S.min?'1':'0']].forEach(([n,v])=>{const r=document.querySelector('input[name='+n+'][value="'+v+'"]');if(r)r.checked=true;});
+K.L=S.keyL;K.M=S.keyM;
 TY.forEach((t,i)=>{$(t+'1').checked=S[t];$(t+'2').checked=!!(S.types2&(1<<i));});
-$('qrOn').checked=S.qrOn;$('qrTitle').value=S.qrTitle;$('qrSsid').value=S.qrSsid;if(S.qrPassSet)$('qrPass').placeholder='unverändert';
-parseSel(1,S.lines1);parseSel(2,S.lines2);sum(1);sum(2);show2(S.station2?1:0);
+$('qrTitle').value=S.qrTitle;$('qrSsid').value=S.qrSsid;if(S.qrPassSet)$('qrPass').placeholder='unverändert';
+parseSel(1,S.lines1);parseSel(2,S.lines2);
+// Gespeicherte Richtung je Linie (nur bei „alle Richtungen“ moeglich) = „Je Linie wählen“
+[1,2].forEach(n=>{if(dv(n)=='B'&&[...sel[n].values()].some(v=>v.d!='B'))$('d'+n).value='I';PM[n]=dv(n);});
+document.querySelectorAll('.err').forEach(e=>{e.style.display='none';});
+$('no2').style.display=S.station2?'none':'';$('has2').style.display=S.station2?'':'none';
+[1,2].forEach(n=>{if($('id'+n).value.trim())card(n,'','');else srch(n,1);});
+sum(1);sum(2);upd();
 getName(1).then(()=>{if(S.station2)getName(2);});
+$('f').addEventListener('change',e=>{if(!/^q\d/.test(e.target.id))setDirty();});$('f').addEventListener('input',e=>{if(!/^q\d/.test(e.target.id))setDirty();});
 $('wifi').textContent=S.wifi;$('rssi').textContent=S.rssi;$('version').textContent=S.version;$('ip').textContent=S.ip;
-$('closes').textContent=S.closes?'Diese Seite ist bis '+S.closes+' Uhr erreichbar (erneut öffnen: Taste 3 s halten).':'';
+$('closes').textContent=S.closes?'Diese Seite ist bis '+S.closes+' Uhr erreichbar (erneut öffnen: mittlere Taste 3 s halten).':'';
 </script></body></html>)HTML";
 
 // ------------------------------------------------------------
@@ -289,6 +394,13 @@ static String formArg(const char* name, unsigned int maxLen) {
   return value;
 }
 
+// Formularwert aus einem Zeichen; nicht in allowed: fallback
+static char formChar(const char* name, const char* allowed, char fallback) {
+  String value = server->arg(name);
+  if (value.length() == 1 && strchr(allowed, value[0]) != nullptr) return value[0];
+  return fallback;
+}
+
 // ------------------------------------------------------------
 // Seiten
 // ------------------------------------------------------------
@@ -299,20 +411,23 @@ static void handleRoot() {
     const DeviceSettings& s = appSettings;
     doc["station"] = s.stationId;
     doc["lines1"] = s.lines1;
-    doc["dir1"] = String(s.dir1);
     doc["station2"] = s.station2Id;
     doc["types2"] = s.types2;
     doc["lines2"] = s.lines2;
     doc["dir2"] = String(s.dir2);
-    doc["dirView"] = s.directionView;
-    doc["zentrumIsH"] = s.zentrumIsH;
-    doc["defZentrum"] = s.defaultViewZentrum;
+    // Richtung je Station, Tasten, Abfahrtszeit (ab 2.3.0)
+    doc["d1"] = String(s.dir1);
+    doc["z1"] = String(s.zentrum1);
+    doc["s1"] = String(s.start1);
+    doc["z2"] = String(s.zentrum2);
+    doc["keyL"] = s.keyLeft;
+    doc["keyM"] = s.keyMid;
+    doc["min"] = s.showMinutes;
     doc["sbahn"] = s.showSbahn;
     doc["ubahn"] = s.showUbahn;
     doc["tram"] = s.showTram;
     doc["bus"] = s.showBus;
     doc["bahn"] = s.showBahn;
-    doc["qrOn"] = s.wifiQr;
     doc["qrTitle"] = s.qrTitle;
     doc["qrSsid"] = s.qrSsid;
     doc["qrPassSet"] = s.qrPassword.length() > 0;   // Passwoerter nie zurueckgeben
@@ -357,13 +472,17 @@ static void handleSave() {
     return;
   }
   s.stationId = station;
-  // "Richtung" Station 1: 0 = alle, 1 = getrennt (Zentrum/Auswaerts),
-  // H/R = nur diese Richtungskennung
-  String view = server->arg("dirView");
-  s.directionView = view == "1";
-  s.dir1 = (view == "H" || view == "R") ? view[0] : 'B';
-  s.zentrumIsH = server->arg("zentrum") != "R";
-  s.defaultViewZentrum = server->arg("defView") != "A";
+  // Richtung Station 1 (d1): B alle, U umschaltbar, H/R nur diese
+  // Kennung; Zentrum-Kennung z1/z2: H, R oder K (keine); Startansicht s1
+  // H/R. Tasten keyL/keyM (BTN_...), Abfahrtszeit min 0/1. Unbrauchbare
+  // Werte korrigiert settingsSave() (validate).
+  s.dir1 = formChar("d1", "BUHR", 'B');
+  s.zentrum1 = formChar("z1", "HRK", 'K');
+  s.start1 = formChar("s1", "HR", 'H');
+  s.zentrum2 = formChar("z2", "HRK", 'K');
+  s.keyLeft = (uint8_t)server->arg("keyL").toInt();
+  s.keyMid = (uint8_t)server->arg("keyM").toInt();
+  s.showMinutes = server->arg("min") == "1";
   s.showSbahn = server->hasArg("sbahn");
   s.showUbahn = server->hasArg("ubahn");
   s.showTram = server->hasArg("tram");
@@ -397,23 +516,19 @@ static void handleSave() {
     }
     s.types2 = (uint8_t)types2;
   }
-  if (server->hasArg("dir2")) {
-    String dir2 = server->arg("dir2");
-    s.dir2 = (dir2 == "H" || dir2 == "R") ? dir2[0] : 'B';
-  }
+  if (server->hasArg("dir2")) s.dir2 = formChar("dir2", "HR", 'B');
   if (server->hasArg("lines2")) {
     LineSelection sel;
     sel.parse(formArg("lines2", 600));
     s.lines2 = sel.toString();
   }
 
-  s.wifiQr = server->hasArg("qrOn");
   s.qrTitle = formArg("qrTitle", 40);
   s.qrSsid = formArg("qrSsid", 32);
   String qrPass = server->arg("qrPass");   // Leerzeichen gehoeren zum Passwort
   if (qrPass.length() > 63) qrPass = qrPass.substring(0, 63);
   if (qrPass.length() > 0) s.qrPassword = qrPass;   // leer = unveraendert
-  if (s.wifiQr && s.qrSsid.length() == 0) {
+  if (s.keyMid == BTN_WIFI_QR && s.qrSsid.length() == 0) {
     sendMessage(400, "WLAN-Name f&uuml;r den QR-Code fehlt.");
     return;
   }

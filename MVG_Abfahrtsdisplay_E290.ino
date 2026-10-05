@@ -1,5 +1,5 @@
 // Version: 2.2.0
-// Letzte Änderung: 03.10.2026 17:46
+// Letzte Änderung: 05.10.2026 16:26
 #define FW_VERSION "2.2.0"
 
 // ------------------------------------------------------------
@@ -86,31 +86,30 @@ bool logModeActive = false;
 int updateCounter = 0;
 int lastUpdateMinute = -1;
 
-// Angezeigte Richtung: true = Zentrum, false = Auswaerts (nur bei
-// getrennter Anzeige). Start und Auto-Reset jeweils auf die Standardansicht
-// (appSettings.defaultViewZentrum, gesetzt in setup()).
-bool showZentrum = true;
-// Seite 2 (Abfahrt 5-8) aktiv - nur bei gemischter Anzeige
-bool showPage2 = false;
-// Angezeigte Station: 0 = Station 1, 1 = Station 2 (nur wenn im Portal
-// eingerichtet). BOOT-Taste schaltet um, Start und Auto-Reset: Station 1.
+// Angezeigte Ansicht: Standardansicht (BTN_NONE) oder die Ansicht einer
+// Taste (BTN_DIRECTION, BTN_STATION2, BTN_PAGE2 - Belegung im Portal). Ein
+// weiterer Tastendruck oder der Auto-Reset fuehrt zur Standardansicht
+// zurueck, ein Weiterschalten durch mehrere Ansichten gibt es nicht.
+uint8_t activeKey = BTN_NONE;
+// Angezeigte Station: 0 = Station 1, 1 = Station 2 (bei BTN_STATION2)
 int activeStation = 0;
 String stationName = "Bahnhof";       // Station 1 (Latin-1 fuer die Anzeige)
 String station2Name = "Station 2";    // Station 2
 
-// Zwischenspeicher der zuletzt abgerufenen Abfahrten. Umschalten, Blaettern
-// und Auto-Reset zeichnen nur daraus neu - abgerufen wird nur beim
+// Zwischenspeicher der zuletzt abgerufenen Abfahrten. Tasten und
+// Auto-Reset zeichnen nur daraus neu - abgerufen wird nur beim
 // Minuten-Update (plus Start, WLAN-Wiederkehr und Retries bei Stoerung).
-// Getrennte Anzeige: je Richtung ein Speicher. Gemischte Anzeige: cacheAll.
-Departure cacheZentrum[MAX_DEPARTURES_SHOWN];
-Departure cacheAuswaerts[MAX_DEPARTURES_SHOWN];
-int cacheZentrumCount = 0;
-int cacheAuswaertsCount = 0;
-Departure cacheAll[MAX_DEPARTURES_SHOWN * 2];   // Seite 1 + Seite 2
+// Station 1: umschaltbare Richtung (dir1 'U') je Richtung ein Speicher,
+// sonst cacheAll - jeweils Seite 1 + Seite 2.
+Departure cacheDirH[MAX_DEPARTURES_SHOWN * 2];
+Departure cacheDirR[MAX_DEPARTURES_SHOWN * 2];
+int cacheDirHCount = 0;
+int cacheDirRCount = 0;
+Departure cacheAll[MAX_DEPARTURES_SHOWN * 2];
 int cacheAllCount = 0;
-// Station 2 (immer gemischt bzw. mit ihrer Richtung, ohne Seite 2). Beide
-// Stationen werden jede Minute abgerufen, damit das Umschalten ohne Abruf
-// auskommt. lastSuccess: Zeitpunkt des letzten erfolgreichen Abrufs je
+// Station 2 (mit ihrer Richtung, ohne Seite 2). Ist sie einer Taste
+// zugeordnet, werden beide Stationen jede Minute abgerufen, damit das
+// Umschalten ohne Abruf auskommt. lastSuccess: Zeitpunkt des letzten erfolgreichen Abrufs je
 // Station (hasData: ueberhaupt schon einer), siehe cacheFresh().
 Departure cacheStation2[MAX_DEPARTURES_SHOWN];
 int cacheStation2Count = 0;
@@ -167,7 +166,6 @@ void setup() {
 
   settingsLoad();
   settingsPrint();
-  showZentrum = appSettings.defaultViewZentrum;
 
   // Frueh starten, damit der Web-Installer das Geraet schon waehrend des
   // Startbildschirms erkennt
@@ -186,6 +184,10 @@ void setup() {
   // ESP32 ablegen (Werkseinstellungen loeschen sonst nicht alles)
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
+  // WLAN-Stromsparmodus aus: Im Sparmodus verpasst der ESP32 bei manchen
+  // Routern Datenpakete und wird getrennt. Mehrverbrauch bei USB-Betrieb
+  // ohne Bedeutung.
+  WiFi.setSleep(false);
   wifiDiagInit();   // vor WiFi.begin(): merkt sich die Gruende von Abbruechen
   if (settingsHasWifi()) {
     Serial.print("Verbinde mit ");
@@ -300,10 +302,12 @@ void loop() {
       wifiBridging = false;
       showWifiErrorIfChanged();
     } else if (wifiBridging) {
+      // Tasten wirken weiter (Ansichten aus dem Zwischenspeicher)
+      bool showingDepartures = handleKeysAndScreens();
       time_t nowRaw = time(nullptr);
       struct tm nowInfo;
       localtime_r(&nowRaw, &nowInfo);
-      if (nowInfo.tm_min != lastUpdateMinute) {
+      if (showingDepartures && nowInfo.tm_min != lastUpdateMinute) {
         lastUpdateMinute = nowInfo.tm_min;
         Serial.println("Kein WLAN - Anzeige ueberbrueckt");
         redrawFromCache(false);
@@ -348,45 +352,8 @@ void loop() {
 
   extrasStatus(currentState != STATE_NORMAL);
 
-  // --- QR-Taste (GPIO21): Kurz-Druck = WLAN-QR, Lang-Druck (>=3s) = Log-Screen ---
-  handleQrButton(triggerQrAction, triggerLogAction);
-
-  // --- Log-Screen aktiv? ---
-  // Differenzform (millis() - start >= dauer) ist ueberlaufsicher
-  if (logModeActive) {
-    if (millis() - logModeStart >= LOG_DISPLAY_DURATION_MS) {
-      Serial.println("Log-Anzeige beendet (Timeout)");
-      logModeActive = false;
-      returnToDepartures();
-    } else {
-      return;
-    }
-  }
-
-  // --- QR-Screen aktiv? ---
-  if (qrModeActive) {
-    if (millis() - qrModeStart >= QR_DISPLAY_DURATION_MS) {
-      Serial.println("QR-Anzeige beendet (Timeout), zurueck zu Abfahrten");
-      qrModeActive = false;
-      returnToDepartures();
-    } else {
-      return;
-    }
-  }
-
-  // --- BOOT-Taste: Station wechseln, Richtung umschalten bzw. blaettern ---
-  handleBootButton(triggerBootAction);
-
-  // --- Auto-Reset: zurueck zu Station 1 bzw. zur Standardansicht ---
-  const unsigned long viewResetMs =
-      settingsHasStation2() ? STATION_AUTO_RESET_MS
-      : useDirectionView()  ? DIRECTION_AUTO_RESET_MS
-                            : PAGE_AUTO_RESET_MS;
-  if (autoResetPending && millis() - autoResetStart >= viewResetMs) {
-    autoResetPending = false;
-    resetViewToDefault();
-    updateCounter++;
-  }
+  // Tasten, QR-/Log-Screen, Auto-Reset (QR-/Log-Screen steht: hier Ende)
+  if (!handleKeysAndScreens()) return;
 
   if (currentState == STATE_API_ERROR) {
     if (millis() - lastErrorRetry >= ERROR_RETRY_INTERVAL_MS) {
@@ -459,9 +426,66 @@ void attemptUpdate(bool preferFullRefresh, bool withOther) {
   if (withOther) fetchOtherStation();
 }
 
-// Getrennte Ansicht (Zentrum/Auswaerts) nur mit einer Station
-bool useDirectionView() {
-  return appSettings.directionView && !settingsHasStation2();
+// Tasten auswerten (Belegung im Portal: Ansicht zeigen bzw. zurueck,
+// mittlere Taste lang = Log-Screen), Ende von QR-/Log-Screen und Auto-Reset
+// zur Standardansicht. Auch waehrend ein WLAN-Ausfall ueberbrueckt wird.
+// Rueckgabe false: QR- oder Log-Screen steht noch.
+bool handleKeysAndScreens() {
+  handleQrButton(triggerMiddleAction, triggerLogAction);
+  handleBootButton(triggerLeftAction);
+
+  // Differenzform (millis() - start >= dauer) ist ueberlaufsicher
+  if (logModeActive) {
+    if (millis() - logModeStart < LOG_DISPLAY_DURATION_MS) return false;
+    Serial.println("Log-Anzeige beendet (Timeout)");
+    logModeActive = false;
+    returnToDepartures();
+  }
+  if (qrModeActive) {
+    if (millis() - qrModeStart < QR_DISPLAY_DURATION_MS) return false;
+    Serial.println("QR-Anzeige beendet (Timeout), zurueck zu Abfahrten");
+    qrModeActive = false;
+    returnToDepartures();
+  }
+
+  const unsigned long viewResetMs =
+      activeKey == BTN_STATION2    ? STATION_AUTO_RESET_MS
+      : activeKey == BTN_DIRECTION ? DIRECTION_AUTO_RESET_MS
+                                   : PAGE_AUTO_RESET_MS;
+  if (autoResetPending && millis() - autoResetStart >= viewResetMs) {
+    autoResetPending = false;
+    Serial.println("Auto-Reset: zurueck zur Standardansicht");
+    resetViewToDefault();
+    updateCounter++;
+  }
+  return true;
+}
+
+// Station 2 eingerichtet und ueber eine Taste erreichbar
+bool station2Used() {
+  return settingsHasStation2() && (appSettings.keyLeft == BTN_STATION2 ||
+                                   appSettings.keyMid == BTN_STATION2);
+}
+
+// Angezeigte Richtungskennung: 'B' alle, 'H' oder 'R'. Station 1 mit
+// umschaltbarer Richtung: Startansicht, mit BTN_DIRECTION die andere.
+char viewDirection() {
+  if (activeStation == 1) return appSettings.dir2;
+  if (appSettings.dir1 != 'U') return appSettings.dir1;
+  char start = appSettings.start1;
+  if (activeKey != BTN_DIRECTION) return start;
+  return start == 'H' ? 'R' : 'H';
+}
+
+// Richtung im Header (dirLabel fuer displayShowDepartures): 'Z'/'A' bei
+// zugeordneter Zentrum-Kennung, ohne Zuordnung bei umschaltbarer Richtung
+// die Kennung selbst ('H'/'R'), sonst keine (0)
+char headerDirection(char dir) {
+  if (dir != 'H' && dir != 'R') return 0;
+  char zentrum = activeStation == 1 ? appSettings.zentrum2 : appSettings.zentrum1;
+  if (zentrum == 'H' || zentrum == 'R') return dir == zentrum ? 'Z' : 'A';
+  if (activeStation == 0 && appSettings.dir1 == 'U') return dir;
+  return 0;
 }
 
 // Stationsnamen holen (Start, neue Einstellungen). Bei Fehler bleibt der
@@ -481,7 +505,7 @@ void fetchStationNames() {
 // Ein Fehler aendert die Anzeige nicht - beim Umschalten wird dann neu
 // abgerufen.
 void fetchOtherStation() {
-  if (!settingsHasStation2()) return;
+  if (!station2Used()) return;
   int other = 1 - activeStation;
   if (!fetchStation(other)) {
     Serial.print("Abruf Station ");
@@ -550,17 +574,13 @@ bool fetchStation(int index) {
 
   if (index == 1) {
     cacheStation2Count = parseDepartures(doc, filter, lines, cacheStation2, MAX_DEPARTURES_SHOWN);
-  } else if (useDirectionView()) {
-    // Beide Richtungen aus denselben Daten, damit das Umschalten ohne
-    // neuen Abruf auskommt. zentrumIsH legt fest, welcher API-Marker
-    // (":H:"/":R:") Richtung Zentrum faehrt.
-    bool zentrumIsH = appSettings.zentrumIsH;
-    DirectionFilter zentrumFilter = zentrumIsH ? DIR_FILTER_H : DIR_FILTER_R;
-    DirectionFilter auswaertsFilter = zentrumIsH ? DIR_FILTER_R : DIR_FILTER_H;
-    cacheZentrumCount = parseDepartures(doc, zentrumFilter, lines, cacheZentrum, MAX_DEPARTURES_SHOWN);
-    cacheAuswaertsCount = parseDepartures(doc, auswaertsFilter, lines, cacheAuswaerts, MAX_DEPARTURES_SHOWN);
+  } else if (station.dir == 'U') {
+    // Umschaltbare Richtung: beide Richtungen aus denselben Daten (je Seite
+    // 1 + 2), damit das Umschalten ohne neuen Abruf auskommt
+    cacheDirHCount = parseDepartures(doc, DIR_FILTER_H, lines, cacheDirH, MAX_DEPARTURES_SHOWN * 2);
+    cacheDirRCount = parseDepartures(doc, DIR_FILTER_R, lines, cacheDirR, MAX_DEPARTURES_SHOWN * 2);
   } else {
-    // Gemischte Anzeige: 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
+    // 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
     cacheAllCount = parseDepartures(doc, filter, lines, cacheAll, MAX_DEPARTURES_SHOWN * 2);
   }
   lastSuccess[index] = millis();
@@ -568,43 +588,36 @@ bool fetchStation(int index) {
   return true;
 }
 
-// Zeichnet die aktuelle Ansicht (Richtung bzw. Seite) aus dem
+// Zeichnet die aktuelle Ansicht (Station, Richtung, Seite) aus dem
 // Zwischenspeicher - ohne Netzwerkzugriff.
 void redrawFromCache(bool fullRefresh) {
-  if (settingsHasStation2()) {
-    // Zwei Stationen: je 4 Abfahrten, Nummer im Header
-    if (activeStation == 1) {
-      displayShowDepartures(cacheStation2, cacheStation2Count, station2Name,
-                            false, false, false, fullRefresh, 2);
-    } else {
-      int count = cacheAllCount;
-      if (count > MAX_DEPARTURES_SHOWN) count = MAX_DEPARTURES_SHOWN;
-      displayShowDepartures(cacheAll, count, stationName,
-                            false, false, false, fullRefresh, 1);
-    }
-    return;
+  char dir = viewDirection();
+  const Departure* list = cacheAll;
+  int count = cacheAllCount;
+  if (activeStation == 1) {
+    list = cacheStation2;
+    count = cacheStation2Count;
+  } else if (appSettings.dir1 == 'U') {
+    list = dir == 'H' ? cacheDirH : cacheDirR;
+    count = dir == 'H' ? cacheDirHCount : cacheDirRCount;
   }
 
-  if (useDirectionView()) {
-    if (showZentrum) {
-      displayShowDepartures(cacheZentrum, cacheZentrumCount, stationName,
-                            true, true, false, fullRefresh);
-    } else {
-      displayShowDepartures(cacheAuswaerts, cacheAuswaertsCount, stationName,
-                            true, false, false, fullRefresh);
-    }
-    return;
-  }
+  // Seite 2 (Abfahrt 5-8) nur bei Station 1
+  bool page2 = activeKey == BTN_PAGE2 && activeStation == 0;
+  int offset = page2 ? MAX_DEPARTURES_SHOWN : 0;
+  count -= offset;
+  if (count < 0) count = 0;
+  if (count > MAX_DEPARTURES_SHOWN) count = MAX_DEPARTURES_SHOWN;
 
-  int offset = showPage2 ? MAX_DEPARTURES_SHOWN : 0;
-  int pageCount = cacheAllCount - offset;
-  if (pageCount < 0) pageCount = 0;
-  if (pageCount > MAX_DEPARTURES_SHOWN) pageCount = MAX_DEPARTURES_SHOWN;
-  displayShowDepartures(cacheAll + offset, pageCount, stationName,
-                        false, false, showPage2, fullRefresh);
+  // Nummer im Header nur, wenn Station 2 erreichbar ist
+  int number = station2Used() ? activeStation + 1 : 0;
+  displayShowDepartures(list + offset, count,
+                        activeStation == 1 ? station2Name : stationName,
+                        headerDirection(dir), page2, appSettings.showMinutes,
+                        fullRefresh, number);
 }
 
-// Nach Umschalten/Blaettern/Auto-Reset: neu zeichnen ohne Abruf. Bei einer
+// Nach Tastendruck/Auto-Reset: neu zeichnen ohne Abruf. Bei einer
 // laufenden API-Stoerung bleibt der Fehlerbildschirm stehen (die Ansicht
 // wird beim naechsten erfolgreichen Abruf gezeichnet).
 void redrawCurrentView() {
@@ -620,8 +633,7 @@ void applyNewSettings() {
   logModeActive = false;
   qrModeActive = false;
   autoResetPending = false;
-  showZentrum = appSettings.defaultViewZentrum;
-  showPage2 = false;
+  activeKey = BTN_NONE;
   activeStation = 0;
   hasData[0] = hasData[1] = false;
   apiRetryPending = false;
@@ -653,6 +665,12 @@ void showPortalSetupScreen() {
 // angebrochen, laeuft das faellige Minuten-Update jetzt (mit Abruf), sonst
 // wird nur aus dem Zwischenspeicher gezeichnet. Bei API-Stoerung: neuer Versuch.
 void returnToDepartures() {
+  // WLAN-Ausfall wird ueberbrueckt: nur aus dem Zwischenspeicher
+  if (WiFi.status() != WL_CONNECTED) {
+    redrawFromCache(true);
+    updateCounter = 0;
+    return;
+  }
   time_t nowRaw = time(nullptr);
   struct tm nowInfo;
   localtime_r(&nowRaw, &nowInfo);
@@ -669,44 +687,74 @@ void returnToDepartures() {
 // ------------------------------------------------------------
 // Tasten-Aktionen
 // ------------------------------------------------------------
-// Werden von handleBootButton()/handleQrButton() (buttons.cpp) aufgerufen
+// Werden von handleBootButton()/handleQrButton() (buttons.cpp) aufgerufen.
+// Jede Taste hat eine Belegung (Portal): In der Standardansicht zeigt sie
+// ihre Ansicht, sonst fuehrt jede Taste zurueck zur Standardansicht.
 
-void triggerBootAction() {
-  if (settingsHasStation2()) {
-    // Zwei Stationen: umschalten, nach STATION_AUTO_RESET_MS zurueck zu 1
-    activeStation = 1 - activeStation;
-    Serial.print("Station umgeschaltet: ");
-    Serial.println(activeStation + 1);
-    autoResetPending = (activeStation != 0);
-    autoResetStart = millis();
-    showActiveStation();
+void triggerLeftAction() {
+  keyPressed(appSettings.keyLeft, "Linke Taste");
+}
+
+void triggerMiddleAction() {
+  keyPressed(appSettings.keyMid, "Mittlere Taste");
+}
+
+void keyPressed(uint8_t action, const char* keyName) {
+  Serial.print(keyName);
+  Serial.print(": ");
+
+  // QR- oder Log-Screen, Ansicht einer Taste: zurueck zur Standardansicht
+  if (qrModeActive || logModeActive) {
+    Serial.println("zurueck zu den Abfahrten");
+    qrModeActive = false;
+    logModeActive = false;
+    activeKey = BTN_NONE;
+    autoResetPending = false;
+    activeStation = 0;
+    returnToDepartures();
+    return;
+  }
+  if (activeKey != BTN_NONE) {
+    Serial.println("zurueck zur Standardansicht");
+    autoResetPending = false;
+    resetViewToDefault();
     updateCounter++;
     return;
   }
 
-  bool leftDefaultView;
-  if (useDirectionView()) {
-    // Richtung umschalten (Zentrum <-> Auswaerts)
-    showZentrum = !showZentrum;
-    Serial.print("Richtung umgeschaltet: ");
-    Serial.println(showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS);
-    leftDefaultView = (showZentrum != appSettings.defaultViewZentrum);
-  } else {
-    // Blaettern: Seite 1 <-> Seite 2 (Abfahrt 5-8)
-    showPage2 = !showPage2;
-    Serial.println(showPage2 ? "Seite 2 (Abfahrt 5-8)" : "Seite 1");
-    leftDefaultView = showPage2;
+  switch (action) {
+    case BTN_WIFI_QR:
+      Serial.println("WLAN-QR-Code (60 s)");
+      qrModeActive = true;
+      qrModeStart = millis();
+      displayShowWifiQr(appSettings.qrTitle.c_str(), appSettings.qrSsid.c_str(),
+                        appSettings.qrPassword.c_str());
+      return;
+    case BTN_STATION2:
+      if (!station2Used()) return;
+      Serial.println("Station 2");
+      activeKey = BTN_STATION2;
+      activeStation = 1;
+      showActiveStation();
+      break;
+    case BTN_DIRECTION:
+      if (appSettings.dir1 != 'U') return;
+      activeKey = BTN_DIRECTION;
+      Serial.print("Richtung ");
+      Serial.println(viewDirection());
+      redrawCurrentView();   // kein Abruf, nur aus dem Zwischenspeicher
+      break;
+    case BTN_PAGE2:
+      Serial.println("Seite 2 (Abfahrt 5-8)");
+      activeKey = BTN_PAGE2;
+      redrawCurrentView();
+      break;
+    default:
+      Serial.println("keine Funktion");
+      return;
   }
-
-  // Weicht die Ansicht von der Standardansicht ab, laeuft der Auto-Reset
-  if (leftDefaultView) {
-    autoResetPending = true;
-    autoResetStart = millis();
-  } else {
-    autoResetPending = false;
-  }
-
-  redrawCurrentView();   // kein Abruf, nur aus dem Zwischenspeicher
+  autoResetPending = true;
+  autoResetStart = millis();
   updateCounter++;
 }
 
@@ -714,7 +762,11 @@ void triggerBootAction() {
 // letzter Abruf geklappt hat, sonst jetzt abrufen (bei Fehler:
 // Fehlerbildschirm)
 void showActiveStation() {
-  if (cacheFresh(activeStation)) {
+  if (WiFi.status() != WL_CONNECTED) {
+    // WLAN-Ausfall wird ueberbrueckt: Zwischenspeicher zeigen, den Zustand
+    // (STATE_WIFI_ERROR) nicht aendern
+    redrawFromCache(true);
+  } else if (cacheFresh(activeStation)) {
     currentState = STATE_NORMAL;
     redrawFromCache(true);
   } else {
@@ -723,40 +775,14 @@ void showActiveStation() {
   }
 }
 
-// Zurueck zu Station 1 bzw. zur Standardansicht und neu zeichnen (vom
-// Auto-Reset in der Loop aufgerufen)
+// Zurueck zur Standardansicht und neu zeichnen (Tastendruck, Auto-Reset)
 void resetViewToDefault() {
-  if (settingsHasStation2()) {
+  activeKey = BTN_NONE;
+  if (activeStation != 0) {
     activeStation = 0;
-    Serial.println("Auto-Reset ausgeloest: zurueck zu Station 1");
     showActiveStation();
-    return;
-  }
-  if (useDirectionView()) {
-    showZentrum = appSettings.defaultViewZentrum;
-    Serial.print("Auto-Reset ausgeloest: zurueck zu ");
-    Serial.println(showZentrum ? LABEL_ZENTRUM : LABEL_AUSWAERTS);
   } else {
-    showPage2 = false;
-    Serial.println("Auto-Reset ausgeloest: zurueck zu Seite 1");
-  }
-  redrawCurrentView();   // kein Abruf, nur aus dem Zwischenspeicher
-}
-
-void triggerQrAction() {
-  // WLAN-QR ausgeschaltet: kurzer Druck auf die QR-Taste ohne Funktion
-  if (!appSettings.wifiQr) return;
-
-  if (qrModeActive) {
-    Serial.println("QR-Anzeige manuell beendet");
-    qrModeActive = false;
-    returnToDepartures();
-  } else {
-    Serial.println("WLAN-QR-Code wird angezeigt (60s)");
-    qrModeActive = true;
-    qrModeStart = millis();
-    displayShowWifiQr(appSettings.qrTitle.c_str(), appSettings.qrSsid.c_str(),
-                      appSettings.qrPassword.c_str());
+    redrawCurrentView();   // kein Abruf, nur aus dem Zwischenspeicher
   }
 }
 
@@ -792,6 +818,9 @@ void showWifiErrorIfChanged() {
   const char* hint = hasWifi ? wifiDiagHintText() : NO_WIFI_HINT;
   if (reason == wifiErrorShownReason) return;
   wifiErrorShownReason = reason;
+  // Fehlerbildschirm ersetzt einen QR-/Log-Screen aus der Ueberbrueckung
+  qrModeActive = false;
+  logModeActive = false;
 
   Serial.println();
   Serial.print("WLAN-Fehlerbildschirm: ");
