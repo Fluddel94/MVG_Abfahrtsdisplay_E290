@@ -16,7 +16,11 @@ static volatile int lastReason = 0;
 
 static void onWifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
   if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
-    lastReason = info.wifi_sta_disconnected.reason;
+    int reason = info.wifi_sta_disconnected.reason;
+    // 8 ASSOC_LEAVE: eigene Abmeldung (z.B. neuer Verbindungsversuch in
+    // wifi_conn) - keine Ursache fuer den Fehlerbildschirm
+    if (reason == 8) return;
+    lastReason = reason;
   } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
     lastReason = 0;
   }

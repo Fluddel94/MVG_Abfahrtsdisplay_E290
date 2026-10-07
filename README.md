@@ -172,8 +172,10 @@ Fehlt etwas, ist die Stelle rot markiert.
    *H* und *R* sind die Richtungskennungen der MVG; das Portal zeigt dazu
    Beispielziele. Bei *Umschaltbar* und *Nur H/R* fragt es, **welche
    Richtung ins Zentrum fährt** – dann steht im Kopf „→ Zentrum“ bzw.
-   „→ Auswärts“. Bei Querverbindungen *Keine* wählen: Bei *Nur H/R* steht
-   dann nur der Stationsname da, bei *Umschaltbar* „→ H“/„→ R“.
+   „→ Auswärts“. Bei Querverbindungen oder wenn die Linien der Station
+   unterschiedlich ins Zentrum fahren, *Keine oder gemischt* wählen: Bei
+   *Nur H/R* steht dann nur der Stationsname da, bei *Umschaltbar*
+   „→ H“/„→ R“.
 4. **Linien (optional):** *Linien auswählen* listet alle Linien der
    angehakten Verkehrsmittel mit Beispielzielen je Richtung (das Laden
    dauert etwa 10 Sekunden). Bis zu 16 Linien anhaken; ohne Häkchen zeigt
@@ -264,10 +266,8 @@ dann alle 30 Sekunden. Stimmt das Passwort nicht: im Web-Installer
 Der kleine Funkchip des Displays empfängt deutlich schlechter als Laptop
 oder Handy und kann nur 2,4 GHz. Hilft oft: das Display anders hinstellen
 oder näher an den Router, ein ordentliches USB-Netzteil statt des
-PC-Anschlusses, im Router für 2,4 GHz einen festen Kanal (1, 6 oder 11)
-statt Autokanal und testweise nur WPA2 statt „WPA2 + WPA3“. Die
-Signalstärke steht im Portal unter *Gerät* (schlechter als etwa
--75 dBm ist knapp).
+PC-Anschlusses. Die Signalstärke steht im Portal unter *Gerät* (schlechter
+als etwa -75 dBm ist knapp).
 
 ### Das Display zeigt einen Fehler beim Abruf
 Die MVG-Schnittstelle antwortet seit über einer Minute nicht (z.B.

@@ -8,8 +8,10 @@
 #include "debug_log.h"
 
 // Ein Versuch gilt spaetestens nach dieser Zeit als gescheitert (Suche auf
-// allen Kanaelen ca. 2-3 s, dazu Anmeldung und IP-Adresse)
-static const unsigned long ATTEMPT_TIMEOUT_MS = 20000UL;
+// allen Kanaelen, Anmeldung und IP-Adresse dauern zusammen ca. 3 s). Ein
+// haengender Versuch wird so vor dem Fehlerbildschirm beim Start
+// (WIFI_ERROR_SCREEN_DELAY_MS, 20 s) neu gestartet.
+static const unsigned long ATTEMPT_TIMEOUT_MS = 10000UL;
 // Pause vor dem naechsten Versuch, je nach Zahl der Fehlschlaege in Folge
 static const unsigned long RETRY_DELAY_MS[] = {2000UL, 5000UL, 15000UL, 30000UL};
 static const int RETRY_DELAY_COUNT = sizeof(RETRY_DELAY_MS) / sizeof(RETRY_DELAY_MS[0]);

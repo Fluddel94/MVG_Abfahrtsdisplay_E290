@@ -288,7 +288,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   gefundene – ungünstig bei Mesh/Repeatern). Alle `WiFi.begin()` (auch
   Improv) laufen über `wifiConnBegin()`. `wifiConnLoop()` startet einen
   neuen Versuch erst, wenn der laufende beendet ist (Abbruch gemeldet oder
-  20 s vergangen), mit Pausen von 2/5/15/30 s; nach sechs Fehlschlägen in
+  10 s vergangen), mit Pausen von 2/5/15/30 s; nach sechs Fehlschlägen in
   Folge wird das WLAN-Modul aus- und wieder eingeschaltet. Das automatische
   Wiederverbinden des ESP32 ist dafür aus – außer
   `extrasHandlesWifiReconnect()` liefert `true`. Mit `DEBUG_LOG 1` im

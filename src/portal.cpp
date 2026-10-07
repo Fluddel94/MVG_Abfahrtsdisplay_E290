@@ -174,7 +174,7 @@ function block(n){
   (n==1?'<option value="U">Umschaltbar per Taste (H/R)</option>':'')+'<option value="H" id="oH'+n+'">Nur Richtung H</option><option value="R" id="oR'+n+'">Nur Richtung R</option><option value="I">Je Linie wählen (in der Linienauswahl)</option></select>'+
   '<div class="box" id="zb'+n+'"><div class="q zq">Welche Richtung fährt ins Zentrum?</div>';
  ['H','R'].forEach(d=>{h+='<label class="rad"><input type="radio" name="z'+n+'" value="'+d+'" onchange="upd()"><span><b>'+d+'</b> <span class="dst" id="ex'+d+n+'"></span></span></label>';});
- h+='<label class="rad"><input type="radio" name="z'+n+'" value="K" onchange="upd()"><span><b>Keine</b> <span class="dst">– ohne Richtungsanzeige im Display (z.B. Querverbindung)</span></span></label>';
+ h+='<label class="rad"><input type="radio" name="z'+n+'" value="K" onchange="upd()"><span><b>Keine oder gemischt</b> <span class="dst">– ohne Richtungsanzeige im Display (z.B. Querverbindungen oder Linien mit verschiedenen Zentrum-Richtungen)</span></span></label>';
  if(n==1)h+='<div id="sb1"><div class="q" style="margin-top:8px">Startansicht</div><div class="seg">'+
   ['H','R'].map(d=>'<label><input type="radio" name="s1" value="'+d+'" onchange="upd()"><span id="sl'+d+'"></span></label>').join('')+'</div></div>';
  h+='<p class="err" id="ez'+n+'"></p></div><p class="hint" id="pv'+n+'"></p></div></div>'+
@@ -246,7 +246,7 @@ function check(){const t=on2(),E=[];document.querySelectorAll('.err').forEach(e=
  for(const n of t?[1,2]:[1]){
   if(!$('id'+n).value.trim()){E.push(err('es'+n,'Bitte eine Station wählen.'));continue;}
   if(!TY.some(i=>$(i+n).checked)){if(sel[n].size)sel[n].forEach(v=>{$(TY[TB[v.c]]+n).checked=true;});else E.push(err('et'+n,'Mindestens ein Verkehrsmittel wählen.'));}
-  if(needZ(n)&&!zv(n))E.push(err('ez'+n,'Bitte wählen, welche Richtung ins Zentrum fährt (oder „Keine“).'));}
+  if(needZ(n)&&!zv(n))E.push(err('ez'+n,'Bitte wählen, welche Richtung ins Zentrum fährt (oder „Keine oder gemischt“).'));}
  if(K.M==4&&!$('qrSsid').value.trim())E.push(err('eq','WLAN-Name für den QR-Code fehlt.'));
  if(E.length){E[0].scrollIntoView({block:'center'});bar('fail','Bitte die markierten Angaben ergänzen.');return false;}
  let b=0;TY.forEach((i,x)=>{if($(i+'2').checked)b|=1<<x;});

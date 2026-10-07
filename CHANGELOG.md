@@ -16,6 +16,11 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   Zugangspunkt (BSSID), Kanal und Signalstärke.
 
 ### Geändert
+- **Portal:** Bei „Welche Richtung fährt ins Zentrum?“ heißt die dritte
+  Antwort jetzt „Keine oder gemischt“ (Querverbindungen oder Linien mit
+  verschiedenen Zentrum-Richtungen).
+- **README:** Ungetestete Router-Tipps (fester WLAN-Kanal, nur WPA2) aus
+  der Hilfe bei WLAN-Abbrüchen entfernt.
 - **Tasten:** In der Ansicht einer Taste zeigt die andere Taste direkt ihre
   Ansicht (z.B. von der anderen Richtung direkt zu Station 2). Dieselbe
   Taste nochmal führt zurück zur Standardansicht. Bisher führte jeder
@@ -33,7 +38,10 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   laufen über `wifiConnBegin()`, `wifiConnLoop()` ersetzt die
   `WiFi.reconnect()`-Aufrufe. Das automatische Wiederverbinden des ESP32
   ist aus, außer eine Erweiterung übernimmt das Wiederverbinden
-  (`extrasHandlesWifiReconnect()`).
+  (`extrasHandlesWifiReconnect()`). Ein Versuch gilt nach 10 s ohne
+  Ergebnis als gescheitert (vor dem Fehlerbildschirm beim Start nach 20 s).
+- `wifi_diag`: Reason-Code 8 (eigene Abmeldung) zählt nicht mehr als
+  Ursache für den WLAN-Fehlerbildschirm.
 
 ## [2.3.0] – 05.10.2026
 

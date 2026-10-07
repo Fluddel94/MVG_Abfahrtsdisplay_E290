@@ -284,7 +284,7 @@ folder, the Arduino IDE only compiles this folder.
   access point with the strongest signal (ESP32 default: the first one
   found – a poor choice with mesh/repeaters). Every `WiFi.begin()`
   (including Improv) goes through `wifiConnBegin()`. `wifiConnLoop()` starts
-  a new attempt only once the current one has ended (drop reported or 20 s
+  a new attempt only once the current one has ended (drop reported or 10 s
   passed), with pauses of 2/5/15/30 s; after six failures in a row the
   Wi-Fi module is switched off and on again. The ESP32's automatic
   reconnect is disabled for this – unless `extrasHandlesWifiReconnect()`

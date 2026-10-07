@@ -175,9 +175,10 @@ entries are marked in red.
    *H* and *R* are MVG's direction codes; the portal shows example
    destinations for them. With *Umschaltbar* and *Nur H/R* it asks **which
    direction runs towards the city centre** – the header then reads
-   "→ Zentrum" or "→ Auswärts". For cross-town lines choose *Keine*
-   (none): with *Nur H/R* only the stop name is shown, with *Umschaltbar*
-   "→ H"/"→ R".
+   "→ Zentrum" or "→ Auswärts". For cross-town lines, or if the stop's
+   lines run towards the centre in different directions, choose *Keine
+   oder gemischt* (none or mixed): with *Nur H/R* only the stop name is
+   shown, with *Umschaltbar* "→ H"/"→ R".
 4. **Linien** (lines, optional): *Linien auswählen* (select lines) lists
    all lines of the ticked modes of transport with example destinations
    per direction (loading takes about 10 seconds). Tick up to 16 lines;
@@ -267,10 +268,8 @@ installer.
 The display's small radio receives much worse than a laptop or phone and
 only supports 2.4 GHz. Often helpful: place the display differently or
 closer to the router, use a proper USB power supply instead of the
-computer's port, set a fixed 2.4 GHz channel (1, 6 or 11) instead of
-auto channel in the router, and try WPA2 only instead of "WPA2 + WPA3".
-The signal strength is shown in the portal under *Gerät* (device); worse
-than about -75 dBm is marginal.
+computer's port. The signal strength is shown in the portal under *Gerät*
+(device); worse than about -75 dBm is marginal.
 
 ### The display shows an error fetching departures
 The MVG interface hasn't answered for over a minute (e.g. maintenance). The
