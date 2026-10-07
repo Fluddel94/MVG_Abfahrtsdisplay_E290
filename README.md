@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="bilder/marienplatz.jpg" width="32%" alt="Display mit Abfahrten am Marienplatz (U-Bahn und S-Bahn mit Verspätungen)">
-  <img src="bilder/dachau_seitenansicht.jpg" width="32%" alt="Seitenansicht des Gehäuses, Abfahrten Dachau Bahnhof">
+  <img src="bilder/pasing.jpg" width="32%" alt="Display im Gehäuse auf dem Regal, Abfahrten Pasing mit Verspätungen">
   <img src="bilder/wlan_qr_code.jpg" width="32%" alt="QR-Code für das Gäste-WLAN">
 </p>
 

@@ -6,6 +6,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.4.0] – 07.10.2026
+
 ### Neu
 - **Tasten-Ansicht ohne Zeitlimit:** Neues Häkchen „Tasten-Ansicht nach
   30 s beenden“ im Portal unter „Tasten“ (Standard: an). Ohne Häkchen
@@ -16,32 +18,30 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   Zugangspunkt (BSSID), Kanal und Signalstärke.
 
 ### Geändert
-- **Portal:** Bei „Welche Richtung fährt ins Zentrum?“ heißt die dritte
-  Antwort jetzt „Keine oder gemischt“ (Querverbindungen oder Linien mit
-  verschiedenen Zentrum-Richtungen).
-- **README:** Ungetestete Router-Tipps (fester WLAN-Kanal, nur WPA2) aus
-  der Hilfe bei WLAN-Abbrüchen entfernt.
+- **WLAN stabiler:** Das Display sucht auf allen Kanälen und verbindet sich
+  mit dem Zugangspunkt mit dem stärksten Signal statt mit dem ersten
+  gefundenen (wichtig bei Mesh-WLAN und Repeatern). Ein neuer
+  Verbindungsversuch startet erst, wenn der laufende beendet ist (Ablehnung
+  durch den Router oder 10 s ohne Ergebnis), mit wachsenden Pausen (2 s bis
+  30 s); nach sechs Fehlschlägen in Folge wird das WLAN-Modul kurz neu
+  gestartet. Bisher kam ein fester Versuch alle 10 s einer noch laufenden
+  Anmeldung in die Quere. Ein beim Start hängender erster Versuch wird so
+  vor dem Fehlerbildschirm wiederholt.
+- **WLAN-Fehlerbildschirm:** Eine Abmeldung durch das Display selbst
+  (Reason-Code 8) gilt nicht mehr als Ursache („Verbindung unterbrochen“).
 - **Tasten:** In der Ansicht einer Taste zeigt die andere Taste direkt ihre
   Ansicht (z.B. von der anderen Richtung direkt zu Station 2). Dieselbe
   Taste nochmal führt zurück zur Standardansicht. Bisher führte jeder
   zweite Druck erst zurück.
-- **WLAN stabiler:** Das Display sucht auf allen Kanälen und verbindet sich
-  mit dem Zugangspunkt mit dem stärksten Signal statt mit dem ersten
-  gefundenen (wichtig bei Mesh-WLAN und Repeatern). Nach einem Abbruch
-  startet ein neuer Versuch erst, wenn der laufende beendet ist, mit
-  wachsenden Pausen (2 s bis 30 s); nach sechs Fehlschlägen in Folge wird
-  das WLAN-Modul kurz neu gestartet. Bisher kam ein fester Versuch alle
-  10 s einer noch laufenden Anmeldung in die Quere.
-
-### Intern
-- Neues Modul `src/wifi_conn`: Alle Verbindungsversuche (auch Improv)
-  laufen über `wifiConnBegin()`, `wifiConnLoop()` ersetzt die
-  `WiFi.reconnect()`-Aufrufe. Das automatische Wiederverbinden des ESP32
-  ist aus, außer eine Erweiterung übernimmt das Wiederverbinden
-  (`extrasHandlesWifiReconnect()`). Ein Versuch gilt nach 10 s ohne
-  Ergebnis als gescheitert (vor dem Fehlerbildschirm beim Start nach 20 s).
-- `wifi_diag`: Reason-Code 8 (eigene Abmeldung) zählt nicht mehr als
-  Ursache für den WLAN-Fehlerbildschirm.
+- **Portal:** Bei „Welche Richtung fährt ins Zentrum?“ heißt die dritte
+  Antwort jetzt „Keine oder gemischt“ (Querverbindungen oder Linien mit
+  verschiedenen Zentrum-Richtungen).
+- **README:** Ungetestete Router-Tipps (fester WLAN-Kanal, nur WPA2) aus
+  der Hilfe bei WLAN-Abbrüchen entfernt; Portal-Bilder aktualisiert.
+- Technik: neues Modul `src/wifi_conn` – alle Verbindungsversuche (auch per
+  Web-Installer) laufen darüber und ersetzen `WiFi.reconnect()`. Das
+  automatische Wiederverbinden des ESP32 ist aus, außer eine Erweiterung
+  übernimmt das Wiederverbinden (`extrasHandlesWifiReconnect()`).
 
 ## [2.3.0] – 05.10.2026
 
