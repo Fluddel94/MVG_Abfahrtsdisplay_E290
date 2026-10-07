@@ -45,7 +45,7 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
 - **Linienauswahl:** nur die Linien, die dich interessieren – je Linie
   beide Richtungen oder nur eine (bis zu 16 Linien je Haltestelle).
 - **Zweite Haltestelle:** z.B. Bus vor der Tür und S-Bahn um die Ecke. Eine
-  Taste zeigt sie, nach 30 s geht es zurück zur ersten.
+  Taste zeigt sie, nach 30 s geht es zurück zur ersten (abschaltbar).
 - **Zwei Tasten frei belegbar:** Richtung wechseln, zweite Haltestelle,
   weitere Abfahrten (Seite 2) oder Gäste-WLAN-QR-Code.
 - **Liniensymbole** wie an der Haltestelle.
@@ -119,9 +119,11 @@ unter *Tasten* festlegst:
 | **WLAN-QR-Code** (nur Mitte) | QR-Code fürs Gäste-WLAN für 60 s |
 | **Keine Funktion** | – |
 
-Ein Druck zeigt die Ansicht der Taste. Ein weiterer Druck – egal auf
-welche der beiden Tasten – oder 30 Sekunden Warten führt zurück zur
-**Standardansicht** (Station 1 mit ihrer Startrichtung).
+Ein Druck zeigt die Ansicht der Taste. Dieselbe Taste nochmal – oder
+30 Sekunden Warten – führt zurück zur **Standardansicht** (Station 1 mit
+ihrer Startrichtung). Die andere Taste zeigt direkt ihre Ansicht. Ohne
+das Häkchen „Tasten-Ansicht nach 30 s beenden“ (Portal, Bereich „Tasten“)
+bleibt die Ansicht stehen, bis du eine Taste drückst.
 
 | Taste | Was passiert |
 |---|---|
@@ -188,7 +190,8 @@ Außerdem:
   (**4** min).
 - **Tasten:** zeigt die Standardansicht und die Belegung der linken und
   mittleren Taste (siehe [Bedienung](#bedienung)). Ist eine Funktion
-  keiner Taste zugeordnet, erscheint ein Hinweis.
+  keiner Taste zugeordnet, erscheint ein Hinweis. Häkchen „Tasten-Ansicht
+  nach 30 s beenden“ (Standard: an).
 - **WLAN-QR-Code** (bei Belegung der mittleren Taste): Überschrift, Name
   und Passwort des WLANs, das Gäste per QR-Code bekommen sollen. Das
   Passwort steht dann gut lesbar auf dem Display – nimm also nur ein
@@ -253,8 +256,9 @@ USB im Web-Installer *Connect to Wi-Fi*.
 ### Das Display zeigt einen WLAN-Fehler
 Er erscheint, wenn das WLAN länger als eine Minute weg ist (beim Start nach
 20 Sekunden). Das Display nennt die vermutete Ursache (z.B. „Passwort
-falsch?“) und versucht es alle 10 Sekunden erneut. Stimmt das Passwort
-nicht: im Web-Installer *Change Wi-Fi*.
+falsch?“) und versucht es selbst erneut – zuerst nach wenigen Sekunden,
+dann alle 30 Sekunden. Stimmt das Passwort nicht: im Web-Installer
+*Change Wi-Fi*.
 
 ### Das Display verliert immer wieder das WLAN
 Der kleine Funkchip des Displays empfängt deutlich schlechter als Laptop

@@ -177,6 +177,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `src/time_utils.h/.cpp` | Laufzeit, Zeitformate |
 | `src/text_utils.h/.cpp` | Umwandlung UTF-8 → Latin-1 für echte Umlaute |
 | `src/wifi_diag.h/.cpp` | Ursache von WLAN-Abbrüchen für den Fehlerbildschirm |
+| `src/wifi_conn.h/.cpp` | WLAN verbinden und nach Abbrüchen wiederherstellen |
 | `src/extras.h/.cpp` | Andockstellen für eigene Zusatzfunktionen – in dieser Version leer, ohne Funktion (siehe [Technische Hinweise](#technische-hinweise-für-änderungen-am-code)) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | Display-Schriften mit Umlauten |
 | `docs/` | Web-Installer (GitHub Pages): Seite, `manifest.json`, Firmware in `docs/firmware/` |
@@ -204,9 +205,11 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   andere (`fetchOtherStation()`); Tasten und Auto-Reset zeichnen nur aus
   dem Zwischenspeicher (Daten bis 2 Minuten alt, sonst neuer Abruf).
 - **Tasten:** Belegung `keyLeft`/`keyMid` (Konstanten `BTN_...` in
-  `settings.h`). `keyPressed()` im .ino: in der Standardansicht die Ansicht
-  der Taste zeigen (`activeKey`), sonst – egal welche Taste – zurück zur
-  Standardansicht; kein Weiterschalten durch mehrere Ansichten.
+  `settings.h`). `keyPressed()` im .ino: die Ansicht der Taste zeigen
+  (`activeKey`); dieselbe Taste (oder eine ohne Funktion) erneut führt zurück
+  zur Standardansicht, die andere Taste zeigt direkt ihre Ansicht; kein
+  Weiterschalten durch mehrere Ansichten. Auto-Reset nach 30 s nur bei
+  `viewAutoBack` (Portal, Standard `VIEW_AUTO_BACK` in `config.h`).
   `handleKeysAndScreens()` wertet Tasten, QR-/Log-Screen und Auto-Reset
   aus, auch während ein WLAN-Ausfall überbrückt wird (dann nur aus dem
   Zwischenspeicher). Die Ansicht ergibt sich aus `activeKey`
@@ -254,7 +257,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `zentrum2` (`H`/`R`/`K` = keine), `start1` (Startansicht `H`/`R`),
   `keyLeft`, `keyMid`, `minutes`, `name1`, `name2` (Stationsnamen, UTF-8;
   fehlen sie, holt `fetchStationNames()` sie einmal bei der MVG und
-  speichert sie); „umschaltbar“ ist `dir1` `U` im
+  speichert sie); seit 2.4.0 `autoBack` (Auto-Reset der Tasten-Ansicht); „umschaltbar“ ist `dir1` `U` im
   Speicher, im NVS als `dirView` + `dir1` `B` (damit 2.2.0 nach einem
   Downgrade passt; auch `zentrumIsH`, `defZentrum`, `qrOn` werden weiter
   geschrieben). Fehlen die neuen Schlüssel (Update von 2.2.0), übernimmt
@@ -280,6 +283,17 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   Verbindungsabbruch aus. Ein falsches Passwort meldet der ESP32 meist nur
   als Zeitüberschreitung beim Anmelden – das kann auch bei sehr schwachem
   Empfang auftreten, daher „Passwort falsch?“ mit Fragezeichen.
+- **WLAN-Verbindung:** `wifi_conn.cpp` sucht auf allen Kanälen und wählt
+  den Zugangspunkt mit dem stärksten Signal (Standard des ESP32: der erste
+  gefundene – ungünstig bei Mesh/Repeatern). Alle `WiFi.begin()` (auch
+  Improv) laufen über `wifiConnBegin()`. `wifiConnLoop()` startet einen
+  neuen Versuch erst, wenn der laufende beendet ist (Abbruch gemeldet oder
+  20 s vergangen), mit Pausen von 2/5/15/30 s; nach sechs Fehlschlägen in
+  Folge wird das WLAN-Modul aus- und wieder eingeschaltet. Das automatische
+  Wiederverbinden des ESP32 ist dafür aus – außer
+  `extrasHandlesWifiReconnect()` liefert `true`. Mit `DEBUG_LOG 1` im
+  seriellen Monitor: jeder Abbruch sofort mit Reason-Code, jede Verbindung
+  und einmal pro Minute Zugangspunkt (BSSID), Kanal und Signal.
 - **Eigene Zusatzfunktionen (Andockstellen):** `src/extras.h` enthält
   feste Stellen im Programmablauf – beim Start, in der Hauptschleife, bei
   Fehlern, nach einem WLAN-Wechsel –, an denen eine eigene Variante des

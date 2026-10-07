@@ -40,11 +40,14 @@ struct DeviceSettings {
   char dir2;                 // Richtung Station 2: 'B', 'H', 'R' (kein 'U')
   char zentrum2;             // wie zentrum1
 
-  // Tastenbelegung (BTN_...): Jede Taste zeigt eine Ansicht, ein weiterer
-  // Druck auf eine der Tasten oder der Auto-Reset fuehrt zur Standardansicht
-  // zurueck. BTN_WIFI_QR nur auf der mittleren Taste.
+  // Tastenbelegung (BTN_...): Jede Taste zeigt ihre Ansicht, dieselbe
+  // Taste erneut oder der Auto-Reset fuehrt zur Standardansicht zurueck,
+  // die andere Taste zeigt direkt ihre Ansicht. BTN_WIFI_QR nur auf der
+  // mittleren Taste.
   uint8_t keyLeft;
   uint8_t keyMid;
+  // Auto-Reset: Ansicht einer Taste nach 30 s beenden (sonst bleibt sie)
+  bool viewAutoBack;
 
   // Abfahrtszeit als Minuten bis zur Abfahrt ("4 min") statt Uhrzeit
   bool showMinutes;

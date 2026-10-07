@@ -48,7 +48,8 @@ Changes per version: [CHANGELOG.md](CHANGELOG.md) (German).
 - **Line selection:** only the lines you care about – per line both
   directions or just one (up to 16 lines per stop).
 - **Second stop:** e.g. the bus at your door and the S-Bahn around the
-  corner. A button shows it, after 30 s it returns to the first one.
+  corner. A button shows it, after 30 s it returns to the first one
+  (can be switched off).
 - **Two buttons with a function of your choice:** switch direction, second
   stop, more departures (page 2) or guest Wi-Fi QR code.
 - **Line symbols** like at the stop.
@@ -122,9 +123,11 @@ in the portal under *Tasten* (buttons):
 | **WLAN-QR-Code** (middle only) | QR code for the guest Wi-Fi for 60 s |
 | **Keine Funktion** (none) | – |
 
-A press shows the button's view. Another press – on either button – or
-waiting 30 seconds returns to the **default view** (stop 1 with its start
-direction).
+A press shows the button's view. Pressing the same button again – or
+waiting 30 seconds – returns to the **default view** (stop 1 with its start
+direction). The other button shows its own view directly. Without the
+checkbox "Tasten-Ansicht nach 30 s beenden" (end button view after 30 s,
+portal section "Tasten"), the view stays until you press a button.
 
 | Button | What happens |
 |---|---|
@@ -191,7 +194,8 @@ Also:
   10:34 +2) or *Minuten* (**4** min).
 - **Tasten** (buttons): shows the default view and the functions of the
   left and middle buttons (see [Operation](#operation)). If a function is
-  not assigned to any button, a notice appears.
+  not assigned to any button, a notice appears. Checkbox "Tasten-Ansicht
+  nach 30 s beenden" (end button view after 30 s, default: on).
 - **WLAN-QR-Code** (Wi-Fi QR code, when assigned to the middle button):
   heading, name and password of the Wi-Fi your guests should get via QR
   code. The password is shown clearly readable on the display – so only
@@ -255,8 +259,9 @@ use *Connect to Wi-Fi* in the web installer.
 ### The display shows a Wi-Fi error
 It appears when the Wi-Fi has been gone for more than a minute (20 seconds
 at startup). The display names the likely cause (e.g. "Passwort falsch?" –
-wrong password?) and retries every 10 seconds. If the password is wrong:
-*Change Wi-Fi* in the web installer.
+wrong password?) and retries by itself – first after a few seconds, then
+every 30 seconds. If the password is wrong: *Change Wi-Fi* in the web
+installer.
 
 ### The display keeps losing the Wi-Fi
 The display's small radio receives much worse than a laptop or phone and

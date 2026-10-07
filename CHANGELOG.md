@@ -6,6 +6,35 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Tasten-Ansicht ohne Zeitlimit:** Neues Häkchen „Tasten-Ansicht nach
+  30 s beenden“ im Portal unter „Tasten“ (Standard: an). Ohne Häkchen
+  bleiben Station 2, die andere Richtung oder Seite 2 stehen, bis eine
+  Taste gedrückt wird.
+- **WLAN-Protokoll im seriellen Monitor** (mit `DEBUG_LOG 1`): jeder
+  Abbruch sofort mit Reason-Code, jede Verbindung und einmal pro Minute
+  Zugangspunkt (BSSID), Kanal und Signalstärke.
+
+### Geändert
+- **Tasten:** In der Ansicht einer Taste zeigt die andere Taste direkt ihre
+  Ansicht (z.B. von der anderen Richtung direkt zu Station 2). Dieselbe
+  Taste nochmal führt zurück zur Standardansicht. Bisher führte jeder
+  zweite Druck erst zurück.
+- **WLAN stabiler:** Das Display sucht auf allen Kanälen und verbindet sich
+  mit dem Zugangspunkt mit dem stärksten Signal statt mit dem ersten
+  gefundenen (wichtig bei Mesh-WLAN und Repeatern). Nach einem Abbruch
+  startet ein neuer Versuch erst, wenn der laufende beendet ist, mit
+  wachsenden Pausen (2 s bis 30 s); nach sechs Fehlschlägen in Folge wird
+  das WLAN-Modul kurz neu gestartet. Bisher kam ein fester Versuch alle
+  10 s einer noch laufenden Anmeldung in die Quere.
+
+### Intern
+- Neues Modul `src/wifi_conn`: Alle Verbindungsversuche (auch Improv)
+  laufen über `wifiConnBegin()`, `wifiConnLoop()` ersetzt die
+  `WiFi.reconnect()`-Aufrufe. Das automatische Wiederverbinden des ESP32
+  ist aus, außer eine Erweiterung übernimmt das Wiederverbinden
+  (`extrasHandlesWifiReconnect()`).
+
 ## [2.3.0] – 05.10.2026
 
 ### Neu

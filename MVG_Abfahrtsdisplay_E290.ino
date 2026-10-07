@@ -1,5 +1,5 @@
 // Version: 2.3.0
-// Letzte Änderung: 05.10.2026 17:01
+// Letzte Änderung: 07.10.2026 07:57
 #define FW_VERSION "2.3.0"
 
 // ------------------------------------------------------------
@@ -44,6 +44,7 @@
 //   time_utils     Laufzeit, Zeitformate
 //   text_utils     UTF-8 -> Latin-1 fuer echte Umlaute auf dem Display
 //   wifi_diag      Ursache von WLAN-Abbruechen fuer den Fehlerbildschirm
+//   wifi_conn      WLAN verbinden und nach Abbruechen wiederherstellen
 //   debug_log.h    Zusatz-Diagnose im seriellen Monitor (DEBUG_LOG in config.h)
 //   extras         Andockstellen fuer optionale Erweiterungen (Abschnitt
 //                  Erweiterungen)
@@ -72,6 +73,7 @@
 #include "src/time_utils.h"
 #include "src/text_utils.h"
 #include "src/wifi_diag.h"
+#include "src/wifi_conn.h"
 #include "src/extras.h"
 
 // ------------------------------------------------------------
@@ -88,9 +90,9 @@ int updateCounter = 0;
 int lastUpdateMinute = -1;
 
 // Angezeigte Ansicht: Standardansicht (BTN_NONE) oder die Ansicht einer
-// Taste (BTN_DIRECTION, BTN_STATION2, BTN_PAGE2 - Belegung im Portal). Ein
-// weiterer Tastendruck oder der Auto-Reset fuehrt zur Standardansicht
-// zurueck, ein Weiterschalten durch mehrere Ansichten gibt es nicht.
+// Taste (BTN_DIRECTION, BTN_STATION2, BTN_PAGE2 - Belegung im Portal).
+// Dieselbe Taste erneut oder der Auto-Reset (abschaltbar im Portal) fuehrt
+// zur Standardansicht zurueck, die andere Taste zeigt direkt ihre Ansicht.
 uint8_t activeKey = BTN_NONE;
 // Angezeigte Station: 0 = Station 1, 1 = Station 2 (bei BTN_STATION2)
 int activeStation = 0;
@@ -190,23 +192,24 @@ void setup() {
   // ohne Bedeutung.
   WiFi.setSleep(false);
   wifiDiagInit();   // vor WiFi.begin(): merkt sich die Gruende von Abbruechen
+  // Staerksten Zugangspunkt waehlen, eigenes Wiederverbinden mit Pausen
+  wifiConnInit(!extrasHandlesWifiReconnect());
   if (settingsHasWifi()) {
     Serial.print("Verbinde mit ");
     Serial.println(appSettings.wifiSsid);
-    WiFi.begin(appSettings.wifiSsid.c_str(), appSettings.wifiPassword.c_str());
+    wifiConnBegin(appSettings.wifiSsid.c_str(), appSettings.wifiPassword.c_str());
   } else {
     Serial.println("Keine WLAN-Daten - Einrichtung per Web-Installer (WLAN verbinden)");
   }
 
   // Klappt die Anmeldung nicht innerhalb von WIFI_ERROR_SCREEN_DELAY_MS,
   // erscheint der Fehlerbildschirm mit der vermuteten Ursache (fruehestens
-  // nach dem Startbildschirm; ohne WLAN-Daten sofort danach). Neuer
-  // Versuch alle ERROR_RETRY_INTERVAL_MS - nach einem Anmeldefehler
-  // (z.B. falsches Passwort) versucht es der ESP32 sonst nicht erneut.
+  // nach dem Startbildschirm; ohne WLAN-Daten sofort danach). Neue
+  // Versuche startet wifiConnLoop() - erst nach dem Ende des laufenden,
+  // mit wachsenden Pausen.
   // Neue WLAN-Daten per Improv verbinden das Board direkt, die Schleife
   // endet dann von selbst.
   unsigned long wifiStart = millis();
-  unsigned long lastWifiRetry = millis();
   while (WiFi.status() != WL_CONNECTED) {
     if (improvLoop()) portalRequested = true;
     extrasStatus(true);
@@ -216,11 +219,7 @@ void setup() {
     if (errorDue && !splashShowing()) {
       showWifiErrorIfChanged();
     }
-    if (settingsHasWifi() && !improvBusy() &&
-        millis() - lastWifiRetry >= ERROR_RETRY_INTERVAL_MS) {
-      WiFi.reconnect();
-      lastWifiRetry = millis();
-    }
+    if (settingsHasWifi() && !improvBusy()) wifiConnLoop();
   }
   if (improvLoop()) portalRequested = true;
 
@@ -315,14 +314,11 @@ void loop() {
       }
     }
 
-    // Neu verbinden alle ERROR_RETRY_INTERVAL_MS - ausser eine Erweiterung
-    // uebernimmt das selbst (extrasHandlesWifiReconnect(), siehe extras.h)
-    // oder Improv benutzt gerade das WLAN
-    if (!extrasHandlesWifiReconnect() && !improvBusy() && settingsHasWifi() &&
-        millis() - lastErrorRetry >= ERROR_RETRY_INTERVAL_MS) {
-      Serial.println("Versuche WLAN-Reconnect...");
-      WiFi.reconnect();
-      lastErrorRetry = millis();
+    // Neu verbinden (wifiConnLoop) - ausser eine Erweiterung uebernimmt
+    // das selbst (extrasHandlesWifiReconnect(), siehe extras.h) oder
+    // Improv benutzt gerade das WLAN
+    if (!extrasHandlesWifiReconnect() && !improvBusy() && settingsHasWifi()) {
+      wifiConnLoop();
     }
     extrasStatus(true);
 
@@ -396,6 +392,7 @@ void loop() {
     Serial.print("Update #");
     Serial.print(updateCounter);
     Serial.println(doFullRefresh ? " (Full Refresh)" : " (Fast Mode)");
+    wifiConnLogStatus();
 
     attemptUpdate(doFullRefresh, true);
   }
@@ -695,8 +692,9 @@ void returnToDepartures() {
 // Tasten-Aktionen
 // ------------------------------------------------------------
 // Werden von handleBootButton()/handleQrButton() (buttons.cpp) aufgerufen.
-// Jede Taste hat eine Belegung (Portal): In der Standardansicht zeigt sie
-// ihre Ansicht, sonst fuehrt jede Taste zurueck zur Standardansicht.
+// Jede Taste hat eine Belegung (Portal) und zeigt ihre Ansicht. Dieselbe
+// Taste erneut fuehrt zurueck zur Standardansicht, die andere Taste zeigt
+// direkt ihre Ansicht.
 
 void triggerLeftAction() {
   keyPressed(appSettings.keyLeft, "Linke Taste");
@@ -710,10 +708,9 @@ void keyPressed(uint8_t action, const char* keyName) {
   Serial.print(keyName);
   Serial.print(": ");
 
-  // QR- oder Log-Screen, Ansicht einer Taste: zurueck zur Standardansicht
-  if (qrModeActive || logModeActive) {
+  // Log-Screen (mittlere Taste lang): jede Taste fuehrt zurueck
+  if (logModeActive) {
     Serial.println("zurueck zu den Abfahrten");
-    qrModeActive = false;
     logModeActive = false;
     activeKey = BTN_NONE;
     autoResetPending = false;
@@ -721,48 +718,83 @@ void keyPressed(uint8_t action, const char* keyName) {
     returnToDepartures();
     return;
   }
-  if (activeKey != BTN_NONE) {
-    Serial.println("zurueck zur Standardansicht");
+
+  // Angezeigte Tasten-Ansicht: dieselbe Taste (oder eine Taste ohne
+  // Funktion) fuehrt zurueck zur Standardansicht, die andere Taste zeigt
+  // direkt ihre Ansicht
+  uint8_t current = qrModeActive ? BTN_WIFI_QR : activeKey;
+  bool available = keyActionAvailable(action);
+  if (current != BTN_NONE && (action == current || !available)) {
     autoResetPending = false;
-    resetViewToDefault();
-    updateCounter++;
+    if (qrModeActive) {
+      Serial.println("zurueck zu den Abfahrten");
+      qrModeActive = false;
+      returnToDepartures();
+    } else {
+      Serial.println("zurueck zur Standardansicht");
+      resetViewToDefault();
+      updateCounter++;
+    }
+    return;
+  }
+  if (!available) {
+    Serial.println("keine Funktion");
     return;
   }
 
-  switch (action) {
-    case BTN_WIFI_QR:
-      Serial.println("WLAN-QR-Code (60 s)");
-      qrModeActive = true;
-      qrModeStart = millis();
-      displayShowWifiQr(appSettings.qrTitle.c_str(), appSettings.qrSsid.c_str(),
-                        appSettings.qrPassword.c_str());
-      return;
-    case BTN_STATION2:
-      if (!station2Used()) return;
-      Serial.println("Station 2");
-      activeKey = BTN_STATION2;
-      activeStation = 1;
-      showActiveStation();
-      break;
-    case BTN_DIRECTION:
-      if (appSettings.dir1 != 'U') return;
-      activeKey = BTN_DIRECTION;
-      Serial.print("Richtung ");
-      Serial.println(viewDirection());
-      redrawCurrentView();   // kein Abruf, nur aus dem Zwischenspeicher
-      break;
-    case BTN_PAGE2:
-      Serial.println("Seite 2 (Abfahrt 5-8)");
-      activeKey = BTN_PAGE2;
-      redrawCurrentView();
-      break;
-    default:
-      Serial.println("keine Funktion");
-      return;
+  bool fromQr = qrModeActive;
+  qrModeActive = false;
+  autoResetPending = false;
+
+  if (action == BTN_WIFI_QR) {
+    Serial.println("WLAN-QR-Code (60 s)");
+    activeKey = BTN_NONE;
+    activeStation = 0;
+    qrModeActive = true;
+    qrModeStart = millis();
+    displayShowWifiQr(appSettings.qrTitle.c_str(), appSettings.qrSsid.c_str(),
+                      appSettings.qrPassword.c_str());
+    return;
   }
-  autoResetPending = true;
-  autoResetStart = millis();
+
+  int newStation = action == BTN_STATION2 ? 1 : 0;
+  bool stationChanged = newStation != activeStation;
+  activeKey = action;
+  activeStation = newStation;
+  if (action == BTN_STATION2) {
+    Serial.println("Station 2");
+  } else if (action == BTN_DIRECTION) {
+    Serial.print("Richtung ");
+    Serial.println(viewDirection());
+  } else {
+    Serial.println("Seite 2 (Abfahrt 5-8)");
+  }
+  // Zeichnen ohne Abruf, ausser die Station wechselt und ihre Daten sind
+  // nicht aktuell (showActiveStation)
+  if (stationChanged) {
+    showActiveStation();
+  } else if (fromQr) {
+    returnToDepartures();
+  } else {
+    redrawCurrentView();
+  }
+  if (appSettings.viewAutoBack) {
+    autoResetPending = true;
+    autoResetStart = millis();
+  }
   updateCounter++;
+}
+
+// Hat die Belegung gerade eine Funktion? (Station 2 eingerichtet,
+// Richtung umschaltbar)
+bool keyActionAvailable(uint8_t action) {
+  switch (action) {
+    case BTN_WIFI_QR:   return true;
+    case BTN_STATION2:  return station2Used();
+    case BTN_DIRECTION: return appSettings.dir1 == 'U';
+    case BTN_PAGE2:     return true;
+    default:            return false;
+  }
 }
 
 // Station nach dem Umschalten zeigen: aus dem Zwischenspeicher, wenn ihr

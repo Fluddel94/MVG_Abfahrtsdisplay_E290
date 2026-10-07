@@ -14,6 +14,7 @@
 #include "extras.h"
 #include "portal.h"
 #include "improv_serial.h"
+#include "wifi_conn.h"
 
 // ------------------------------------------------------------
 // Protokoll-Konstanten
@@ -132,7 +133,7 @@ static uint8_t currentState() {
 static void restoreSavedWifi() {
   WiFi.disconnect();
   if (pendingWifi) {
-    WiFi.begin(pendingSsid.c_str(), pendingPassword.c_str());
+    wifiConnBegin(pendingSsid.c_str(), pendingPassword.c_str());
   } else if (settingsHasWifi()) {
     String ssid, password;
     {
@@ -140,7 +141,7 @@ static void restoreSavedWifi() {
       ssid = appSettings.wifiSsid;
       password = appSettings.wifiPassword;
     }
-    WiFi.begin(ssid.c_str(), password.c_str());
+    wifiConnBegin(ssid.c_str(), password.c_str());
   }
 }
 
@@ -171,7 +172,7 @@ static void handleWifiSettings(const uint8_t* data, uint8_t length) {
 
   WiFi.disconnect();
   vTaskDelay(pdMS_TO_TICKS(100));
-  WiFi.begin(ssid.c_str(), password.c_str());
+  wifiConnBegin(ssid.c_str(), password.c_str());
 
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < IMPROV_CONNECT_TIMEOUT_MS) {

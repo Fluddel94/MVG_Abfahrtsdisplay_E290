@@ -55,6 +55,7 @@ static const char* const KEY_ZENTRUM2 = "zentrum2";
 static const char* const KEY_KEY_LEFT = "keyLeft";
 static const char* const KEY_KEY_MID = "keyMid";
 static const char* const KEY_MINUTES = "minutes";
+static const char* const KEY_AUTO_BACK = "autoBack";   // seit 2.4.0
 static const char* const KEY_NAME1 = "name1";
 static const char* const KEY_NAME2 = "name2";
 
@@ -139,6 +140,7 @@ static void setDefaults(DeviceSettings& s) {
   s.qrTitle = QR_SCREEN_TITLE;
   setKeyDefaults(s, FEATURE_WIFI_QR);
   s.showMinutes = SHOW_MINUTES;
+  s.viewAutoBack = VIEW_AUTO_BACK;
 }
 
 static bool validKey(uint8_t key, bool middle) {
@@ -258,6 +260,7 @@ void settingsLoad() {
     readUChar(prefs, KEY_KEY_LEFT, s.keyLeft);
     readUChar(prefs, KEY_KEY_MID, s.keyMid);
     readBool(prefs, KEY_MINUTES, s.showMinutes);
+    readBool(prefs, KEY_AUTO_BACK, s.viewAutoBack);
     readString(prefs, KEY_NAME1, s.name1);
     readString(prefs, KEY_NAME2, s.name2);
     prefs.end();
@@ -323,6 +326,7 @@ bool settingsSave() {
   ok &= writeUChar(prefs, KEY_KEY_LEFT, appSettings.keyLeft);
   ok &= writeUChar(prefs, KEY_KEY_MID, appSettings.keyMid);
   ok &= writeBool(prefs, KEY_MINUTES, appSettings.showMinutes);
+  ok &= writeBool(prefs, KEY_AUTO_BACK, appSettings.viewAutoBack);
   ok &= writeString(prefs, KEY_NAME1, appSettings.name1);
   ok &= writeString(prefs, KEY_NAME2, appSettings.name2);
   prefs.end();
@@ -478,7 +482,8 @@ void settingsPrint() {
   Serial.print("Tasten: links ");
   Serial.print(KEY_NAMES[s.keyLeft]);
   Serial.print(", Mitte ");
-  Serial.println(KEY_NAMES[s.keyMid]);
+  Serial.print(KEY_NAMES[s.keyMid]);
+  Serial.println(s.viewAutoBack ? ", Ansicht endet nach 30 s" : ", Ansicht bleibt");
   Serial.print("Abfahrtszeit: ");
   Serial.println(s.showMinutes ? "Minuten" : "Uhrzeit");
   Serial.print("WLAN-QR: ");

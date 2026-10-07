@@ -124,7 +124,9 @@ details{margin-top:6px;font-size:.88em;color:#555}summary{cursor:pointer}details
 <label for="qrSsid">WLAN-Name</label><input type="text" id="qrSsid" name="qrSsid" maxlength="32">
 <label for="qrPass">Passwort</label><input type="text" id="qrPass" name="qrPass" maxlength="63" autocomplete="off">
 <p class="err" id="eq"></p><p class="hint">Das Passwort steht f&uuml;r alle lesbar auf dem Display. Leer lassen = unver&auml;ndert.</p></div>
-<p class="hint">Nochmal dr&uuml;cken (eine der beiden Tasten) oder nach 30&nbsp;s: zur&uuml;ck zur Standardansicht. Mittlere Taste 3&nbsp;s halten: Systeminfo und Einstellportal.</p>
+<p class="hint">Dieselbe Taste nochmal: zur&uuml;ck zur Standardansicht. Die andere Taste zeigt direkt ihre Ansicht. Mittlere Taste 3&nbsp;s halten: Systeminfo und Einstellportal.</p>
+<div class="cb" style="margin-top:14px"><input type="checkbox" id="back" name="back" value="1"><label for="back">Tasten-Ansicht nach 30 s beenden</label></div>
+<p class="hint">Station 2, andere Richtung oder Seite 2 wechseln dann von selbst zur&uuml;ck zur Standardansicht. Ohne H&auml;kchen bleiben sie bis zum n&auml;chsten Tastendruck.</p>
 <p class="hint warn" id="kw"></p></section>
 <div class="bar" id="bar"><div><span id="bst">Alles gespeichert</span><button type="submit">Speichern</button></div></div>
 </form>
@@ -325,7 +327,7 @@ block(1);block(2);
 $('help').href=S.help;$('id1').value=sid[1]=S.station;$('id2').value=sid[2]=S.station2;
 $('d1').value=S.d1;$('d2').value=S.dir2;
 [['z1',S.z1],['z2',S.z2],['s1',S.s1],['min',S.min?'1':'0']].forEach(([n,v])=>{const r=document.querySelector('input[name='+n+'][value="'+v+'"]');if(r)r.checked=true;});
-K.L=S.keyL;K.M=S.keyM;
+K.L=S.keyL;K.M=S.keyM;$('back').checked=S.back!==false;
 TY.forEach((t,i)=>{$(t+'1').checked=S[t];$(t+'2').checked=!!(S.types2&(1<<i));});
 $('qrTitle').value=S.qrTitle;$('qrSsid').value=S.qrSsid;if(S.qrPassSet)$('qrPass').placeholder='unverändert';
 parseSel(1,S.lines1);parseSel(2,S.lines2);
@@ -430,6 +432,7 @@ static void handleRoot() {
     doc["keyL"] = s.keyLeft;
     doc["keyM"] = s.keyMid;
     doc["min"] = s.showMinutes;
+    doc["back"] = s.viewAutoBack;   // ab 2.4.0
     doc["sbahn"] = s.showSbahn;
     doc["ubahn"] = s.showUbahn;
     doc["tram"] = s.showTram;
@@ -481,7 +484,8 @@ static void handleSave() {
   s.stationId = station;
   // Richtung Station 1 (d1): B alle, U umschaltbar, H/R nur diese
   // Kennung; Zentrum-Kennung z1/z2: H, R oder K (keine); Startansicht s1
-  // H/R. Tasten keyL/keyM (BTN_...), Abfahrtszeit min 0/1. Unbrauchbare
+  // H/R. Tasten keyL/keyM (BTN_...), Abfahrtszeit min 0/1, Auto-Reset
+  // back (Haekchen). Unbrauchbare
   // Werte korrigiert settingsSave() (validate).
   s.dir1 = formChar("d1", "BUHR", 'B');
   s.zentrum1 = formChar("z1", "HRK", 'K');
@@ -490,6 +494,7 @@ static void handleSave() {
   s.keyLeft = (uint8_t)server->arg("keyL").toInt();
   s.keyMid = (uint8_t)server->arg("keyM").toInt();
   s.showMinutes = server->arg("min") == "1";
+  s.viewAutoBack = server->hasArg("back");
   s.showSbahn = server->hasArg("sbahn");
   s.showUbahn = server->hasArg("ubahn");
   s.showTram = server->hasArg("tram");

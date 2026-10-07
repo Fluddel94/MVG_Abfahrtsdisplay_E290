@@ -156,6 +156,10 @@
 #define DIRECTION_AUTO_RESET_MS 30000UL
 #define PAGE_AUTO_RESET_MS 30000UL   // Seite 2 -> zurueck zur Standardansicht
 #define STATION_AUTO_RESET_MS 30000UL   // Station 2 -> zurueck zu Station 1
+// 1 = die Ansicht einer Taste (Richtung, Station 2, Seite 2) endet nach den
+//     drei Zeiten oben von selbst; 0 = sie bleibt bis zum naechsten
+//     Tastendruck. Standardwert, im Portal unter "Tasten" einstellbar.
+#define VIEW_AUTO_BACK 1
 #define QR_DISPLAY_DURATION_MS 60000UL
 #define LOG_DISPLAY_DURATION_MS 60000UL
 #define LONG_PRESS_MS 3000UL

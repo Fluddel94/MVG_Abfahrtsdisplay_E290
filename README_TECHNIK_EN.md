@@ -177,6 +177,7 @@ folder, the Arduino IDE only compiles this folder.
 | `src/time_utils.h/.cpp` | uptime, time formats |
 | `src/text_utils.h/.cpp` | conversion UTF-8 → Latin-1 for real umlauts |
 | `src/wifi_diag.h/.cpp` | cause of Wi-Fi drops for the error screen |
+| `src/wifi_conn.h/.cpp` | connect to Wi-Fi and reconnect after drops |
 | `src/extras.h/.cpp` | hooks for your own add-ons – empty in this version, no function (see [Technical notes](#technical-notes-for-code-changes)) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | display fonts with umlauts |
 | `docs/` | web installer (GitHub Pages): page, `manifest.json`, firmware in `docs/firmware/` |
@@ -203,9 +204,11 @@ folder, the Arduino IDE only compiles this folder.
   (`fetchOtherStation()`); buttons and auto-reset only draw from the cache
   (data up to 2 minutes old, otherwise a new request).
 - **Buttons:** functions `keyLeft`/`keyMid` (constants `BTN_...` in
-  `settings.h`). `keyPressed()` in the .ino: in the default view, show the
-  button's view (`activeKey`), otherwise – whichever button – return to the
-  default view; no cycling through several views. `handleKeysAndScreens()`
+  `settings.h`). `keyPressed()` in the .ino: show the button's view
+  (`activeKey`); the same button (or one without a function) again returns
+  to the default view, the other button shows its own view directly; no
+  cycling through several views. Auto-reset after 30 s only with
+  `viewAutoBack` (portal, default `VIEW_AUTO_BACK` in `config.h`). `handleKeysAndScreens()`
   handles buttons, QR/log screen and auto-reset, also while a Wi-Fi outage
   is being bridged (then from the cache only). The view follows from
   `activeKey` (`viewDirection()`, `headerDirection()` for
@@ -253,7 +256,7 @@ folder, the Arduino IDE only compiles this folder.
   `zentrum2` (`H`/`R`/`K` = none), `start1` (start view `H`/`R`),
   `keyLeft`, `keyMid`, `minutes`, `name1`, `name2` (stop names, UTF-8; if
   missing, `fetchStationNames()` fetches them once from MVG and stores
-  them); "switchable" is `dir1` `U` in memory,
+  them); added in 2.4.0: `autoBack` (auto-reset of the button view); "switchable" is `dir1` `U` in memory,
   stored in NVS as `dirView` + `dir1` `B` (so 2.2.0 still works after a
   downgrade; `zentrumIsH`, `defZentrum`, `qrOn` are still written too). If
   the new keys are missing (update from 2.2.0), `settingsLoad()` converts
@@ -277,6 +280,17 @@ folder, the Arduino IDE only compiles this folder.
   the connection drops. A wrong password is usually only reported as a
   timeout during login – which can also happen with very weak reception,
   hence "Passwort falsch?" with a question mark.
+- **Wi-Fi connection:** `wifi_conn.cpp` scans all channels and picks the
+  access point with the strongest signal (ESP32 default: the first one
+  found – a poor choice with mesh/repeaters). Every `WiFi.begin()`
+  (including Improv) goes through `wifiConnBegin()`. `wifiConnLoop()` starts
+  a new attempt only once the current one has ended (drop reported or 20 s
+  passed), with pauses of 2/5/15/30 s; after six failures in a row the
+  Wi-Fi module is switched off and on again. The ESP32's automatic
+  reconnect is disabled for this – unless `extrasHandlesWifiReconnect()`
+  returns `true`. With `DEBUG_LOG 1`, the serial monitor shows every drop
+  immediately with its reason code, every connection and once a minute
+  the access point (BSSID), channel and signal.
 - **Your own add-ons (hooks):** `src/extras.h` contains fixed points in the
   program flow – at startup, in the main loop, on errors, after a Wi-Fi
   change – where your own variant of the project can run additional code,
