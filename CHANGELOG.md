@@ -6,6 +6,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.5.0] – 31.10.2026
+
 ### Neu
 - **Störungen abschaltbar:** Häkchen „Störungen anzeigen“ im Portal unter
   „Anzeige“ (Standard: an). Ohne Häkchen kein Warndreieck; ausgefallene
@@ -25,10 +27,9 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
   API-Fehler und Board-Start werden dort nicht mehr angezeigt.
 - Portal: Eingaben werden nur noch von der Seite selbst geprüft (Fehler rot
   am Feld statt Browser-Hinweis).
-
-### Intern
-- Neue NVS-Schlüssel `showInc` und `fullRef`; `displayShowLog()` heißt
-  jetzt `displayShowInfo()`, `drawQr()` kann feste Modulgröße und Position.
+- Technik: neue Einstellungen im Gerätespeicher (`showInc`, `fullRef`), bei
+  einem Update gelten die bisherigen Werte (Dreieck an, alle 10 Minuten);
+  `displayShowLog()` heißt jetzt `displayShowInfo()`.
 
 ## [2.4.0] – 07.10.2026
 
