@@ -192,13 +192,16 @@ folder, the Arduino IDE only compiles this folder.
   determined by observation, they are not documented. Message types:
   `INCIDENT` (disruption) and `EARLY_TERMINATION` (trip ends early) trigger
   a warning triangle, `INFO` (e.g. fare notes) is deliberately ignored. Add
-  new trip-relevant message types in `mvg_api.cpp`.
+  new trip-relevant message types in `mvg_api.cpp`. `drawContent()` in
+  `display.cpp` draws the triangle (disruption and cancellation) at a fixed
+  position left of the separator (`WARNING_ICON_X`), only with
+  `showIncidents`; the destination then ends at `WARNING_DEST_END`.
 - **Transport filter:** `downloadDepartures()` appends `&transportTypes=…`
   to the URL. Without this parameter the API only returns S-Bahn, U-Bahn,
   tram and city bus (observed).
 - **API requests:** departures are fetched in `fetchStation()` (.ino,
   section Update-Steuerung) – on the minute update, at startup, after Wi-Fi
-  returns, when returning from QR/log in a new minute and during a
+  returns, when returning from QR/info in a new minute and during a
   disruption. If stop 2 is assigned to a button, `attemptUpdate()` first
   fetches and draws the displayed stop, then the other one
   (`fetchOtherStation()`); buttons and auto-reset only draw from the cache
@@ -209,7 +212,7 @@ folder, the Arduino IDE only compiles this folder.
   to the default view, the other button shows its own view directly; no
   cycling through several views. Auto-reset after 30 s only with
   `viewAutoBack` (portal, default `VIEW_AUTO_BACK` in `config.h`). `handleKeysAndScreens()`
-  handles buttons, QR/log screen and auto-reset, also while a Wi-Fi outage
+  handles buttons, QR/info screen and auto-reset, also while a Wi-Fi outage
   is being bridged (then from the cache only). The view follows from
   `activeKey` (`viewDirection()`, `headerDirection()` for
   "→ Zentrum/Auswärts/H/R").
@@ -256,7 +259,10 @@ folder, the Arduino IDE only compiles this folder.
   `zentrum2` (`H`/`R`/`K` = none), `start1` (start view `H`/`R`),
   `keyLeft`, `keyMid`, `minutes`, `name1`, `name2` (stop names, UTF-8; if
   missing, `fetchStationNames()` fetches them once from MVG and stores
-  them); added in 2.4.0: `autoBack` (auto-reset of the button view); "switchable" is `dir1` `U` in memory,
+  them); added in 2.4.0: `autoBack` (auto-reset of the button view);
+  added in 2.5.0: `showInc` (warning triangle, default `SHOW_INCIDENTS`)
+  and `fullRef` (full refresh every n minutes, default
+  `FULL_REFRESH_EVERY`, limited to `FULL_REFRESH_MIN`..`FULL_REFRESH_MAX`); "switchable" is `dir1` `U` in memory,
   stored in NVS as `dirView` + `dir1` `B` (so 2.2.0 still works after a
   downgrade; `zentrumIsH`, `defZentrum`, `qrOn` are still written too). If
   the new keys are missing (update from 2.2.0), `settingsLoad()` converts
@@ -268,6 +274,11 @@ folder, the Arduino IDE only compiles this folder.
   `docs/manifest.json` – only then does the installer offer *Update*
   without erasing. Never change the marker `FIRMWARE_MARKER` (firmware
   upload in the portal, check in the export script).
+- **Settings/info screen** (middle button 3 s): `displayShowInfo()` in
+  `display.cpp` – QR code for the portal address (`drawQr()` with fixed
+  module size `INFO_QR_SCALE`), version below (suffix from "-" on a second
+  line if needed), IP, portal closing time, Wi-Fi name, signal, uptime.
+  Internally the state is still called `logModeActive`.
 - **Line symbols:** add new bitmaps in `line_icons.h` – at most 36 px wide
   (checked by `static_assert` in `display.cpp`). The pixel font of the
   generated symbols knows 0–9, "N", "X", "R", "B", "E", "S", "V"; other

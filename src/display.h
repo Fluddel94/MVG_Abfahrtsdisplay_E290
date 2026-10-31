@@ -17,14 +17,16 @@ void displayShowSplash(const char* firmwareVersion);
 // isPage2: Seitenhinweis "(2/2)" hinter dem Header.
 // minutes: Abfahrtszeit als Minuten bis zur Abfahrt ("4 min", "jetzt"),
 //   ab 60 Minuten Uhrzeit; false: Uhrzeit mit Verspaetung.
+// incidents: Warndreieck bei Stoerung/Ausfall (links vom Trennstrich);
+//   false: keins, ausgefallene Fahrten nur durchgestrichen.
 // stationNumber = 1 oder 2: Nummer im schwarzen Kaestchen vor dem Namen
 //   (nur bei zwei Stationen), 0 = ohne.
 // fullRefresh = true: sauberer Full Refresh, false: Fast Mode (schneller,
 //   doppeltes Update gegen Grauschleier).
 void displayShowDepartures(const Departure departures[], int found,
                            const String& stationName, char dirLabel,
-                           bool isPage2, bool minutes, bool fullRefresh,
-                           int stationNumber = 0);
+                           bool isPage2, bool minutes, bool incidents,
+                           bool fullRefresh, int stationNumber = 0);
 
 // Fehlerbildschirme
 // WLAN-Fehler mit vermuteter Ursache und optionalem Hinweis ("" = keiner),
@@ -39,11 +41,12 @@ void displayShowApiError();
 void displayShowWifiQr(const char* title, const char* qrWlanSsid,
                        const char* qrWlanPassword);
 
-// System-Log (Momentaufnahme beim Aufruf). portalAddress: Adresse des
-// Einstellungsportals ohne "http://", portalUntil: Uhrzeit "HH:MM", zu der
-// es schliesst ("" = unbekannt).
-void displayShowLog(const char* firmwareVersion, const char* portalAddress,
-                    const char* portalUntil, int wifiDisconnects, int apiFails);
+// Einstellungen/Info (Momentaufnahme beim Aufruf): QR-Code zum Portal,
+// Version, IP-Adresse, WLAN-Name, Signal, Laufzeit. portalAddress: IP-
+// Adresse ohne "http://", portalUntil: Uhrzeit "HH:MM", zu der das Portal
+// schliesst ("" = unbekannt).
+void displayShowInfo(const char* firmwareVersion, const char* portalAddress,
+                     const char* portalUntil);
 
 // Firmware-Upload im Portal laeuft
 void displayShowUpdate();

@@ -42,5 +42,5 @@ bool extrasHandlesWifiReconnect();
 void extrasWifiChanged();
 
 // Zusatz zur Versionsnummer, z.B. "-variante" (Standard: "").
-// Erscheint im seriellen Monitor und im System-Log.
+// Erscheint im seriellen Monitor und auf dem Bildschirm Einstellungen/Info.
 const char* extrasVersionSuffix();

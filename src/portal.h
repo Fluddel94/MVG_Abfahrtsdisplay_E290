@@ -3,7 +3,7 @@
 // Aendern der Einstellungen, mit Stationssuche, Richtungsanzeige und
 // Firmware-Upload.
 //
-// Das Portal ist nur auf Abruf offen (Systemlog, Ersteinrichtung, nach
+// Das Portal ist nur auf Abruf offen (Einstellungen/Info, Ersteinrichtung, nach
 // "WLAN verbinden" im Web-Installer) und schliesst sich nach
 // PORTAL_DURATION_MS von selbst. Es laeuft in einem eigenen Task, damit die
 // Seite auch waehrend Display-Updates sofort reagiert. Gespeicherte

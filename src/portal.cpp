@@ -88,6 +88,7 @@ details{margin-top:6px;font-size:.88em;color:#555}summary{cursor:pointer}details
 .err{color:#b00;font-size:.9em;font-weight:600;margin:6px 0}
 .box.need{border-color:#a60;background:#fff8e8}.box.need .zq::after{content:" – bitte auswählen";color:#a60}
 .chip.na span{border-style:dashed;color:#999;background:#f4f4f4}.chip.na input:checked+span{opacity:.55}
+input[type=number]{width:5em;box-sizing:border-box;padding:8px;font-size:1em;border:1px solid #999;border-radius:6px;background:#fff;color:#111}
 .cb{display:flex;align-items:center;gap:8px;margin:6px 0}.cb input{width:20px;height:20px;flex:none}.cb label{margin:0}
 .hit{border:1px solid #bbb;border-radius:6px;padding:8px;margin:6px 0;background:#fff;color:#111;font-size:1rem}
 .hit .acts{display:flex;gap:12px;align-items:center;margin-top:6px}
@@ -104,7 +105,7 @@ details{margin-top:6px;font-size:.88em;color:#555}summary{cursor:pointer}details
 </style></head><body><main>
 <h1>Abfahrtsdisplay</h1>
 <p class="hint">Hilfe zu allen Einstellungen: <a id="help" href="#" target="_blank">Anleitung (README)</a></p>
-<form id="f" method="post" action="/speichern" onsubmit="return check()">
+<form id="f" method="post" action="/speichern" onsubmit="return check()" novalidate>
 <section><h2><span class="no" id="no1">1</span><span>Station 1<span id="hn1"></span></span></h2><div id="st1"></div></section>
 <section><div id="no2"><button type="button" class="add" onclick="show2(1)">+ Zweite Station hinzuf&uuml;gen</button>
 <p class="hint">Eine Taste kann dann Station 2 zeigen.</p></div>
@@ -114,7 +115,12 @@ details{margin-top:6px;font-size:.88em;color:#555}summary{cursor:pointer}details
 <input type="hidden" name="types2" id="types2"><input type="hidden" name="lines2" id="lines2">
 <input type="hidden" name="n1" id="n1"><input type="hidden" name="n2" id="n2">
 <section><h2>Anzeige</h2><h3 style="margin-top:10px">Abfahrtszeit als</h3>
-<div class="seg"><label><input type="radio" name="min" value="0" id="min0"><span>Uhrzeit<small>10:34 +2</small></span></label><label><input type="radio" name="min" value="1" id="min1"><span>Minuten<small>4 min</small></span></label></div></section>
+<div class="seg"><label><input type="radio" name="min" value="0" id="min0"><span>Uhrzeit<small>10:34 +2</small></span></label><label><input type="radio" name="min" value="1" id="min1"><span>Minuten<small>4 min</small></span></label></div>
+<div class="cb" style="margin-top:14px"><input type="checkbox" id="inc" name="inc" value="1"><label for="inc">St&ouml;rungen anzeigen</label></div>
+<p class="hint">Warndreieck vor der Abfahrtszeit bei St&ouml;rungen und Ausf&auml;llen. Ohne H&auml;kchen sind ausgefallene Fahrten nur durchgestrichen.</p>
+<h3 style="margin-top:14px"><label for="fr" style="margin:0">Full Refresh alle</label></h3>
+<p style="margin:4px 0"><input type="number" id="fr" name="fr" min="1" max="60" step="1" inputmode="numeric"> Minuten</p><p class="err" id="ef"></p>
+<p class="hint">Komplettes Neuzeichnen des Displays (kurzes Flackern) gegen Schatten alter Anzeigen, dazwischen schnelle Updates. Standard 10, m&ouml;glich 1&ndash;60.</p></section>
 <section><h2>Tasten</h2>
 <div class="box"><div class="q">Standardansicht</div><span id="std"></span><p class="hint" style="margin:4px 0 0">ergibt sich aus Station 1</p></div>
 <h3 style="margin-top:14px">Linke Taste</h3><select id="keyL" name="keyL" onchange="K.L=+this.value;upd()"></select><p class="hint" id="resL"></p>
@@ -124,7 +130,7 @@ details{margin-top:6px;font-size:.88em;color:#555}summary{cursor:pointer}details
 <label for="qrSsid">WLAN-Name</label><input type="text" id="qrSsid" name="qrSsid" maxlength="32">
 <label for="qrPass">Passwort</label><input type="text" id="qrPass" name="qrPass" maxlength="63" autocomplete="off">
 <p class="err" id="eq"></p><p class="hint">Das Passwort steht f&uuml;r alle lesbar auf dem Display. Leer lassen = unver&auml;ndert.</p></div>
-<p class="hint">Dieselbe Taste nochmal: zur&uuml;ck zur Standardansicht. Die andere Taste zeigt direkt ihre Ansicht. Mittlere Taste 3&nbsp;s halten: Systeminfo und Einstellportal.</p>
+<p class="hint">Dieselbe Taste nochmal: zur&uuml;ck zur Standardansicht. Die andere Taste zeigt direkt ihre Ansicht. Mittlere Taste 3&nbsp;s halten: Einstellungen/Info mit QR-Code zu dieser Seite.</p>
 <div class="cb" style="margin-top:14px"><input type="checkbox" id="back" name="back" value="1"><label for="back">Tasten-Ansicht nach 30 s beenden</label></div>
 <p class="hint">Station 2, andere Richtung oder Seite 2 wechseln dann von selbst zur&uuml;ck zur Standardansicht. Ohne H&auml;kchen bleiben sie bis zum n&auml;chsten Tastendruck.</p>
 <p class="hint warn" id="kw"></p></section>
@@ -247,6 +253,7 @@ function check(){const t=on2(),E=[];document.querySelectorAll('.err').forEach(e=
   if(!$('id'+n).value.trim()){E.push(err('es'+n,'Bitte eine Station wählen.'));continue;}
   if(!TY.some(i=>$(i+n).checked)){if(sel[n].size)sel[n].forEach(v=>{$(TY[TB[v.c]]+n).checked=true;});else E.push(err('et'+n,'Mindestens ein Verkehrsmittel wählen.'));}
   if(needZ(n)&&!zv(n))E.push(err('ez'+n,'Bitte wählen, welche Richtung ins Zentrum fährt (oder „Keine oder gemischt“).'));}
+ const fr=Number($('fr').value);if(!Number.isInteger(fr)||fr<1||fr>60)E.push(err('ef','Bitte eine ganze Zahl von 1 bis 60 eingeben.'));
  if(K.M==4&&!$('qrSsid').value.trim())E.push(err('eq','WLAN-Name für den QR-Code fehlt.'));
  if(E.length){E[0].scrollIntoView({block:'center'});bar('fail','Bitte die markierten Angaben ergänzen.');return false;}
  let b=0;TY.forEach((i,x)=>{if($(i+'2').checked)b|=1<<x;});
@@ -319,7 +326,7 @@ function upload(){
  const fd=new FormData();fd.append('firmware',f,f.name);
  const x=new XMLHttpRequest();x.open('POST','/update');
  x.upload.onprogress=e=>{if(e.lengthComputable)$('fwBar').value=e.loaded*100/e.total;};
- x.onload=()=>{if(x.status==200){$('fwBar').value=100;$('fwMsg').textContent='Erfolgreich. Das Display startet neu, die Einstellungen bleiben erhalten. Diese Seite ist danach wieder über den System-Log erreichbar.';}
+ x.onload=()=>{if(x.status==200){$('fwBar').value=100;$('fwMsg').textContent='Erfolgreich. Das Display startet neu, die Einstellungen bleiben erhalten. Diese Seite ist danach wieder über „Einstellungen/Info“ (mittlere Taste 3 s) erreichbar.';}
   else{$('fwMsg').textContent='Fehler: '+x.responseText+' Die bisherige Firmware läuft weiter.';$('fwBtn').disabled=false;}};
  x.onerror=()=>{$('fwMsg').textContent='Verbindung abgebrochen. Die bisherige Firmware läuft weiter.';$('fwBtn').disabled=false;};
  $('fwBtn').disabled=true;$('fwBar').style.display='';$('fwBar').value=0;$('fwMsg').textContent='Lade hoch ...';x.send(fd);}
@@ -327,7 +334,7 @@ block(1);block(2);
 $('help').href=S.help;$('id1').value=sid[1]=S.station;$('id2').value=sid[2]=S.station2;
 $('d1').value=S.d1;$('d2').value=S.dir2;
 [['z1',S.z1],['z2',S.z2],['s1',S.s1],['min',S.min?'1':'0']].forEach(([n,v])=>{const r=document.querySelector('input[name='+n+'][value="'+v+'"]');if(r)r.checked=true;});
-K.L=S.keyL;K.M=S.keyM;$('back').checked=S.back!==false;
+K.L=S.keyL;K.M=S.keyM;$('back').checked=S.back!==false;$('inc').checked=S.inc!==false;$('fr').value=S.fr||10;
 TY.forEach((t,i)=>{$(t+'1').checked=S[t];$(t+'2').checked=!!(S.types2&(1<<i));});
 $('qrTitle').value=S.qrTitle;$('qrSsid').value=S.qrSsid;if(S.qrPassSet)$('qrPass').placeholder='unverändert';
 parseSel(1,S.lines1);parseSel(2,S.lines2);
@@ -433,6 +440,8 @@ static void handleRoot() {
     doc["keyM"] = s.keyMid;
     doc["min"] = s.showMinutes;
     doc["back"] = s.viewAutoBack;   // ab 2.4.0
+    doc["inc"] = s.showIncidents;   // ab 2.5.0
+    doc["fr"] = s.fullRefreshMin;
     doc["sbahn"] = s.showSbahn;
     doc["ubahn"] = s.showUbahn;
     doc["tram"] = s.showTram;
@@ -485,8 +494,8 @@ static void handleSave() {
   // Richtung Station 1 (d1): B alle, U umschaltbar, H/R nur diese
   // Kennung; Zentrum-Kennung z1/z2: H, R oder K (keine); Startansicht s1
   // H/R. Tasten keyL/keyM (BTN_...), Abfahrtszeit min 0/1, Auto-Reset
-  // back (Haekchen). Unbrauchbare
-  // Werte korrigiert settingsSave() (validate).
+  // back (Haekchen), Stoerungen inc (Haekchen), Full Refresh fr (Minuten).
+  // Unbrauchbare Werte korrigiert settingsSave() (validate).
   s.dir1 = formChar("d1", "BUHR", 'B');
   s.zentrum1 = formChar("z1", "HRK", 'K');
   s.start1 = formChar("s1", "HR", 'H');
@@ -495,6 +504,10 @@ static void handleSave() {
   s.keyMid = (uint8_t)server->arg("keyM").toInt();
   s.showMinutes = server->arg("min") == "1";
   s.viewAutoBack = server->hasArg("back");
+  s.showIncidents = server->hasArg("inc");
+  // Full Refresh: leer/ungueltig = bisheriger Wert, sonst 1..60 (validate)
+  long refreshMin = server->arg("fr").toInt();
+  if (refreshMin > 0) s.fullRefreshMin = (uint8_t)min(refreshMin, (long)FULL_REFRESH_MAX);
   s.showSbahn = server->hasArg("sbahn");
   s.showUbahn = server->hasArg("ubahn");
   s.showTram = server->hasArg("tram");

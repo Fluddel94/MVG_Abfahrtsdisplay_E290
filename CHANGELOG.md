@@ -6,6 +6,30 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Störungen abschaltbar:** Häkchen „Störungen anzeigen“ im Portal unter
+  „Anzeige“ (Standard: an). Ohne Häkchen kein Warndreieck; ausgefallene
+  Fahrten sind weiter durchgestrichen, das tatsächliche Ziel bei
+  vorzeitigem Fahrtende bleibt.
+- **Full Refresh einstellbar:** Feld „Full Refresh alle … Minuten“ im
+  Portal unter „Anzeige“ (Standard 10 wie bisher, 1–60).
+
+### Geändert
+- **Warndreieck an fester Stelle:** Bei Störung und Ausfall steht das
+  Dreieck immer direkt links vom Trennstrich vor der Abfahrtszeit (bisher
+  hinter dem Ziel bzw. bei Ausfall rechts der Zeit). Verspätung und
+  Zeitspalte bleiben unverändert.
+- **„Einstellungen/Info“ statt System-Log** (mittlere Taste 3 s): QR-Code
+  zum Einstellungsportal, IP-Adresse, „Portal offen bis …“, Version,
+  WLAN-Name, Signal (Bewertung und dBm) und Laufzeit. WLAN-Abbrüche,
+  API-Fehler und Board-Start werden dort nicht mehr angezeigt.
+- Portal: Eingaben werden nur noch von der Seite selbst geprüft (Fehler rot
+  am Feld statt Browser-Hinweis).
+
+### Intern
+- Neue NVS-Schlüssel `showInc` und `fullRef`; `displayShowLog()` heißt
+  jetzt `displayShowInfo()`, `drawQr()` kann feste Modulgröße und Position.
+
 ## [2.4.0] – 07.10.2026
 
 ### Neu

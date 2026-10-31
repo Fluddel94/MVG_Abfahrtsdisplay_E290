@@ -79,6 +79,11 @@
 //     ab 60 Minuten Uhrzeit)
 #define SHOW_MINUTES 0
 
+// 1 = Warndreieck bei Stoerungen und Ausfaellen (links vom Trennstrich);
+// 0 = keins, ausgefallene Fahrten nur mit durchgestrichener Zeit.
+// Standardwert, im Portal unter "Anzeige" einstellbar.
+#define SHOW_INCIDENTS 1
+
 // ============================================================
 // ZUSATZFUNKTIONEN (optional, standardmaessig aus)
 // ============================================================
@@ -133,7 +138,12 @@
 
 // --- Zeitsteuerung ---
 #define UPDATE_TARGET_SECOND 1
+// Full Refresh (sauberes Neuzeichnen gegen Geisterbilder) alle so viele
+// Minuten, dazwischen Fast Mode. Standardwert, im Portal unter "Anzeige"
+// einstellbar (FULL_REFRESH_MIN bis FULL_REFRESH_MAX).
 #define FULL_REFRESH_EVERY 10
+#define FULL_REFRESH_MIN 1
+#define FULL_REFRESH_MAX 60
 #define BUTTON_DEBOUNCE_MS 500UL       // Mindestabstand zwischen zwei gezaehlten Druecken
 #define BUTTON_EDGE_STABLE_MS 30UL     // Entprellung: Taste vorher so lange stabil
 #define BUTTON_LATCH_MAX_AGE_MS 15000UL // aeltere gemerkte Druecke verwerfen
@@ -163,7 +173,7 @@
 #define QR_DISPLAY_DURATION_MS 60000UL
 #define LOG_DISPLAY_DURATION_MS 60000UL
 #define LONG_PRESS_MS 3000UL
-// Einstellungsportal: so lange offen nach dem Oeffnen (Systemlog, nach
+// Einstellungsportal: so lange offen nach dem Oeffnen (Einstellungen/Info, nach
 // "WLAN verbinden"); ohne gespeicherte Station bleibt es dauerhaft offen
 #define PORTAL_DURATION_MS 1800000UL   // 30 Minuten
 

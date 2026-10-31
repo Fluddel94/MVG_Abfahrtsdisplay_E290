@@ -51,6 +51,10 @@ struct DeviceSettings {
 
   // Abfahrtszeit als Minuten bis zur Abfahrt ("4 min") statt Uhrzeit
   bool showMinutes;
+  // Warndreieck bei Stoerung/Ausfall (sonst nur durchgestrichene Zeit)
+  bool showIncidents;
+  // Full Refresh alle so viele Minuten (FULL_REFRESH_MIN..MAX)
+  uint8_t fullRefreshMin;
 
   // Verkehrsmittel Station 1 (mindestens eines ist true)
   bool showSbahn;

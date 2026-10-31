@@ -50,8 +50,8 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
   weitere Abfahrten (Seite 2) oder Gäste-WLAN-QR-Code.
 - **Liniensymbole** wie an der Haltestelle.
 - **Ausfälle und Störungen:** Fällt ein Zug aus, ist die Uhrzeit
-  durchgestrichen; bei Störungen erscheint ein Warndreieck. Endet ein Zug
-  früher, steht das tatsächliche Ziel da.
+  durchgestrichen; bei Störungen und Ausfällen steht ein Warndreieck vor der
+  Uhrzeit (abschaltbar). Endet ein Zug früher, steht das tatsächliche Ziel da.
 - **Geteilte Züge** (z.B. S1 Flughafen / Freising) erscheinen als eine Zeile –
   auch Regionalzüge, deren Zugteile verschiedene Liniennummern haben (z.B.
   BRB RB 55/56/57, Symbol „RB“, Ziele gekürzt: „Lenggri./Tegerns.“).
@@ -127,7 +127,7 @@ bleibt die Ansicht stehen, bis du eine Taste drückst.
 
 | Taste | Was passiert |
 |---|---|
-| **Mittlere Taste** 3 Sekunden halten | System-Info für 60 s – und das [Einstellungsportal](#einstellungsportal) öffnet sich für 30 Minuten. Nochmal 3 s halten = zurück. |
+| **Mittlere Taste** 3 Sekunden halten | „Einstellungen/Info“ für 60 s: QR-Code und Adresse des [Einstellungsportals](#einstellungsportal) (öffnet sich für 30 Minuten), Version, WLAN-Name mit Signal und Laufzeit. Jede Taste = zurück. |
 | **Rechte Taste** | Neustart |
 
 ## Einstellungsportal
@@ -137,7 +137,8 @@ vom PC oder Handy, solange es im selben WLAN ist. Änderungen gelten sofort
 nach dem Speichern.
 
 **So öffnest du es:** die mittlere Taste drei Sekunden halten. Das Display zeigt
-dann die Adresse (z.B. `http://192.168.178.42`) – diese im Browser eintippen.
+dann einen QR-Code und die Adresse (z.B. `192.168.178.42`) – QR-Code mit dem
+Handy scannen oder die Adresse im Browser eintippen.
 Das Portal bleibt 30 Minuten offen. Bei der ersten Einrichtung führt
 *Visit device* im Web-Installer direkt hin.
 
@@ -189,7 +190,11 @@ Außerdem:
   wie oben. Im Kopf steht dann die Nummer der Station. Sie wird
   automatisch einer freien Taste zugeordnet.
 - **Anzeige:** Abfahrtszeit als *Uhrzeit* (10:34 +2) oder *Minuten*
-  (**4** min).
+  (**4** min). Häkchen „Störungen anzeigen“ (Standard: an): ohne Häkchen
+  kein Warndreieck, ausgefallene Fahrten sind nur durchgestrichen.
+  *Full Refresh alle … Minuten* (Standard 10, 1–60): so oft zeichnet das
+  Display komplett neu (kurzes Flackern, entfernt Schatten alter Anzeigen),
+  dazwischen schnelle Updates.
 - **Tasten:** zeigt die Standardansicht und die Belegung der linken und
   mittleren Taste (siehe [Bedienung](#bedienung)). Ist eine Funktion
   keiner Taste zugeordnet, erscheint ein Hinweis. Häkchen „Tasten-Ansicht
@@ -276,7 +281,7 @@ Abfahrten von selbst wieder, sobald es klappt.
 
 ### Das Portal lässt sich nicht öffnen
 Es ist nur 30 Minuten nach dem Öffnen erreichbar: die mittlere Taste
-drei Sekunden halten und die angezeigte Adresse verwenden. PC oder Handy müssen
+drei Sekunden halten und den QR-Code oder die angezeigte Adresse verwenden. PC oder Handy müssen
 im selben WLAN sein.
 
 ## Gut zu wissen

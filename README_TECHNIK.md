@@ -193,13 +193,15 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   Meldungstypen: `INCIDENT` (Störung) und `EARLY_TERMINATION` (vorzeitiges
   Fahrtende) lösen ein Warndreieck aus, `INFO` (z.B. Tarifhinweise) wird
   bewusst ignoriert. Neue fahrtrelevante Meldungstypen in `mvg_api.cpp`
-  ergänzen.
+  ergänzen. Das Dreieck (Störung und Ausfall) zeichnet `drawContent()` in
+  `display.cpp` an fester Stelle links vom Trennstrich (`WARNING_ICON_X`),
+  nur bei `showIncidents`; das Ziel endet dann bei `WARNING_DEST_END`.
 - **Verkehrsmittel-Filter:** `downloadDepartures()` hängt
   `&transportTypes=…` an die URL. Ohne diesen Parameter liefert die API nur
   S-Bahn, U-Bahn, Tram und Stadtbus (beobachtet).
 - **API-Abrufe:** Abfahrten werden in `fetchStation()` (.ino, Abschnitt
   Update-Steuerung) abgerufen – beim Minuten-Update, beim Start, nach
-  WLAN-Wiederkehr, bei Rückkehr aus QR/Log in einer neuen Minute und
+  WLAN-Wiederkehr, bei Rückkehr aus QR/Info in einer neuen Minute und
   während einer Störung. Ist Station 2 einer Taste zugeordnet, ruft
   `attemptUpdate()` erst die angezeigte Station ab und zeichnet, danach die
   andere (`fetchOtherStation()`); Tasten und Auto-Reset zeichnen nur aus
@@ -210,7 +212,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   zur Standardansicht, die andere Taste zeigt direkt ihre Ansicht; kein
   Weiterschalten durch mehrere Ansichten. Auto-Reset nach 30 s nur bei
   `viewAutoBack` (Portal, Standard `VIEW_AUTO_BACK` in `config.h`).
-  `handleKeysAndScreens()` wertet Tasten, QR-/Log-Screen und Auto-Reset
+  `handleKeysAndScreens()` wertet Tasten, QR-/Info-Screen und Auto-Reset
   aus, auch während ein WLAN-Ausfall überbrückt wird (dann nur aus dem
   Zwischenspeicher). Die Ansicht ergibt sich aus `activeKey`
   (`viewDirection()`, `headerDirection()` für „→ Zentrum/Auswärts/H/R“).
@@ -257,7 +259,10 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `zentrum2` (`H`/`R`/`K` = keine), `start1` (Startansicht `H`/`R`),
   `keyLeft`, `keyMid`, `minutes`, `name1`, `name2` (Stationsnamen, UTF-8;
   fehlen sie, holt `fetchStationNames()` sie einmal bei der MVG und
-  speichert sie); seit 2.4.0 `autoBack` (Auto-Reset der Tasten-Ansicht); „umschaltbar“ ist `dir1` `U` im
+  speichert sie); seit 2.4.0 `autoBack` (Auto-Reset der Tasten-Ansicht);
+  seit 2.5.0 `showInc` (Warndreieck, Standard `SHOW_INCIDENTS`) und
+  `fullRef` (Full Refresh alle n Minuten, Standard `FULL_REFRESH_EVERY`,
+  begrenzt auf `FULL_REFRESH_MIN`..`FULL_REFRESH_MAX`); „umschaltbar“ ist `dir1` `U` im
   Speicher, im NVS als `dirView` + `dir1` `B` (damit 2.2.0 nach einem
   Downgrade passt; auch `zentrumIsH`, `defZentrum`, `qrOn` werden weiter
   geschrieben). Fehlen die neuen Schlüssel (Update von 2.2.0), übernimmt
@@ -270,6 +275,11 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `docs/manifest.json` übereinstimmen – nur dann bietet der Installer
   *Update* ohne Löschen an. Die Kennung `FIRMWARE_MARKER` (Firmware-Upload
   im Portal, Prüfung im Export-Skript) nie ändern.
+- **Einstellungen/Info** (mittlere Taste 3 s): `displayShowInfo()` in
+  `display.cpp` – QR-Code zur Portal-Adresse (`drawQr()` mit fester
+  Modulgröße `INFO_QR_SCALE`), Version darunter (Zusatz ab „-“ ggf. in
+  zweiter Zeile), IP, Portal-Schließzeit, WLAN-Name, Signal, Laufzeit.
+  Intern heißt der Zustand weiter `logModeActive`.
 - **Liniensymbole:** neue Bitmaps in `line_icons.h` ergänzen – maximal
   36 px breit (per `static_assert` in `display.cpp` geprüft). Die
   Pixelschrift der generierten Symbole kennt 0–9, „N“, „X“, „R“, „B“, „E“,

@@ -54,8 +54,9 @@ Changes per version: [CHANGELOG.md](CHANGELOG.md) (German).
   stop, more departures (page 2) or guest Wi-Fi QR code.
 - **Line symbols** like at the stop.
 - **Cancellations and disruptions:** if a train is cancelled, the time is
-  struck through; disruptions show a warning triangle. If a train ends
-  early, the actual destination is shown.
+  struck through; disruptions and cancellations show a warning triangle in
+  front of the time (can be switched off). If a train ends early, the
+  actual destination is shown.
 - **Split trains** (e.g. S1 airport / Freising) appear as one row – also
   regional trains whose parts have different line numbers (e.g. BRB
   RB 55/56/57, symbol "RB", destinations shortened: "Lenggri./Tegerns.").
@@ -131,7 +132,7 @@ portal section "Tasten"), the view stays until you press a button.
 
 | Button | What happens |
 |---|---|
-| **Middle button**, hold 3 seconds | system info for 60 s – and the [settings portal](#settings-portal) opens for 30 minutes. Hold 3 s again = back. |
+| **Middle button**, hold 3 seconds | "Einstellungen/Info" (settings/info) for 60 s: QR code and address of the [settings portal](#settings-portal) (opens for 30 minutes), version, Wi-Fi name with signal, and uptime. Any button = back. |
 | **Right button** | restart |
 
 ## Settings portal
@@ -140,8 +141,8 @@ The display has its own small web page where you set everything – from a
 computer or phone on the same Wi-Fi. Changes apply as soon as you save.
 
 **How to open it:** hold the middle button for three seconds. The display
-then shows the address (e.g. `http://192.168.178.42`) – type it into your
-browser. The portal stays open for 30 minutes. During first setup,
+then shows a QR code and the address (e.g. `192.168.178.42`) – scan the QR
+code with your phone or type the address into your browser. The portal stays open for 30 minutes. During first setup,
 *Visit device* in the web installer takes you there directly.
 
 Each stop is set up in four steps; below every setting the portal shows
@@ -192,7 +193,11 @@ Also:
   above. The header then shows the stop's number. It is automatically
   assigned to a free button.
 - **Anzeige** (display): departure time as *Uhrzeit* (clock time,
-  10:34 +2) or *Minuten* (**4** min).
+  10:34 +2) or *Minuten* (**4** min). Checkbox "Störungen anzeigen" (show
+  disruptions, default: on): without it there is no warning triangle, and
+  cancelled trips are only struck through. *Full Refresh alle … Minuten*
+  (default 10, 1–60): how often the display redraws completely (brief
+  flicker, removes ghosting of old content), with quick updates in between.
 - **Tasten** (buttons): shows the default view and the functions of the
   left and middle buttons (see [Operation](#operation)). If a function is
   not assigned to any button, a notice appears. Checkbox "Tasten-Ansicht
@@ -278,7 +283,7 @@ as soon as it works.
 
 ### The portal can't be opened
 It is only reachable for 30 minutes after opening: hold the middle button
-for three seconds and use the address shown. Computer or phone must be on
+for three seconds and use the QR code or the address shown. Computer or phone must be on
 the same Wi-Fi.
 
 ## Good to know

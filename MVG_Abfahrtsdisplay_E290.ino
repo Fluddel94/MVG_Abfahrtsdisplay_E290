@@ -1,5 +1,5 @@
 // Version: 2.4.0
-// Letzte Änderung: 07.10.2026 17:53
+// Letzte Änderung: 31.10.2026 18:00
 #define FW_VERSION "2.4.0"
 
 // ------------------------------------------------------------
@@ -125,7 +125,8 @@ bool apiRetryPending = false;
 bool apiFailing = false;
 unsigned long failSince = 0;
 
-// Statistik fuer den Log-Screen (API-Stoerungen: siehe stats.cpp)
+// WLAN-Abbrueche seit dem Start (fuer Erweiterungen, siehe extras.h;
+// API-Stoerungen: siehe stats.cpp)
 int wifiDisconnectCount = 0;
 
 // Einrichtungs-Screen (noch keine Station) wird gerade angezeigt
@@ -384,7 +385,8 @@ void loop() {
     lastUpdateMinute = nowInfo.tm_min;
     updateCounter++;
 
-    bool doFullRefresh = (updateCounter >= FULL_REFRESH_EVERY);
+    // Abstand der Full Refreshs in Minuten aus den Einstellungen (Portal)
+    bool doFullRefresh = (updateCounter >= appSettings.fullRefreshMin);
     if (doFullRefresh) {
       updateCounter = 0;
     }
@@ -435,7 +437,7 @@ bool handleKeysAndScreens() {
   // Differenzform (millis() - start >= dauer) ist ueberlaufsicher
   if (logModeActive) {
     if (millis() - logModeStart < LOG_DISPLAY_DURATION_MS) return false;
-    Serial.println("Log-Anzeige beendet (Timeout)");
+    Serial.println("Info-Anzeige beendet (Timeout)");
     logModeActive = false;
     returnToDepartures();
   }
@@ -618,7 +620,7 @@ void redrawFromCache(bool fullRefresh) {
   displayShowDepartures(list + offset, count,
                         activeStation == 1 ? station2Name : stationName,
                         headerDirection(dir), page2, appSettings.showMinutes,
-                        fullRefresh, number);
+                        appSettings.showIncidents, fullRefresh, number);
 }
 
 // Nach Tastendruck/Auto-Reset: neu zeichnen ohne Abruf. Bei einer
@@ -827,17 +829,17 @@ void resetViewToDefault() {
 
 void triggerLogAction() {
   if (logModeActive) {
-    Serial.println("Log-Anzeige manuell beendet (langer Druck)");
+    Serial.println("Info-Anzeige manuell beendet (langer Druck)");
     logModeActive = false;
     returnToDepartures();
   } else {
-    Serial.println("Log-Anzeige aktiviert (langer Druck, 60s), Portal offen");
+    Serial.println("Info-Anzeige aktiviert (langer Druck, 60s), Portal offen");
     logModeActive = true;
     logModeStart = millis();
     portalOpen();   // Laufzeit startet bei jedem Oeffnen neu
     String address = WiFi.localIP().toString();
-    displayShowLog(firmwareVersionText().c_str(), address.c_str(),
-                   portalClosingTime().c_str(), wifiDisconnectCount, getApiFailCount());
+    displayShowInfo(firmwareVersionText().c_str(), address.c_str(),
+                    portalClosingTime().c_str());
   }
 }
 

@@ -69,13 +69,23 @@ static_assert(COL_ICON + LINE_ICON_MAX_WIDTH < COL_DEST,
 #define SPLASH_SUBTITLE "Heltec Vision Master E290"
 #define SPLASH_BAR_HEIGHT 38   // schwarzer Titelbalken oben
 
-// --- Warndreieck ---
+// --- Warndreieck (Stoerung, Ausfall) ---
+// Steht immer an derselben Stelle direkt links vom Trennstrich, das Ziel
+// wird in solchen Zeilen entsprechend kuerzer
 #define WARNING_ICON_WIDTH 13
-#define WARNING_ICON_GAP 6
+#define WARNING_ICON_X     189   // Mitte des Dreiecks (Spitze), 183..195
+#define WARNING_DEST_END   183   // Ziel endet davor (plus DEST_MARGIN)
+static_assert(WARNING_ICON_X + WARNING_ICON_WIDTH / 2 < COL_PIPE2,
+              "Warndreieck ueberlappt den Trennstrich");
 
 // --- Ausfall (durchgestrichene Uhrzeit) ---
 #define STRIKE_OVERHANG 2        // Ueberstand des Strichs links und rechts
-#define CANCEL_ICON_SHIFT 2      // Warndreieck so weit rechts von der Verspaetungs-Position
+
+// --- Einstellungen/Info (mittlere Taste 3 s) ---
+#define INFO_QR_SCALE 3          // Pixel je QR-Modul (kleiner als beim WLAN-QR)
+#define INFO_QR_TOP 6
+#define INFO_TEXT_GAP 6          // Abstand QR-Code -> Textspalte
+#define INFO_LINE_HEIGHT 18
 
 static EInkDisplay_VisionMasterE290 display;
 
@@ -181,10 +191,11 @@ static void drawWarningTriangle(int x, int yBaseline) {
 // ('Z' Zentrum, 'A' Auswaerts, 'H'/'R' Kennung, 0 = keine), auf Seite 2
 // mit Hinweis "(2/2)" (isPage2). Bei stationNumber 1/2 steht die Nummer
 // weiss in einem schwarzen Kaestchen vor dem Namen. minutes: Abfahrtszeit
-// als Minuten bis zur Abfahrt.
+// als Minuten bis zur Abfahrt. incidents: Warndreieck bei Stoerung/Ausfall.
 static void drawContent(const Departure departures[], int found,
                         const String& stationName, char dirLabel,
-                        bool isPage2, bool minutes, int stationNumber) {
+                        bool isPage2, bool minutes, bool incidents,
+                        int stationNumber) {
   display.setTextColor(BLACK);
 
   display.setFont(&FreeSansBold12pt7b);
@@ -328,14 +339,12 @@ static void drawContent(const Departure departures[], int found,
       display.setFont(&FreeSans9pt8b);
       display.setTextColor(BLACK);
 
-      // Bei Ausfall steht das Warndreieck rechts statt der Verspaetung,
-      // hinter dem Ziel dann keins (sonst doppelt)
-      bool destWarning = departures[i].hasWarning && !departures[i].cancelled;
+      // Warndreieck bei Stoerung oder Ausfall (abschaltbar) an fester
+      // Stelle links vom Trennstrich - das Ziel endet dann davor
+      bool warning = incidents &&
+                     (departures[i].hasWarning || departures[i].cancelled);
 
-      int destMaxWidth = COL_PIPE2 - COL_DEST - DEST_MARGIN;
-      if (destWarning) {
-        destMaxWidth -= (WARNING_ICON_WIDTH + WARNING_ICON_GAP);
-      }
+      int destMaxWidth = (warning ? WARNING_DEST_END : COL_PIPE2) - COL_DEST - DEST_MARGIN;
 
       String dest = departures[i].multiDest
                         ? fitEvenly(departures[i].destination, destMaxWidth)
@@ -343,11 +352,7 @@ static void drawContent(const Departure departures[], int found,
       display.setCursor(COL_DEST, y);
       display.print(dest);
 
-      if (destWarning) {
-        int destTextWidth = textWidth(dest);
-        int iconX = COL_DEST + destTextWidth + WARNING_ICON_GAP + WARNING_ICON_WIDTH / 2;
-        drawWarningTriangle(iconX, y);
-      }
+      if (warning) drawWarningTriangle(WARNING_ICON_X, y);
 
       display.setCursor(COL_PIPE2, y);
       display.print("|");
@@ -390,19 +395,15 @@ static void drawContent(const Departure departures[], int found,
       }
 
       if (departures[i].cancelled) {
-        // Ausfall: Uhrzeit bzw. Minuten durchstreichen, Warndreieck an die
-        // Stelle der Verspaetung (linke Kante dort, wo sonst "+x" beginnt).
-        // Strich an den tatsaechlich gezeichneten Zeichen ausrichten (die
-        // Schrift hat links einen Vorlauf), Hoehe: Mitte der Ziffern
+        // Ausfall: Uhrzeit bzw. Minuten durchstreichen (Warndreieck steht
+        // links vom Trennstrich, siehe oben). Strich an den tatsaechlich
+        // gezeichneten Zeichen ausrichten (die Schrift hat links einen
+        // Vorlauf), Hoehe: Mitte der Ziffern
         display.getTextBounds("0", COL_TIME, y, &tbx, &tby, &tbw, &tbh);
         int strikeY = tby + tbh / 2;
         int strikeX0 = textLeft - STRIKE_OVERHANG;
         int strikeX1 = textRight + STRIKE_OVERHANG;
         display.drawLine(strikeX0, strikeY, strikeX1, strikeY, BLACK);
-
-        display.print(" ");                       // Cursor steht jetzt, wo "+x" begaenne
-        int delayStartX = display.getCursorX() + CANCEL_ICON_SHIFT;
-        drawWarningTriangle(delayStartX + WARNING_ICON_WIDTH / 2, y);
 
       } else if (!asMinutes) {
         // Abweichung 0 (auch eine auf 0 gesetzte -1/-2) nie anzeigen: Die API
@@ -469,19 +470,21 @@ void displayShowSplash(const char* firmwareVersion) {
 
 void displayShowDepartures(const Departure departures[], int found,
                            const String& stationName, char dirLabel,
-                           bool isPage2, bool minutes, bool fullRefresh,
-                           int stationNumber) {
+                           bool isPage2, bool minutes, bool incidents,
+                           bool fullRefresh, int stationNumber) {
   if (fullRefresh) {
     display.fastmodeOff();
     display.clearMemory();
-    drawContent(departures, found, stationName, dirLabel, isPage2, minutes, stationNumber);
+    drawContent(departures, found, stationName, dirLabel, isPage2, minutes, incidents,
+                stationNumber);
     display.update();
   } else {
     // Fast Mode: zweimal hintereinander aktualisieren, verbessert den
     // Kontrast pro Update und wirkt Grauschleier entgegen
     display.fastmodeOn();
     display.clearMemory();
-    drawContent(departures, found, stationName, dirLabel, isPage2, minutes, stationNumber);
+    drawContent(departures, found, stationName, dirLabel, isPage2, minutes, incidents,
+                stationNumber);
     display.update();
     display.update();
   }
@@ -546,15 +549,19 @@ void displayShowApiError() {
 // Erzeugung aufgerufen - die QR-Daten sind nur innerhalb dieses Callbacks
 // gueltig. Die gezeichnete Kantenlaenge landet in qrDrawnSize (0 = Fehler).
 static int qrDrawnSize = 0;
+// Feste Modulgroesse und obere Kante (0 bzw. -1 = passend zu QR_AREA_SIZE,
+// senkrecht mittig). Setzt drawQr() vor der Erzeugung.
+static int qrFixedScale = 0;
+static int qrFixedTop = -1;
 
 static void drawQrCallback(esp_qrcode_handle_t qrcode) {
   int moduleCount = esp_qrcode_get_size(qrcode);
-  int scale = QR_AREA_SIZE / moduleCount;
+  int scale = qrFixedScale > 0 ? qrFixedScale : QR_AREA_SIZE / moduleCount;
   if (scale < 1) scale = 1;
   int qrPixelSize = moduleCount * scale;
 
   int qrX = QR_MARGIN;
-  int qrY = (display.height() - qrPixelSize) / 2;
+  int qrY = qrFixedTop >= 0 ? qrFixedTop : (display.height() - qrPixelSize) / 2;
 
   for (int y = 0; y < moduleCount; y++) {
     for (int x = 0; x < moduleCount; x++) {
@@ -581,9 +588,13 @@ static String escapeWifiQr(const char* text) {
 
 // QR-Code links auf dem Display zeichnen (QR-Generator aus dem ESP32-Core,
 // ESP-IDF-Komponente esp_qrcode; die Version waehlt er selbst, hoechstens
-// QR_MAX_VERSION). Rueckgabe: gezeichnete Kantenlaenge in Pixeln, 0 = Fehler
-// (dann steht "QR-Fehler" an seiner Stelle).
-static int drawQr(const String& payload) {
+// QR_MAX_VERSION). scale/top: feste Modulgroesse und obere Kante (0 bzw.
+// -1 = so gross wie QR_AREA_SIZE erlaubt, senkrecht mittig). Rueckgabe:
+// gezeichnete Kantenlaenge in Pixeln, 0 = Fehler (dann steht "QR-Fehler" an
+// seiner Stelle).
+static int drawQr(const String& payload, int scale = 0, int top = -1) {
+  qrFixedScale = scale;
+  qrFixedTop = top;
   esp_qrcode_config_t cfg = {};
   cfg.display_func = drawQrCallback;
   cfg.max_qrcode_version = QR_MAX_VERSION;
@@ -639,75 +650,86 @@ void displayShowWifiQr(const char* title, const char* qrWlanSsid,
   display.update();
 }
 
-void displayShowLog(const char* firmwareVersion, const char* portalAddress,
-                    const char* portalUntil, int wifiDisconnects, int apiFails) {
+// Einstellungen/Info: kleiner QR-Code zum Portal links oben, Version
+// darunter; rechts IP-Adresse, bis wann das Portal offen ist, WLAN-Name,
+// Signal und Laufzeit (Momentaufnahme beim Aufruf).
+void displayShowInfo(const char* firmwareVersion, const char* portalAddress,
+                     const char* portalUntil) {
   display.fastmodeOff();
   display.clearMemory();
   display.setTextColor(BLACK);
 
-  // Zeilenabstand 18px, damit 7 Zeilen auf die 128px Displayhoehe passen
-  display.setFont(&FreeSansBold9pt8b);
-  display.setCursor(5, 16);
-  display.print("System-Log");
+  String url = "http://" + String(portalAddress) + "/";
+  int qrSize = drawQr(url, INFO_QR_SCALE, INFO_QR_TOP);
+  if (qrSize == 0) qrSize = QR_AREA_SIZE / 2;   // "QR-Fehler" steht dort
+  int textX = QR_MARGIN + qrSize + INFO_TEXT_GAP;
+  int maxTextWidth = display.width() - textX - 2;
 
-  // Firmware-Version rechtsbuendig in der Titelzeile
+  // Version zentriert unter dem QR-Code. Passt sie nicht in die Spalte
+  // (z.B. mit Zusatz "-privat"), Zusatz ab "-" in eine zweite Zeile.
   display.setFont(&FreeSans9pt8b);
-  String versionText = "v" + String(firmwareVersion);
-  display.setCursor(display.width() - textWidth(versionText) - 5, 16);
-  display.print(versionText);
+  String version = "v" + String(firmwareVersion);
+  String version2 = "";
+  int dash = version.indexOf('-');
+  if (textWidth(version) > qrSize && dash > 0) {
+    version2 = version.substring(dash + 1);
+    version = version.substring(0, dash);
+  }
+  int versionY = INFO_QR_TOP + qrSize + 20;
+  int columnWidth = textX - QR_MARGIN - 2;
+  version = fitText(version, columnWidth);
+  display.setCursor(QR_MARGIN + max(0, (qrSize - (int)textWidth(version)) / 2), versionY);
+  display.print(version);
+  if (version2.length() > 0) {
+    version2 = fitText(version2, columnWidth);
+    display.setCursor(QR_MARGIN + max(0, (qrSize - (int)textWidth(version2)) / 2),
+                      versionY + INFO_LINE_HEIGHT);
+    display.print(version2);
+  }
 
-  // Einstellungsportal: Adresse (fett) und bis wann es offen ist
-  display.setCursor(5, 35);
-  display.print("Einstellungen: ");
+  // Titel und IP-Adresse fett
   display.setFont(&FreeSansBold9pt8b);
+  display.setCursor(textX, 16);
+  display.print("Einstellungen/Info");
+  display.setCursor(textX, 38);
   display.print(portalAddress);
+
   display.setFont(&FreeSans9pt8b);
-  display.setCursor(5, 53);
+  int y = 56;
+  display.setCursor(textX, y);
   if (portalUntil != nullptr && portalUntil[0] != '\0') {
-    display.print("Ab jetzt bis ");
+    display.print("Portal offen bis ");
     display.print(portalUntil);
-    display.print(" erreichbar");
   } else {
-    display.print("Ab jetzt 30 Min. erreichbar");
+    display.print("Portal 30 Min. offen");
   }
 
-  // Board-Startzeitpunkt = aktuelle NTP-Zeit minus Laufzeit seit Boot.
-  // Nur gueltig, wenn die Uhr bereits per NTP gestellt wurde - ohne NTP
-  // startet die ESP32-Uhr bei 1970, daher Plausibilitaetsgrenze.
-  const time_t TIME_VALID_MIN = 1700000000; // 14.11.2023
-  time_t now = time(nullptr);
-  display.setCursor(5, 71);
-  display.print("Board-Start: ");
-  if (now >= TIME_VALID_MIN) {
-    time_t bootTime = now - (time_t)(uptimeMs() / 1000ULL);
-    display.print(formatDateTime(bootTime));
-  } else {
-    display.print("unbekannt (kein NTP)");
-  }
+  y += INFO_LINE_HEIGHT;
+  display.setCursor(textX, y);
+  bool connected = WiFi.status() == WL_CONNECTED;
+  String ssid = connected ? utf8ToLatin1(WiFi.SSID()) : String("--");
+  display.print(fitText("WLAN: " + ssid, maxTextWidth));
 
-  // Momentaufnahme der Signalstaerke beim Oeffnen des Log-Screens
-  display.setCursor(5, 89);
-  display.print("WLAN-Signal: ");
-  if (WiFi.status() == WL_CONNECTED) {
+  // Bewertung und Wert, z.B. "Signal: gut, -64 dBm"
+  y += INFO_LINE_HEIGHT;
+  display.setCursor(textX, y);
+  String signal = "Signal: --";
+  if (connected) {
     int rssi = WiFi.RSSI();
-    display.print(rssi);
-    display.print(" dBm (");
-    display.print(wifiQualityText(rssi));
-    display.print(")");
-  } else {
-    display.print("--");
+    signal = "Signal: " + String(wifiQualityText(rssi)) + ", " + String(rssi) + " dBm";
   }
+  display.print(fitText(signal, maxTextWidth));
 
-  // WLAN-Abbrueche seit Start, API-Stoerungen der letzten 24 h
-  display.setCursor(5, 107);
-  // ohne Doppelpunkte, damit auch zweistellige Werte in die Zeile passen
-  display.print("WLAN-Abbr. ");
-  display.print(wifiDisconnects);
-  display.print(" / API-Fails (24h) ");
-  display.print(apiFails);
-
-  display.setCursor(5, 125);
-  display.print("Zur\xFC" "ck: 60s oder 3s halten");
+  // Laufzeit seit dem Start: "3 T 4 h", unter einem Tag "5 h 12 min"
+  y += INFO_LINE_HEIGHT;
+  display.setCursor(textX, y);
+  unsigned long minutesUp = (unsigned long)(uptimeMs() / 60000ULL);
+  unsigned long days = minutesUp / 1440;
+  unsigned long hours = (minutesUp / 60) % 24;
+  String uptime;
+  if (days > 0) uptime = String(days) + " T " + String(hours) + " h";
+  else uptime = String(hours) + " h " + String(minutesUp % 60) + " min";
+  display.print("Laufzeit: " + uptime);
 
   display.update();
 }

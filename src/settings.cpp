@@ -56,6 +56,9 @@ static const char* const KEY_KEY_LEFT = "keyLeft";
 static const char* const KEY_KEY_MID = "keyMid";
 static const char* const KEY_MINUTES = "minutes";
 static const char* const KEY_AUTO_BACK = "autoBack";   // seit 2.4.0
+// Ab 2.5.0 (Anzeige: Stoerungen, Full Refresh)
+static const char* const KEY_SHOW_INC = "showInc";
+static const char* const KEY_FULL_REFRESH = "fullRef";
 static const char* const KEY_NAME1 = "name1";
 static const char* const KEY_NAME2 = "name2";
 
@@ -141,6 +144,8 @@ static void setDefaults(DeviceSettings& s) {
   setKeyDefaults(s, FEATURE_WIFI_QR);
   s.showMinutes = SHOW_MINUTES;
   s.viewAutoBack = VIEW_AUTO_BACK;
+  s.showIncidents = SHOW_INCIDENTS;
+  s.fullRefreshMin = FULL_REFRESH_EVERY;
 }
 
 static bool validKey(uint8_t key, bool middle) {
@@ -177,6 +182,8 @@ static void validate(DeviceSettings& s) {
   if (s.start1 != 'R') s.start1 = 'H';
   s.keyLeft = usableKey(s, s.keyLeft, false);
   s.keyMid = usableKey(s, s.keyMid, true);
+  if (s.fullRefreshMin < FULL_REFRESH_MIN) s.fullRefreshMin = FULL_REFRESH_MIN;
+  if (s.fullRefreshMin > FULL_REFRESH_MAX) s.fullRefreshMin = FULL_REFRESH_MAX;
 }
 
 // ------------------------------------------------------------
@@ -261,6 +268,8 @@ void settingsLoad() {
     readUChar(prefs, KEY_KEY_MID, s.keyMid);
     readBool(prefs, KEY_MINUTES, s.showMinutes);
     readBool(prefs, KEY_AUTO_BACK, s.viewAutoBack);
+    readBool(prefs, KEY_SHOW_INC, s.showIncidents);
+    readUChar(prefs, KEY_FULL_REFRESH, s.fullRefreshMin);
     readString(prefs, KEY_NAME1, s.name1);
     readString(prefs, KEY_NAME2, s.name2);
     prefs.end();
@@ -327,6 +336,8 @@ bool settingsSave() {
   ok &= writeUChar(prefs, KEY_KEY_MID, appSettings.keyMid);
   ok &= writeBool(prefs, KEY_MINUTES, appSettings.showMinutes);
   ok &= writeBool(prefs, KEY_AUTO_BACK, appSettings.viewAutoBack);
+  ok &= writeBool(prefs, KEY_SHOW_INC, appSettings.showIncidents);
+  ok &= writeUChar(prefs, KEY_FULL_REFRESH, appSettings.fullRefreshMin);
   ok &= writeString(prefs, KEY_NAME1, appSettings.name1);
   ok &= writeString(prefs, KEY_NAME2, appSettings.name2);
   prefs.end();
@@ -485,7 +496,11 @@ void settingsPrint() {
   Serial.print(KEY_NAMES[s.keyMid]);
   Serial.println(s.viewAutoBack ? ", Ansicht endet nach 30 s" : ", Ansicht bleibt");
   Serial.print("Abfahrtszeit: ");
-  Serial.println(s.showMinutes ? "Minuten" : "Uhrzeit");
+  Serial.print(s.showMinutes ? "Minuten" : "Uhrzeit");
+  Serial.print(s.showIncidents ? ", Stoerungen anzeigen" : ", Stoerungen aus");
+  Serial.print(", Full Refresh alle ");
+  Serial.print(s.fullRefreshMin);
+  Serial.println(" Min.");
   Serial.print("WLAN-QR: ");
   if (s.keyMid == BTN_WIFI_QR) {
     Serial.print("an, Titel \"");
