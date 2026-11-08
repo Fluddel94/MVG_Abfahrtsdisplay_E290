@@ -6,6 +6,8 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.6.0] – 08.11.2026
+
 ### Neu
 - **Störungstext in der ersten Zeile:** Hat eine der ersten drei Abfahrten
   eine Störungsmeldung, zeigt die erste Zeile Warndreieck, Linie und
