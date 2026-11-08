@@ -31,3 +31,8 @@ void wifiConnLoop();
 // Signal, Kanal und Zugangspunkt der bestehenden Verbindung in den
 // seriellen Monitor (einmal pro Minute aus loop(), nur mit DEBUG_LOG 1).
 void wifiConnLogStatus();
+
+// Neustart mit sauberer Abmeldung vom WLAN (Router gibt die Verbindung
+// sofort frei, statt auf eine Zeitueberschreitung zu warten). Alle
+// Neustarts des Sketches laufen hier durch. Kehrt nicht zurueck.
+void restartCleanly();

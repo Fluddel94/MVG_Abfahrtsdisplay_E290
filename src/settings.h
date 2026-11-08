@@ -53,6 +53,8 @@ struct DeviceSettings {
   bool showMinutes;
   // Warndreieck bei Stoerung/Ausfall (sonst nur durchgestrichene Zeit)
   bool showIncidents;
+  // Stoerungstext in der ersten Zeile (nur mit showIncidents)
+  bool incidentText;
   // Full Refresh alle so viele Minuten (FULL_REFRESH_MIN..MAX)
   uint8_t fullRefreshMin;
 

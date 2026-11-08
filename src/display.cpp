@@ -78,6 +78,12 @@ static_assert(COL_ICON + LINE_ICON_MAX_WIDTH < COL_DEST,
 static_assert(WARNING_ICON_X + WARNING_ICON_WIDTH / 2 < COL_PIPE2,
               "Warndreieck ueberlappt den Trennstrich");
 
+// --- Stoerungszeile (erste Zeile: Dreieck, "S2:", Stoerungstext) ---
+#define INCIDENT_ICON_X       9   // Mitte des Dreiecks (3..15)
+#define INCIDENT_TEXT_X      20   // Linie fett ab hier
+#define INCIDENT_LABEL_GAP    4   // Abstand Linie -> Text
+#define INCIDENT_RIGHT_MARGIN 3   // Text endet so weit vor dem rechten Rand
+
 // --- Ausfall (durchgestrichene Uhrzeit) ---
 #define STRIKE_OVERHANG 2        // Ueberstand des Strichs links und rechts
 
@@ -112,6 +118,16 @@ static String fitText(String text, int maxWidth) {
   }
   result.trim();
   return result + ".";
+}
+
+// Wie fitText, aber mit "..." am Ende (Stoerungstext)
+static String fitEllipsis(String text, int maxWidth) {
+  if (textWidth(text) <= maxWidth) return text;
+  while (text.length() > 1 && textWidth(text + "...") > maxWidth) {
+    text = text.substring(0, text.length() - 1);
+  }
+  text.trim();
+  return text + "...";
 }
 
 // Kuerzt mehrere Ziele "A/B/C" (Fluegelzug) gleichmaessig: Jedes Ziel wird
@@ -192,10 +208,12 @@ static void drawWarningTriangle(int x, int yBaseline) {
 // mit Hinweis "(2/2)" (isPage2). Bei stationNumber 1/2 steht die Nummer
 // weiss in einem schwarzen Kaestchen vor dem Namen. minutes: Abfahrtszeit
 // als Minuten bis zur Abfahrt. incidents: Warndreieck bei Stoerung/Ausfall.
+// incidentDep: Abfahrt, deren Stoerungstext die erste Zeile zeigt (die
+// Abfahrten folgen dann ab Zeile 2), nullptr = keine Stoerungszeile.
 static void drawContent(const Departure departures[], int found,
                         const String& stationName, char dirLabel,
                         bool isPage2, bool minutes, bool incidents,
-                        int stationNumber) {
+                        int stationNumber, const Departure* incidentDep) {
   display.setTextColor(BLACK);
 
   display.setFont(&FreeSansBold12pt7b);
@@ -320,13 +338,31 @@ static void drawContent(const Departure departures[], int found,
     if (now > 1700000000) nowMinute = (long)(now / 60);
   }
 
+  // Stoerungszeile: Dreieck, Linie fett mit Doppelpunkt, Text (mit "..."
+  // gekuerzt). Die Abfahrten ruecken eine Zeile nach unten.
+  int firstRow = 0;
+  if (incidentDep != nullptr && found > 0) {
+    int y = yStart;
+    drawWarningTriangle(INCIDENT_ICON_X, y);
+    display.setFont(&FreeSansBold9pt8b);
+    display.setCursor(INCIDENT_TEXT_X, y);
+    display.print(incidentDep->line + ":");
+    int textX = display.getCursorX() + INCIDENT_LABEL_GAP;
+    display.setFont(&FreeSans9pt8b);
+    display.setCursor(textX, y);
+    display.print(fitEllipsis(incidentDep->incident,
+                              display.width() - INCIDENT_RIGHT_MARGIN - textX));
+    display.drawLine(0, y + 6, display.width(), y + 6, BLACK);
+    firstRow = 1;
+  }
+
   if (found == 0) {
     display.setFont(&FreeSans9pt8b);
     display.setCursor(5, yStart);
     display.print(isPage2 ? "Keine weiteren Abfahrten" : "Keine Abfahrten gefunden");
   } else {
     for (int i = 0; i < found; i++) {
-      int y = yStart + i * rowHeight;
+      int y = yStart + (i + firstRow) * rowHeight;
 
       display.setFont(&FreeSans9pt8b);
 
@@ -471,12 +507,13 @@ void displayShowSplash(const char* firmwareVersion) {
 void displayShowDepartures(const Departure departures[], int found,
                            const String& stationName, char dirLabel,
                            bool isPage2, bool minutes, bool incidents,
-                           bool fullRefresh, int stationNumber) {
+                           bool fullRefresh, int stationNumber,
+                           const Departure* incidentDep) {
   if (fullRefresh) {
     display.fastmodeOff();
     display.clearMemory();
     drawContent(departures, found, stationName, dirLabel, isPage2, minutes, incidents,
-                stationNumber);
+                stationNumber, incidentDep);
     display.update();
   } else {
     // Fast Mode: zweimal hintereinander aktualisieren, verbessert den
@@ -484,7 +521,7 @@ void displayShowDepartures(const Departure departures[], int found,
     display.fastmodeOn();
     display.clearMemory();
     drawContent(departures, found, stationName, dirLabel, isPage2, minutes, incidents,
-                stationNumber);
+                stationNumber, incidentDep);
     display.update();
     display.update();
   }

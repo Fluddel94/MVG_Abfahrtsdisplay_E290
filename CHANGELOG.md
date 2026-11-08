@@ -6,6 +6,27 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Störungstext in der ersten Zeile:** Hat eine der ersten drei Abfahrten
+  eine Störungsmeldung, zeigt die erste Zeile Warndreieck, Linie und
+  Meldung (z.B. „S2: Notarzteinsatz auf der Strecke“, zu lange Texte mit
+  „...“ gekürzt), darunter drei Abfahrten. Es zählt die Meldung der
+  frühesten gestörten Abfahrt; Ausfälle ohne Meldung und „Fährt nur bis …“
+  bleiben beim Symbol. Gilt für Station 1 (auch in der Richtungsansicht),
+  nicht für Station 2; Seite 2 beginnt dann mit der vierten Abfahrt.
+  Im Portal unter „Anzeige“ → „Störungen zeigen als“: *Symbol* oder
+  *Text + Symbol* (Standard, auch nach einem Update).
+- **Neustart bei dauerhaften Abruffehlern:** Scheitern die Abrufe trotz
+  WLAN 10 Minuten am Stück, startet das Display neu – nur wenn seit dem
+  Start schon einmal ein Abruf geklappt hat und das Portal nicht offen ist.
+
+### Geändert
+- Vor jedem Neustart (Firmware-Update, Werkseinstellungen, Abruffehler)
+  meldet sich das Display sauber vom WLAN ab.
+- Technik: neue Einstellung im Gerätespeicher `incText`; `Departure.incident`
+  enthält den Text der ersten `INCIDENT`-Meldung; neue Funktion
+  `restartCleanly()` in `wifi_conn`.
+
 ## [2.5.0] – 31.10.2026
 
 ### Neu

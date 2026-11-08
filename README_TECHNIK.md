@@ -196,6 +196,14 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   ergänzen. Das Dreieck (Störung und Ausfall) zeichnet `drawContent()` in
   `display.cpp` an fester Stelle links vom Trennstrich (`WARNING_ICON_X`),
   nur bei `showIncidents`; das Ziel endet dann bei `WARNING_DEST_END`.
+- **Störungszeile:** `parseDepartures()` merkt sich je Abfahrt den Text der
+  ersten `INCIDENT`-Meldung (`Departure.incident`, Latin-1, höchstens
+  `INCIDENT_TEXT_MAX` Zeichen); zusammengefasste Fahrten und Ersatzzüge
+  übernehmen ihn. `incidentRowIndex()` (.ino) wählt die früheste der ersten
+  drei Abfahrten mit Text (nur Station 1, `showIncidents` und
+  `incidentText`); `drawContent()` zeichnet dann Dreieck, Linie fett, Text
+  (`fitEllipsis()`) in Zeile 1 und drei Abfahrten darunter. Seite 2 beginnt
+  in dem Fall mit der vierten Abfahrt.
 - **Verkehrsmittel-Filter:** `downloadDepartures()` hängt
   `&transportTypes=…` an die URL. Ohne diesen Parameter liefert die API nur
   S-Bahn, U-Bahn, Tram und Stadtbus (beobachtet).
@@ -228,6 +236,13 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `WIFI_ERROR_SCREEN_DELAY_MS` (20 s). Der WLAN-Stromsparmodus ist aus
   (`WiFi.setSleep(false)` in `setup()`) – im Sparmodus trennten manche
   Router das Board immer wieder.
+- **Neustart bei Abruffehlern:** Scheitern die Abrufe bei bestehendem WLAN
+  `API_RESTART_AFTER_MS` (10 Min.) am Stück, startet das Gerät neu – nur,
+  wenn seit dem Start schon ein Abruf geklappt hat (`everFetched`, sonst
+  droht bei einem längeren MVG-Ausfall eine Neustart-Schleife) und das
+  Portal nicht offen ist. WLAN-Ausfälle zählen nicht mit. Alle Neustarts
+  laufen über `restartCleanly()` (`wifi_conn`), das sich vorher mit
+  `WiFi.disconnect()` vom WLAN abmeldet.
 - **Antworten als Datenstrom:** Die MVG antwortet ohne Längenangabe und
   nicht in Blöcken. `fetchJsonStream()` liest die Antwort mit
   `HttpBodyStream` (wartet bis `HTTP_TIMEOUT_MS` auf weitere Daten) direkt
@@ -262,7 +277,8 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   speichert sie); seit 2.4.0 `autoBack` (Auto-Reset der Tasten-Ansicht);
   seit 2.5.0 `showInc` (Warndreieck, Standard `SHOW_INCIDENTS`) und
   `fullRef` (Full Refresh alle n Minuten, Standard `FULL_REFRESH_EVERY`,
-  begrenzt auf `FULL_REFRESH_MIN`..`FULL_REFRESH_MAX`); „umschaltbar“ ist `dir1` `U` im
+  begrenzt auf `FULL_REFRESH_MIN`..`FULL_REFRESH_MAX`); seit 2.6.0
+  `incText` (Störungstext in Zeile 1, Standard `SHOW_INCIDENT_TEXT`); „umschaltbar“ ist `dir1` `U` im
   Speicher, im NVS als `dirView` + `dir1` `B` (damit 2.2.0 nach einem
   Downgrade passt; auch `zentrumIsH`, `defZentrum`, `qrOn` werden weiter
   geschrieben). Fehlen die neuen Schlüssel (Update von 2.2.0), übernimmt

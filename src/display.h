@@ -21,12 +21,16 @@ void displayShowSplash(const char* firmwareVersion);
 //   false: keins, ausgefallene Fahrten nur durchgestrichen.
 // stationNumber = 1 oder 2: Nummer im schwarzen Kaestchen vor dem Namen
 //   (nur bei zwei Stationen), 0 = ohne.
+// incidentDep: erste Zeile = Stoerungstext dieser Abfahrt (Dreieck, "S2:",
+//   Text mit "..." gekuerzt), die Abfahrten folgen darunter (dann hoechstens
+//   3 uebergeben). nullptr = keine Stoerungszeile.
 // fullRefresh = true: sauberer Full Refresh, false: Fast Mode (schneller,
 //   doppeltes Update gegen Grauschleier).
 void displayShowDepartures(const Departure departures[], int found,
                            const String& stationName, char dirLabel,
                            bool isPage2, bool minutes, bool incidents,
-                           bool fullRefresh, int stationNumber = 0);
+                           bool fullRefresh, int stationNumber = 0,
+                           const Departure* incidentDep = nullptr);
 
 // Fehlerbildschirme
 // WLAN-Fehler mit vermuteter Ursache und optionalem Hinweis ("" = keiner),

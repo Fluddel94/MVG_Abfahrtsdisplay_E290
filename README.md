@@ -52,6 +52,9 @@ Wer selbst kompilieren oder den Code ändern möchte: **[README_TECHNIK.md](READ
 - **Ausfälle und Störungen:** Fällt ein Zug aus, ist die Uhrzeit
   durchgestrichen; bei Störungen und Ausfällen steht ein Warndreieck vor der
   Uhrzeit (abschaltbar). Endet ein Zug früher, steht das tatsächliche Ziel da.
+- **Störungstext:** Gibt es bei einer der nächsten drei Abfahrten eine
+  Störung, steht die Meldung in der ersten Zeile (z.B. „S2: Notarzteinsatz
+  auf der Strecke“), darunter drei Abfahrten (abschaltbar, nur Station 1).
 - **Geteilte Züge** (z.B. S1 Flughafen / Freising) erscheinen als eine Zeile –
   auch Regionalzüge, deren Zugteile verschiedene Liniennummern haben (z.B.
   BRB RB 55/56/57, Symbol „RB“, Ziele gekürzt: „Lenggri./Tegerns.“).
@@ -191,7 +194,13 @@ Außerdem:
   automatisch einer freien Taste zugeordnet.
 - **Anzeige:** Abfahrtszeit als *Uhrzeit* (10:34 +2) oder *Minuten*
   (**4** min). Häkchen „Störungen anzeigen“ (Standard: an): ohne Häkchen
-  kein Warndreieck, ausgefallene Fahrten sind nur durchgestrichen.
+  kein Warndreieck, ausgefallene Fahrten sind nur durchgestrichen. Mit
+  Häkchen: *Störungen zeigen als* *Symbol* (nur Warndreieck) oder
+  *Text + Symbol* (Standard): Hat eine der ersten drei Abfahrten eine
+  Störungsmeldung, zeigt die erste Zeile Linie und Meldung der frühesten
+  davon, darunter drei Abfahrten. Gilt für Station 1 (auch beim Wechsel der
+  Richtung), nicht für Station 2; Seite 2 beginnt dann mit der vierten
+  Abfahrt. Zu lange Meldungen werden mit „...“ gekürzt.
   *Full Refresh alle … Minuten* (Standard 10, 1–60): so oft zeichnet das
   Display komplett neu (kurzes Flackern, entfernt Schatten alter Anzeigen),
   dazwischen schnelle Updates.

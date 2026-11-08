@@ -1,5 +1,5 @@
 // Version: 2.5.0
-// Letzte Änderung: 31.10.2026 20:00
+// Letzte Änderung: 08.11.2026 14:27
 #define FW_VERSION "2.5.0"
 
 // ------------------------------------------------------------
@@ -124,6 +124,9 @@ bool hasData[2] = { false, false };
 bool apiRetryPending = false;
 bool apiFailing = false;
 unsigned long failSince = 0;
+// Seit dem Start hat schon ein Abruf geklappt (Bedingung fuer den Neustart
+// nach API_RESTART_AFTER_MS, verhindert eine Neustart-Schleife)
+bool everFetched = false;
 
 // WLAN-Abbrueche seit dem Start (fuer Erweiterungen, siehe extras.h;
 // API-Stoerungen: siehe stats.cpp)
@@ -330,6 +333,8 @@ void loop() {
   if (currentState == STATE_WIFI_ERROR) {
     Serial.println("WLAN wiederhergestellt!");
     currentState = STATE_NORMAL;
+    // Fehlschlaege ohne WLAN zaehlen nicht fuer Ueberbruecken/Neustart
+    apiFailing = false;
     setupScreenShown = false;   // IP-Adresse kann sich geaendert haben
     if (settingsHasStation()) attemptUpdate(true, true);
     updateCounter = 0;
@@ -354,6 +359,14 @@ void loop() {
   if (!handleKeysAndScreens()) return;
 
   if (currentState == STATE_API_ERROR) {
+    // Scheitern die Abrufe trotz WLAN schon sehr lange, hilft oft ein
+    // Neustart (z.B. wenn die Netzwerk-/TLS-Verbindung des Geraets haengt).
+    // Nicht bei offenem Portal (Nutzer koennte gerade etwas einstellen).
+    if (apiFailing && everFetched && !portalIsOpen() &&
+        millis() - failSince >= API_RESTART_AFTER_MS) {
+      Serial.println("Abrufe scheitern seit 10 Minuten - Neustart");
+      restartCleanly();
+    }
     if (millis() - lastErrorRetry >= ERROR_RETRY_INTERVAL_MS) {
       Serial.println("Erneuter API-Versuch nach Fehler...");
       attemptUpdate(true, true);
@@ -591,6 +604,7 @@ bool fetchStation(int index) {
   }
   lastSuccess[index] = millis();
   hasData[index] = true;
+  everFetched = true;
   return true;
 }
 
@@ -608,19 +622,40 @@ void redrawFromCache(bool fullRefresh) {
     count = dir == 'H' ? cacheDirHCount : cacheDirRCount;
   }
 
-  // Seite 2 (Abfahrt 5-8) nur bei Station 1
+  // Stoerungszeile (nur Station 1): Seite 1 zeigt dann den Text und drei
+  // Abfahrten, Seite 2 beginnt mit der vierten
+  int incidentIndex = activeStation == 0 ? incidentRowIndex(list, count) : -1;
+  int page1Rows = incidentIndex >= 0 ? MAX_DEPARTURES_SHOWN - 1 : MAX_DEPARTURES_SHOWN;
+
+  // Seite 2 (Abfahrt 5-8 bzw. 4-7) nur bei Station 1
   bool page2 = activeKey == BTN_PAGE2 && activeStation == 0;
-  int offset = page2 ? MAX_DEPARTURES_SHOWN : 0;
+  int offset = page2 ? page1Rows : 0;
   count -= offset;
   if (count < 0) count = 0;
-  if (count > MAX_DEPARTURES_SHOWN) count = MAX_DEPARTURES_SHOWN;
+  if (count > (page2 ? MAX_DEPARTURES_SHOWN : page1Rows)) {
+    count = page2 ? MAX_DEPARTURES_SHOWN : page1Rows;
+  }
 
   // Nummer im Header nur, wenn Station 2 erreichbar ist
   int number = station2Used() ? activeStation + 1 : 0;
   displayShowDepartures(list + offset, count,
                         activeStation == 1 ? station2Name : stationName,
                         headerDirection(dir), page2, appSettings.showMinutes,
-                        appSettings.showIncidents, fullRefresh, number);
+                        appSettings.showIncidents, fullRefresh, number,
+                        page2 || incidentIndex < 0 ? nullptr : &list[incidentIndex]);
+}
+
+// Stoerungszeile: Index der fruehesten der ersten drei Abfahrten mit
+// Stoerungstext (INCIDENT), -1 = keine Zeile (auch wenn im Portal
+// abgeschaltet). Nur Seite 1 ist massgeblich - auch fuer Seite 2, damit
+// dort keine Abfahrt fehlt.
+int incidentRowIndex(const Departure list[], int count) {
+  if (!appSettings.showIncidents || !appSettings.incidentText) return -1;
+  int limit = min(count, MAX_DEPARTURES_SHOWN - 1);
+  for (int i = 0; i < limit; i++) {
+    if (list[i].incident.length() > 0) return i;
+  }
+  return -1;
 }
 
 // Nach Tastendruck/Auto-Reset: neu zeichnen ohne Abruf. Bei einer

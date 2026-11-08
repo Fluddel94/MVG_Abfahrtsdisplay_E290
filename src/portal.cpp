@@ -20,6 +20,7 @@
 #include "settings.h"
 #include "mvg_api.h"
 #include "portal.h"
+#include "wifi_conn.h"   // restartCleanly()
 
 // Link zur Anleitung (Hilfe zu den Einstellungen)
 #define PORTAL_HELP_URL "https://github.com/Fluddel94/MVG_Abfahrtsdisplay_E290#einstellungsportal"
@@ -118,6 +119,9 @@ input[type=number]{width:5em;box-sizing:border-box;padding:8px;font-size:1em;bor
 <div class="seg"><label><input type="radio" name="min" value="0" id="min0"><span>Uhrzeit<small>10:34 +2</small></span></label><label><input type="radio" name="min" value="1" id="min1"><span>Minuten<small>4 min</small></span></label></div>
 <div class="cb" style="margin-top:14px"><input type="checkbox" id="inc" name="inc" value="1"><label for="inc">St&ouml;rungen anzeigen</label></div>
 <p class="hint">Warndreieck vor der Abfahrtszeit bei St&ouml;rungen und Ausf&auml;llen. Ohne H&auml;kchen sind ausgefallene Fahrten nur durchgestrichen.</p>
+<div id="incw"><h3 style="margin-top:10px">St&ouml;rungen zeigen als</h3>
+<div class="seg"><label><input type="radio" name="it" value="0" id="it0"><span>Symbol<small>hinter der Abfahrt</small></span></label><label><input type="radio" name="it" value="1" id="it1"><span>Text + Symbol<small>Meldung in Zeile 1</small></span></label></div>
+<p class="hint">Mit Text steht die Meldung der n&auml;chsten gest&ouml;rten Abfahrt (von den ersten drei) in der ersten Zeile, darunter drei Abfahrten. Gilt f&uuml;r Station 1, nicht f&uuml;r Seite 2 und Station 2.</p></div>
 <h3 style="margin-top:14px"><label for="fr" style="margin:0">Full Refresh alle</label></h3>
 <p style="margin:4px 0"><input type="number" id="fr" name="fr" min="1" max="60" step="1" inputmode="numeric"> Minuten</p><p class="err" id="ef"></p>
 <p class="hint">Komplettes Neuzeichnen des Displays (kurzes Flackern) gegen Schatten alter Anzeigen, dazwischen schnelle Updates. Standard 10, m&ouml;glich 1&ndash;60.</p></section>
@@ -335,6 +339,7 @@ $('help').href=S.help;$('id1').value=sid[1]=S.station;$('id2').value=sid[2]=S.st
 $('d1').value=S.d1;$('d2').value=S.dir2;
 [['z1',S.z1],['z2',S.z2],['s1',S.s1],['min',S.min?'1':'0']].forEach(([n,v])=>{const r=document.querySelector('input[name='+n+'][value="'+v+'"]');if(r)r.checked=true;});
 K.L=S.keyL;K.M=S.keyM;$('back').checked=S.back!==false;$('inc').checked=S.inc!==false;$('fr').value=S.fr||10;
+$('it'+(S.it===false?0:1)).checked=true;const incw=()=>{$('incw').style.display=$('inc').checked?'':'none';};$('inc').addEventListener('change',incw);incw();
 TY.forEach((t,i)=>{$(t+'1').checked=S[t];$(t+'2').checked=!!(S.types2&(1<<i));});
 $('qrTitle').value=S.qrTitle;$('qrSsid').value=S.qrSsid;if(S.qrPassSet)$('qrPass').placeholder='unverändert';
 parseSel(1,S.lines1);parseSel(2,S.lines2);
@@ -441,6 +446,7 @@ static void handleRoot() {
     doc["min"] = s.showMinutes;
     doc["back"] = s.viewAutoBack;   // ab 2.4.0
     doc["inc"] = s.showIncidents;   // ab 2.5.0
+    doc["it"] = s.incidentText;     // ab 2.6.0
     doc["fr"] = s.fullRefreshMin;
     doc["sbahn"] = s.showSbahn;
     doc["ubahn"] = s.showUbahn;
@@ -494,7 +500,8 @@ static void handleSave() {
   // Richtung Station 1 (d1): B alle, U umschaltbar, H/R nur diese
   // Kennung; Zentrum-Kennung z1/z2: H, R oder K (keine); Startansicht s1
   // H/R. Tasten keyL/keyM (BTN_...), Abfahrtszeit min 0/1, Auto-Reset
-  // back (Haekchen), Stoerungen inc (Haekchen), Full Refresh fr (Minuten).
+  // back (Haekchen), Stoerungen inc (Haekchen), Stoerungstext it 0/1 (fehlt
+  // = unveraendert), Full Refresh fr (Minuten).
   // Unbrauchbare Werte korrigiert settingsSave() (validate).
   s.dir1 = formChar("d1", "BUHR", 'B');
   s.zentrum1 = formChar("z1", "HRK", 'K');
@@ -505,6 +512,7 @@ static void handleSave() {
   s.showMinutes = server->arg("min") == "1";
   s.viewAutoBack = server->hasArg("back");
   s.showIncidents = server->hasArg("inc");
+  if (server->hasArg("it")) s.incidentText = server->arg("it") == "1";
   // Full Refresh: leer/ungueltig = bisheriger Wert, sonst 1..60 (validate)
   long refreshMin = server->arg("fr").toInt();
   if (refreshMin > 0) s.fullRefreshMin = (uint8_t)min(refreshMin, (long)FULL_REFRESH_MAX);
@@ -805,13 +813,13 @@ bool portalLoop() {
   if (pendingRestart) {
     Serial.println("Portal: Firmware-Update fertig, Neustart");
     delay(1000);   // Antwort noch ausliefern
-    ESP.restart();
+    restartCleanly();
   }
   if (pendingReset) {
     Serial.println("Portal: Werkseinstellungen, Neustart");
     settingsFactoryReset();
     delay(1000);   // Antwortseite noch ausliefern
-    ESP.restart();
+    restartCleanly();
   }
   if (!pendingSave) return false;
   {

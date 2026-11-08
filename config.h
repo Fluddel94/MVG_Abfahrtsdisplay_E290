@@ -83,6 +83,12 @@
 // 0 = keins, ausgefallene Fahrten nur mit durchgestrichener Zeit.
 // Standardwert, im Portal unter "Anzeige" einstellbar.
 #define SHOW_INCIDENTS 1
+// Nur mit SHOW_INCIDENTS 1: 1 = Stoerungstext der naechsten gestoerten
+// Abfahrt (unter den ersten drei) in der ersten Zeile, darunter drei
+// Abfahrten - gilt fuer Station 1 (auch Richtungsansicht), nicht fuer
+// Seite 2 und Station 2. 0 = nur Warndreieck. Standardwert, im Portal unter
+// "Anzeige" einstellbar.
+#define SHOW_INCIDENT_TEXT 1
 
 // ============================================================
 // ZUSATZFUNKTIONEN (optional, standardmaessig aus)
@@ -153,6 +159,10 @@
 // ERROR_RETRY_INTERVAL_MS erneut versucht, ohne die Tasten zu blockieren.
 // Erst wenn so lange kein Abruf geklappt hat: Fehlerbildschirm + API-Fail.
 #define API_ERROR_SCREEN_DELAY_MS 60000UL
+// Scheitern die Abrufe so lange am Stueck (bei bestehendem WLAN), startet
+// das Geraet neu - aber nur, wenn seit dem Start schon einmal ein Abruf
+// geklappt hat (sonst Neustart-Schleife, falls die MVG laenger ausfaellt).
+#define API_RESTART_AFTER_MS 600000UL
 // Startbildschirm (Projektname + Version) mindestens so lange zeigen.
 // WLAN, Uhrzeit und erster Abruf laufen im Hintergrund weiter.
 #define SPLASH_DURATION_MS 5000UL

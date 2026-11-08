@@ -59,6 +59,7 @@ static const char* const KEY_AUTO_BACK = "autoBack";   // seit 2.4.0
 // Ab 2.5.0 (Anzeige: Stoerungen, Full Refresh)
 static const char* const KEY_SHOW_INC = "showInc";
 static const char* const KEY_FULL_REFRESH = "fullRef";
+static const char* const KEY_INC_TEXT = "incText";   // seit 2.6.0
 static const char* const KEY_NAME1 = "name1";
 static const char* const KEY_NAME2 = "name2";
 
@@ -145,6 +146,7 @@ static void setDefaults(DeviceSettings& s) {
   s.showMinutes = SHOW_MINUTES;
   s.viewAutoBack = VIEW_AUTO_BACK;
   s.showIncidents = SHOW_INCIDENTS;
+  s.incidentText = SHOW_INCIDENT_TEXT;
   s.fullRefreshMin = FULL_REFRESH_EVERY;
 }
 
@@ -269,6 +271,7 @@ void settingsLoad() {
     readBool(prefs, KEY_MINUTES, s.showMinutes);
     readBool(prefs, KEY_AUTO_BACK, s.viewAutoBack);
     readBool(prefs, KEY_SHOW_INC, s.showIncidents);
+    readBool(prefs, KEY_INC_TEXT, s.incidentText);
     readUChar(prefs, KEY_FULL_REFRESH, s.fullRefreshMin);
     readString(prefs, KEY_NAME1, s.name1);
     readString(prefs, KEY_NAME2, s.name2);
@@ -337,6 +340,7 @@ bool settingsSave() {
   ok &= writeBool(prefs, KEY_MINUTES, appSettings.showMinutes);
   ok &= writeBool(prefs, KEY_AUTO_BACK, appSettings.viewAutoBack);
   ok &= writeBool(prefs, KEY_SHOW_INC, appSettings.showIncidents);
+  ok &= writeBool(prefs, KEY_INC_TEXT, appSettings.incidentText);
   ok &= writeUChar(prefs, KEY_FULL_REFRESH, appSettings.fullRefreshMin);
   ok &= writeString(prefs, KEY_NAME1, appSettings.name1);
   ok &= writeString(prefs, KEY_NAME2, appSettings.name2);
@@ -497,7 +501,8 @@ void settingsPrint() {
   Serial.println(s.viewAutoBack ? ", Ansicht endet nach 30 s" : ", Ansicht bleibt");
   Serial.print("Abfahrtszeit: ");
   Serial.print(s.showMinutes ? "Minuten" : "Uhrzeit");
-  Serial.print(s.showIncidents ? ", Stoerungen anzeigen" : ", Stoerungen aus");
+  Serial.print(!s.showIncidents ? ", Stoerungen aus"
+               : s.incidentText ? ", Stoerungen mit Text" : ", Stoerungen als Symbol");
   Serial.print(", Full Refresh alle ");
   Serial.print(s.fullRefreshMin);
   Serial.println(" Min.");

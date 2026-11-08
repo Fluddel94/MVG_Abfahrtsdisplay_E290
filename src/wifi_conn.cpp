@@ -111,3 +111,12 @@ void wifiConnLoop() {
   Serial.printf("WLAN: neuer Verbindungsversuch (%d)\n", failCount + 1);
   wifiConnBegin(ssid.c_str(), password.c_str());
 }
+
+void restartCleanly() {
+  Serial.println("Neustart (WLAN wird vorher abgemeldet)");
+  if (WiFi.status() == WL_CONNECTED) {
+    WiFi.disconnect();
+    delay(200);   // Abmeldung noch senden
+  }
+  ESP.restart();
+}

@@ -29,6 +29,7 @@ struct RawEntry {
   bool hasPlatform;   // "platform" nur bei Schienenverkehr vorhanden
   int platform;
   bool multiDest;      // destination = mehrere Ziele "A/B/C"
+  String incident;     // erste INCIDENT-Meldung (Latin-1), leer = keine
   char direction;     // 'H' oder 'R' laut lineId, '?' falls keins von beiden
   long long plannedTime;
 };
@@ -590,6 +591,7 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
     r.superseded = false;
     r.hasWarning = false;
     r.multiDest = false;
+    r.incident = "";
 
     // Verkehrsmittel erkennen (fuer das Liniensymbol). Der Feldname ist
     // nicht offiziell dokumentiert: "transportType" (bgw-pt/v3), als
@@ -632,6 +634,19 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
         r.hasWarning = true;
       }
 
+      // Text der ersten Stoerung (fuer die Stoerungszeile im Display)
+      if (typeStr == "INCIDENT" && r.incident.length() == 0) {
+        const char* msg = info["message"];
+        if (msg != nullptr) {
+          r.incident = utf8ToLatin1(String(msg));
+          r.incident.replace("\n", " ");
+          r.incident.trim();
+          if (r.incident.length() > INCIDENT_TEXT_MAX) {
+            r.incident = r.incident.substring(0, INCIDENT_TEXT_MAX);
+          }
+        }
+      }
+
       if (typeStr == "EARLY_TERMINATION") {
         r.earlyTermination = true;
         const char* msg = info["message"];
@@ -664,6 +679,7 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
 
       // Passenden, echten Ersatzzug gefunden
       raw[j].hasWarning = true;
+      if (raw[j].incident.length() == 0) raw[j].incident = raw[i].incident;
       raw[i].superseded = true;
       break;
     }
@@ -756,6 +772,7 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
       if (!sameLine) mixedLines = true;
       if (raw[j].realtime && raw[j].delayMin < minRealtimeDelay) minRealtimeDelay = raw[j].delayMin;
       raw[i].hasWarning = raw[i].hasWarning || raw[j].hasWarning;
+      if (raw[i].incident.length() == 0) raw[i].incident = raw[j].incident;
       raw[i].selected = raw[i].selected || raw[j].selected;
       raw[i].realtime = raw[i].realtime || raw[j].realtime;
       raw[j].superseded = true;
@@ -814,6 +831,7 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
     d.realtime = raw[i].realtime;
     d.isBus = raw[i].isBus;
     d.multiDest = raw[i].multiDest;
+    d.incident = raw[i].incident;
     d.time = formatTime(raw[i].plannedTime);
     d.planned = (time_t)(raw[i].plannedTime / 1000);
 

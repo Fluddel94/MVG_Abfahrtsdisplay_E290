@@ -57,6 +57,10 @@ Changes per version: [CHANGELOG.md](CHANGELOG.md) (German).
   struck through; disruptions and cancellations show a warning triangle in
   front of the time (can be switched off). If a train ends early, the
   actual destination is shown.
+- **Disruption text:** if one of the next three departures has a
+  disruption, its message is shown in the first row (e.g. "S2:
+  Notarzteinsatz auf der Strecke"), with three departures below (can be
+  switched off, stop 1 only).
 - **Split trains** (e.g. S1 airport / Freising) appear as one row – also
   regional trains whose parts have different line numbers (e.g. BRB
   RB 55/56/57, symbol "RB", destinations shortened: "Lenggri./Tegerns.").
@@ -195,7 +199,13 @@ Also:
 - **Anzeige** (display): departure time as *Uhrzeit* (clock time,
   10:34 +2) or *Minuten* (**4** min). Checkbox "Störungen anzeigen" (show
   disruptions, default: on): without it there is no warning triangle, and
-  cancelled trips are only struck through. *Full Refresh alle … Minuten*
+  cancelled trips are only struck through. With it: *Störungen zeigen als*
+  (show disruptions as) *Symbol* (warning triangle only) or *Text + Symbol*
+  (default): if one of the first three departures has a disruption
+  message, the first row shows the line and message of the earliest one,
+  with three departures below. Applies to stop 1 (also when switching
+  direction), not to stop 2; page 2 then starts with the fourth departure.
+  Messages that are too long are shortened with "...". *Full Refresh alle … Minuten*
   (default 10, 1–60): how often the display redraws completely (brief
   flicker, removes ghosting of old content), with quick updates in between.
 - **Tasten** (buttons): shows the default view and the functions of the

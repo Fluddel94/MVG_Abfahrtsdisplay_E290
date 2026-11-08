@@ -196,6 +196,14 @@ folder, the Arduino IDE only compiles this folder.
   `display.cpp` draws the triangle (disruption and cancellation) at a fixed
   position left of the separator (`WARNING_ICON_X`), only with
   `showIncidents`; the destination then ends at `WARNING_DEST_END`.
+- **Disruption row:** `parseDepartures()` keeps the text of the first
+  `INCIDENT` message per departure (`Departure.incident`, Latin-1, at most
+  `INCIDENT_TEXT_MAX` characters); merged trips and replacement trains
+  take it over. `incidentRowIndex()` (.ino) picks the earliest of the
+  first three departures with a text (stop 1 only, `showIncidents` and
+  `incidentText`); `drawContent()` then draws the triangle, the line in
+  bold and the text (`fitEllipsis()`) in row 1 and three departures below.
+  Page 2 then starts with the fourth departure.
 - **Transport filter:** `downloadDepartures()` appends `&transportTypes=…`
   to the URL. Without this parameter the API only returns S-Bahn, U-Bahn,
   tram and city bus (observed).
@@ -229,6 +237,13 @@ folder, the Arduino IDE only compiles this folder.
   `WIFI_ERROR_SCREEN_DELAY_MS` (20 s). Wi-Fi power saving is off
   (`WiFi.setSleep(false)` in `setup()`) – with power saving, some routers
   kept disconnecting the board.
+- **Restart on request failures:** if requests keep failing for
+  `API_RESTART_AFTER_MS` (10 min) while Wi-Fi is connected, the device
+  restarts – only if a request has succeeded since startup (`everFetched`,
+  otherwise a longer MVG outage would cause a restart loop) and the portal
+  is not open. Wi-Fi outages do not count. All restarts go through
+  `restartCleanly()` (`wifi_conn`), which first leaves the Wi-Fi with
+  `WiFi.disconnect()`.
 - **Responses as a stream:** MVG answers without a length header and not
   chunked. `fetchJsonStream()` reads the response with `HttpBodyStream`
   (waits up to `HTTP_TIMEOUT_MS` for more data) directly into ArduinoJson,
@@ -262,7 +277,9 @@ folder, the Arduino IDE only compiles this folder.
   them); added in 2.4.0: `autoBack` (auto-reset of the button view);
   added in 2.5.0: `showInc` (warning triangle, default `SHOW_INCIDENTS`)
   and `fullRef` (full refresh every n minutes, default
-  `FULL_REFRESH_EVERY`, limited to `FULL_REFRESH_MIN`..`FULL_REFRESH_MAX`); "switchable" is `dir1` `U` in memory,
+  `FULL_REFRESH_EVERY`, limited to `FULL_REFRESH_MIN`..`FULL_REFRESH_MAX`);
+  added in 2.6.0: `incText` (disruption text in row 1, default
+  `SHOW_INCIDENT_TEXT`); "switchable" is `dir1` `U` in memory,
   stored in NVS as `dirView` + `dir1` `B` (so 2.2.0 still works after a
   downgrade; `zentrumIsH`, `defZentrum`, `qrOn` are still written too). If
   the new keys are missing (update from 2.2.0), `settingsLoad()` converts

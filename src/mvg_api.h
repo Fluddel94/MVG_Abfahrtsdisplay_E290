@@ -21,7 +21,13 @@ struct Departure {
   bool hasWarning;      // Warndreieck anzeigen
   bool isBus;           // laut API ein Bus -> generiertes Bus-Icon
   bool multiDest;       // mehrere Ziele "A/B/C" (Fluegelzug) -> gleichmaessig kuerzen
+  String incident;      // Text der ersten INCIDENT-Meldung (Latin-1, gekuerzt
+                        // auf INCIDENT_TEXT_MAX Zeichen), leer = keine
 };
+
+// Laengster gespeicherter Stoerungstext je Abfahrt (passt ohnehin nur
+// gekuerzt in eine Displayzeile)
+#define INCIDENT_TEXT_MAX 100
 
 // Richtungsfilter fuer parseDepartures()
 enum DirectionFilter {
