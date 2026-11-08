@@ -143,7 +143,19 @@
 #define LABEL_AUSWAERTS_SHORT "Ausw."
 
 // --- Zeitsteuerung ---
+// Gezeichnet wird jede Minute bei Sekunde UPDATE_TARGET_SECOND (Uhrzeit und
+// Abfahrten aus dem Zwischenspeicher). Abgerufen wird schon vorher, zu
+// einer jede Minute neu gewuerfelten Sekunde zwischen FETCH_WINDOW_START
+// und FETCH_WINDOW_END - so fragen nicht alle Geraete gleichzeitig bei der
+// MVG an. Station 2 wird direkt danach abgerufen, aber nur, wenn es dann
+// noch nicht spaeter als FETCH_OTHER_LATEST ist (sonst in der naechsten
+// Minute). Sind die Daten beim Zeichnen aelter als FETCH_MAX_AGE_MS (z.B.
+// Abruf verpasst), wird wie frueher direkt vor dem Zeichnen abgerufen.
 #define UPDATE_TARGET_SECOND 1
+#define FETCH_WINDOW_START 30
+#define FETCH_WINDOW_END 50
+#define FETCH_OTHER_LATEST 48
+#define FETCH_MAX_AGE_MS 50000UL
 // Full Refresh (sauberes Neuzeichnen gegen Geisterbilder) alle so viele
 // Minuten, dazwischen Fast Mode. Standardwert, im Portal unter "Anzeige"
 // einstellbar (FULL_REFRESH_MIN bis FULL_REFRESH_MAX).

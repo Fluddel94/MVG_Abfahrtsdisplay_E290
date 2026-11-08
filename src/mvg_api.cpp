@@ -841,3 +841,19 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
 
   return count;
 }
+
+// ------------------------------------------------------------
+// Abgefahrene Eintraege entfernen (Zeichnen aus dem Zwischenspeicher)
+// ------------------------------------------------------------
+int dropDeparted(Departure list[], int count, time_t now) {
+  if (now < 1700000000) return count;
+  long nowMinute = (long)(now / 60);
+  int kept = 0;
+  for (int i = 0; i < count; i++) {
+    long depMinute = (long)((list[i].planned + (time_t)list[i].delayMin * 60) / 60);
+    if (depMinute < nowMinute) continue;
+    if (kept != i) list[kept] = list[i];
+    kept++;
+  }
+  return kept;
+}

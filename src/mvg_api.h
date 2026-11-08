@@ -79,3 +79,12 @@ bool listStationLines(const char* globalId, uint8_t typeBits, String& jsonOut);
 // Rueckgabe: Anzahl Eintraege in result.
 int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
                     const LineSelection& lines, Departure result[], int maxResults);
+
+// Entfernt bereits abgefahrene Eintraege (Abfahrtsminute laut Plan +
+// Verspaetung liegt vor der Minute von now) und rueckt die uebrigen nach
+// vorn. Gebraucht beim Zeichnen aus dem Zwischenspeicher, weil die Daten
+// bis zu einer Minute vor dem Zeichnen abgerufen werden (bzw. beim
+// Ueberbruecken von Stoerungen noch aelter sind). Ohne gueltige Uhrzeit
+// (now vor 2023) bleibt die Liste unveraendert.
+// Rueckgabe: neue Anzahl Eintraege.
+int dropDeparted(Departure list[], int count, time_t now);

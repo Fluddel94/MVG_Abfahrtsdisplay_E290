@@ -7,9 +7,13 @@
 // verpasst. Der Interrupt merkt sich den Druck, ausgewertet wird er beim
 // naechsten loop()-Durchlauf.
 //
-// Entprellen: Ein Druck zaehlt nur, wenn die Taste vorher mindestens
-// BUTTON_EDGE_STABLE_MS losgelassen war. Das Prellen beim Druecken und
-// beim Loslassen erzeugt so keine zusaetzlichen Druecke.
+// Entprellen: Ein Druck zaehlt nur beim Wechsel von losgelassen auf
+// gedrueckt (zuletzt gesehener Pegel HIGH) und wenn die Taste vorher
+// mindestens BUTTON_EDGE_STABLE_MS losgelassen war. Das Prellen beim
+// Druecken und beim Loslassen erzeugt so keine zusaetzlichen Druecke -
+// auch nicht nach langem Halten, wenn der Interrupt beim Loslassen den Pin
+// gerade in einem kurzen LOW-Moment liest (vor 2.6.1 zaehlte das als neuer
+// Druck und schloss z.B. die Info-Anzeige sofort wieder).
 
 #include <Arduino.h>
 #include "../config.h"
@@ -19,10 +23,12 @@
 static volatile bool bootPressLatched = false;
 static volatile unsigned long bootPressAt = 0;     // Zeitpunkt des Drucks
 static volatile unsigned long bootLastEdge = 0;    // letzte Flanke (fuer Entprellung)
+static volatile bool bootLevelLow = false;         // zuletzt gesehener Pegel (true = gedrueckt)
 
 static volatile bool qrPressLatched = false;
 static volatile unsigned long qrPressAt = 0;
 static volatile unsigned long qrLastEdge = 0;
+static volatile bool qrLevelLow = false;
 
 // --- Nur in loop() verwendet ---
 static unsigned long bootLastAccepted = 0;
@@ -35,28 +41,46 @@ static unsigned long qrLastAccepted = 0;
 static bool qrAcceptedOnce = false;
 
 // Wird bei jeder Flanke (Druecken und Loslassen) aufgerufen. Ein Druck
-// (LOW) zaehlt nur, wenn die Taste davor stabil losgelassen war.
+// zaehlt nur beim Wechsel HIGH -> LOW, wenn die Taste davor stabil
+// losgelassen war.
 static void IRAM_ATTR onBootEdge() {
   unsigned long now = millis();
-  if (digitalRead(BOOT_BUTTON) == LOW && now - bootLastEdge >= BUTTON_EDGE_STABLE_MS) {
+  bool low = digitalRead(BOOT_BUTTON) == LOW;
+  if (low && !bootLevelLow && now - bootLastEdge >= BUTTON_EDGE_STABLE_MS) {
     bootPressLatched = true;
     bootPressAt = now;
   }
+  bootLevelLow = low;
   bootLastEdge = now;
 }
 
 static void IRAM_ATTR onQrEdge() {
   unsigned long now = millis();
-  if (digitalRead(QR_BUTTON) == LOW && now - qrLastEdge >= BUTTON_EDGE_STABLE_MS) {
+  bool low = digitalRead(QR_BUTTON) == LOW;
+  if (low && !qrLevelLow && now - qrLastEdge >= BUTTON_EDGE_STABLE_MS) {
     qrPressLatched = true;
     qrPressAt = now;
   }
+  qrLevelLow = low;
   qrLastEdge = now;
+}
+
+// Sicherheitsnetz, falls der Interrupt eine Flanke verpasst hat: Ist die
+// Taste stabil losgelassen, gilt der gemerkte Pegel wieder als HIGH
+static void syncReleasedLevel(int pin, volatile bool& levelLow,
+                              volatile unsigned long& lastEdge) {
+  if (digitalRead(pin) != HIGH) return;
+  noInterrupts();
+  if (millis() - lastEdge >= BUTTON_EDGE_STABLE_MS) levelLow = false;
+  interrupts();
 }
 
 // Holt einen gemerkten Druck ab. false, wenn keiner vorliegt, er zu alt ist
 // (z.B. waehrend QR-/Log-Screen gedrueckt, die BOOT-Taste wird dort nicht
-// ausgewertet) oder zu kurz nach dem letzten gezaehlten Druck kam.
+// ausgewertet) oder zu kurz nach dem letzten gezaehlten Druck bzw. nach dem
+// Loslassen eines langen Drucks kam (lastAccepted). Vorzeichenbehafteter
+// Vergleich: Ein Druck, der noch vor diesem Zeitpunkt lag (Wackeln beim
+// Halten), zaehlt ebenfalls nicht.
 static bool takeLatchedPress(volatile bool& latched, volatile unsigned long& pressAt,
                              unsigned long& lastAccepted, bool& acceptedOnce,
                              unsigned long& pressTimeOut) {
@@ -68,7 +92,7 @@ static bool takeLatchedPress(volatile bool& latched, volatile unsigned long& pre
 
   if (!has) return false;
   if (millis() - at > BUTTON_LATCH_MAX_AGE_MS) return false;
-  if (acceptedOnce && at - lastAccepted < BUTTON_DEBOUNCE_MS) return false;
+  if (acceptedOnce && (long)(at - lastAccepted) < (long)BUTTON_DEBOUNCE_MS) return false;
 
   lastAccepted = at;
   acceptedOnce = true;
@@ -79,11 +103,14 @@ static bool takeLatchedPress(volatile bool& latched, volatile unsigned long& pre
 void buttonsInit() {
   pinMode(BOOT_BUTTON, INPUT_PULLUP);
   pinMode(QR_BUTTON, INPUT_PULLUP);
+  bootLevelLow = digitalRead(BOOT_BUTTON) == LOW;
+  qrLevelLow = digitalRead(QR_BUTTON) == LOW;
   attachInterrupt(digitalPinToInterrupt(BOOT_BUTTON), onBootEdge, CHANGE);
   attachInterrupt(digitalPinToInterrupt(QR_BUTTON), onQrEdge, CHANGE);
 }
 
 void handleQrButton(void (*onShortPress)(), void (*onLongPress)()) {
+  syncReleasedLevel(QR_BUTTON, qrLevelLow, qrLastEdge);
   unsigned long pressAt;
   if (!qrButtonHeld &&
       takeLatchedPress(qrPressLatched, qrPressAt, qrLastAccepted, qrAcceptedOnce, pressAt)) {
@@ -112,12 +139,16 @@ void handleQrButton(void (*onShortPress)(), void (*onLongPress)()) {
     qrButtonHeld = false;
     if (!qrLongPressTriggered) {
       onShortPress();
+    } else {
+      // Nach einem langen Druck zaehlt die Sperrzeit ab dem Loslassen
+      qrLastAccepted = lastEdge;
     }
     qrLongPressTriggered = false;
   }
 }
 
 void handleBootButton(void (*onPress)()) {
+  syncReleasedLevel(BOOT_BUTTON, bootLevelLow, bootLastEdge);
   unsigned long pressAt;
   if (takeLatchedPress(bootPressLatched, bootPressAt, bootLastAccepted, bootAcceptedOnce, pressAt)) {
     onPress();

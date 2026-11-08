@@ -172,7 +172,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `src/debug_log.h` | Zusätzliche Diagnose im seriellen Monitor (`DEBUG_LOG` in `config.h`) |
 | `src/display.h/.cpp` | Alles, was gezeichnet wird |
 | `src/line_icons.h` | Liniensymbole und Generator für Bus-/Zug-Symbole |
-| `src/buttons.h/.cpp` | Tastenauswertung (Entprellen, Kurz-/Lang-Druck) |
+| `src/buttons.h/.cpp` | Tastenauswertung (Entprellen, Kurz-/Lang-Druck; ein Druck zählt nur beim Wechsel losgelassen → gedrückt) |
 | `src/stats.h/.cpp` | API-Störungsstatistik, WLAN-Signalbewertung |
 | `src/time_utils.h/.cpp` | Laufzeit, Zeitformate |
 | `src/text_utils.h/.cpp` | Umwandlung UTF-8 → Latin-1 für echte Umlaute |
@@ -208,12 +208,23 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `&transportTypes=…` an die URL. Ohne diesen Parameter liefert die API nur
   S-Bahn, U-Bahn, Tram und Stadtbus (beobachtet).
 - **API-Abrufe:** Abfahrten werden in `fetchStation()` (.ino, Abschnitt
-  Update-Steuerung) abgerufen – beim Minuten-Update, beim Start, nach
-  WLAN-Wiederkehr, bei Rückkehr aus QR/Info in einer neuen Minute und
-  während einer Störung. Ist Station 2 einer Taste zugeordnet, ruft
-  `attemptUpdate()` erst die angezeigte Station ab und zeichnet, danach die
-  andere (`fetchOtherStation()`); Tasten und Auto-Reset zeichnen nur aus
-  dem Zwischenspeicher (Daten bis 2 Minuten alt, sonst neuer Abruf).
+  Update-Steuerung) abgerufen. Seit 2.6.1 ruft das Display jede Minute zu
+  einer zufälligen Sekunde zwischen `FETCH_WINDOW_START` und
+  `FETCH_WINDOW_END` (:30–:50, jede Minute neu gewürfelt) ab
+  (`prefetchDepartures()`, füllt nur den Zwischenspeicher) und zeichnet zur
+  vollen Minute (`UPDATE_TARGET_SECOND`) aus dem Zwischenspeicher – so
+  fragen nicht alle Geräte gleichzeitig bei der MVG an, und die Uhrzeit
+  springt pünktlich um. Beim Zeichnen blendet `dropDeparted()` inzwischen
+  abgefahrene Züge aus. Station 2 (wenn einer Taste zugeordnet) wird direkt
+  nach der angezeigten Station abgerufen, aber nur bis Sekunde
+  `FETCH_OTHER_LATEST` (48), sonst in der nächsten Minute. Sind die Daten
+  beim Zeichnen älter als `FETCH_MAX_AGE_MS` (Abruf verpasst, z.B. weil
+  QR/Info offen war), ruft `attemptUpdate()` wie früher direkt davor ab;
+  läuft nach einem Fehlschlag schon der leise neue Versuch, nicht.
+  Zusätzlich wird beim Start, nach WLAN-Wiederkehr, bei Rückkehr aus
+  QR/Info in einer neuen Minute und während einer Störung abgerufen. Tasten
+  und Auto-Reset zeichnen nur aus dem Zwischenspeicher (Daten bis 2 Minuten
+  alt, sonst neuer Abruf).
 - **Tasten:** Belegung `keyLeft`/`keyMid` (Konstanten `BTN_...` in
   `settings.h`). `keyPressed()` im .ino: die Ansicht der Taste zeigen
   (`activeKey`); dieselbe Taste (oder eine ohne Funktion) erneut führt zurück

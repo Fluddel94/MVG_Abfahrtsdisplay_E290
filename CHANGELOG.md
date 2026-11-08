@@ -6,6 +6,27 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.6.1] – 08.11.2026
+
+### Behoben
+- **Langer Tastendruck:** Die Info-Anzeige (mittlere Taste 3 s) ging
+  manchmal sofort wieder zu. Ursache: Prellen beim Loslassen nach langem
+  Halten wurde als neuer kurzer Druck gezählt. Ebenso konnte eine länger
+  gehaltene linke Taste ihre Ansicht gleich wieder schließen. Ein Druck
+  zählt jetzt nur noch beim Wechsel von losgelassen auf gedrückt; nach
+  einem langen Druck gilt die Sperrzeit ab dem Loslassen.
+
+### Geändert
+- **Abruf zu zufälliger Sekunde:** Das Display fragt die MVG nicht mehr
+  zur vollen Minute ab, sondern jede Minute zu einer zufälligen Sekunde
+  zwischen :30 und :50, und zeichnet zur vollen Minute aus dem
+  Zwischenspeicher. Das entlastet die Schnittstelle (nicht mehr alle
+  Displays gleichzeitig), und die Uhrzeit springt pünktlicher um.
+  Inzwischen abgefahrene Züge werden beim Zeichnen ausgeblendet.
+- Technik: neue Konstanten `FETCH_WINDOW_START`, `FETCH_WINDOW_END`,
+  `FETCH_OTHER_LATEST`, `FETCH_MAX_AGE_MS` in `config.h`; neue Funktionen
+  `prefetchDepartures()` (.ino) und `dropDeparted()` (`mvg_api`).
+
 ## [2.6.0] – 08.11.2026
 
 ### Neu

@@ -1,6 +1,6 @@
-// Version: 2.6.0
-// Letzte Änderung: 08.11.2026 14:55
-#define FW_VERSION "2.6.0"
+// Version: 2.6.1
+// Letzte Änderung: 08.11.2026 18:30
+#define FW_VERSION "2.6.1"
 
 // ------------------------------------------------------------
 // Konfiguration
@@ -88,6 +88,11 @@ bool qrModeActive = false;
 bool logModeActive = false;
 int updateCounter = 0;
 int lastUpdateMinute = -1;
+// Vorab-Abruf (siehe config.h, FETCH_WINDOW_*): Minute, in der er schon
+// lief, und die fuer die laufende Minute gewuerfelte Sekunde (-1 = noch
+// nicht gewuerfelt)
+int prefetchMinute = -1;
+int prefetchSecond = -1;
 
 // Angezeigte Ansicht: Standardansicht (BTN_NONE) oder die Ansicht einer
 // Taste (BTN_DIRECTION, BTN_STATION2, BTN_PAGE2 - Belegung im Portal).
@@ -101,7 +106,8 @@ String station2Name = "Station 2";    // Station 2
 
 // Zwischenspeicher der zuletzt abgerufenen Abfahrten. Tasten und
 // Auto-Reset zeichnen nur daraus neu - abgerufen wird nur beim
-// Minuten-Update (plus Start, WLAN-Wiederkehr und Retries bei Stoerung).
+// Vorab-Abruf jede Minute (plus Start, WLAN-Wiederkehr, Rueckkehr von
+// QR-/Info-Anzeige und Retries bei Stoerung).
 // Station 1: umschaltbare Richtung (dir1 'U') je Richtung ein Speicher,
 // sonst cacheAll - jeweils Seite 1 + Seite 2.
 Departure cacheDirH[MAX_DEPARTURES_SHOWN * 2];
@@ -391,6 +397,21 @@ void loop() {
   struct tm nowInfo;
   localtime_r(&nowRaw, &nowInfo);
 
+  // Vorab-Abruf zur gewuerfelten Sekunde, erst nachdem in dieser Minute
+  // gezeichnet wurde. ">=": verpasst die Loop die Sekunde (Display-Update,
+  // Taste, Portal-Suche), wird der Abruf in derselben Minute nachgeholt.
+  if (nowInfo.tm_min == lastUpdateMinute && nowInfo.tm_min != prefetchMinute) {
+    if (prefetchSecond < 0) {
+      prefetchSecond = FETCH_WINDOW_START +
+                       (int)(esp_random() % (FETCH_WINDOW_END - FETCH_WINDOW_START + 1));
+    }
+    if (nowInfo.tm_sec >= prefetchSecond) {
+      prefetchMinute = nowInfo.tm_min;
+      prefetchSecond = -1;
+      prefetchDepartures(nowInfo.tm_sec);
+    }
+  }
+
   // ">=" statt "==": verpasst die Loop Sekunde 1 (z.B. weil ein Display-
   // Update oder ein Abruf kurz blockiert), wird das Update in derselben
   // Minute nachgeholt
@@ -409,15 +430,51 @@ void loop() {
     Serial.println(doFullRefresh ? " (Full Refresh)" : " (Fast Mode)");
     wifiConnLogStatus();
 
-    attemptUpdate(doFullRefresh, true);
+    // Normalfall: Daten aus dem Vorab-Abruf der letzten Minute, nur
+    // zeichnen. Laeuft nach einem Fehlschlag schon der leise neue Versuch
+    // (apiRetryPending, alle 10 s), ebenfalls nur zeichnen - bei einer
+    // MVG-Stoerung sollen nicht alle Geraete zur vollen Minute anfragen.
+    // Rueckfall (Vorab-Abruf verpasst, z.B. QR-/Info-Anzeige stand): wie
+    // frueher direkt vor dem Zeichnen abrufen.
+    bool fresh = hasData[activeStation] &&
+                 millis() - lastSuccess[activeStation] < FETCH_MAX_AGE_MS;
+    if (fresh || apiRetryPending) {
+      redrawFromCache(doFullRefresh);
+    } else {
+      Serial.println("Keine aktuellen Daten - Abruf vor dem Zeichnen");
+      attemptUpdate(doFullRefresh, true);
+    }
+  }
+}
+
+// Vorab-Abruf (loop, gewuerfelte Sekunde): fuellt nur den
+// Zwischenspeicher, gezeichnet wird zur naechsten vollen Minute. Station 2
+// nur, wenn danach noch genug Zeit bis dahin bleibt. Fehlschlag: wie beim
+// leisen neuen Versuch (Anzeige bleibt bzw. Fehlerbildschirm).
+void prefetchDepartures(int second) {
+  Serial.print("Abruf bei Sekunde ");
+  Serial.println(second);
+  if (!fetchDepartures()) {
+    if (currentState == STATE_API_ERROR) displayShowApiError();
+    return;
+  }
+  time_t nowRaw = time(nullptr);
+  struct tm nowInfo;
+  localtime_r(&nowRaw, &nowInfo);
+  if (nowInfo.tm_min == prefetchMinute && nowInfo.tm_sec <= FETCH_OTHER_LATEST) {
+    fetchOtherStation();
+  } else if (station2Used()) {
+    Serial.println("Station 2 erst in der naechsten Minute");
   }
 }
 
 // ------------------------------------------------------------
 // Update-Steuerung
 // ------------------------------------------------------------
-// Einziger Ort, an dem Abfahrten von der MVG-API abgerufen werden
-// (fetchDepartures). Laedt die Rohdaten einmal, wertet sie fuer alle
+// Abruf mit anschliessendem Zeichnen (Rueckfall beim Minuten-Update,
+// WLAN-Wiederkehr, Rueckkehr von QR-/Info-Anzeige, Retry bei Stoerung).
+// Der regulaere Abruf jede Minute ist prefetchDepartures() (nur
+// Zwischenspeicher). Laedt die Rohdaten einmal, wertet sie fuer alle
 // Ansichten aus (Zwischenspeicher) und zeichnet dann die aktuelle Ansicht.
 // Mit zwei Stationen wird danach auch die andere Station abgerufen
 // (withOther), damit das Umschalten sofort aus dem Zwischenspeicher geht.
@@ -612,15 +669,19 @@ bool fetchStation(int index) {
 // Zwischenspeicher - ohne Netzwerkzugriff.
 void redrawFromCache(bool fullRefresh) {
   char dir = viewDirection();
-  const Departure* list = cacheAll;
-  int count = cacheAllCount;
+  Departure* list = cacheAll;
+  int* countRef = &cacheAllCount;
   if (activeStation == 1) {
     list = cacheStation2;
-    count = cacheStation2Count;
+    countRef = &cacheStation2Count;
   } else if (appSettings.dir1 == 'U') {
     list = dir == 'H' ? cacheDirH : cacheDirR;
-    count = dir == 'H' ? cacheDirHCount : cacheDirRCount;
+    countRef = dir == 'H' ? &cacheDirHCount : &cacheDirRCount;
   }
+  // Die Daten stammen aus dem Abruf vor bis zu einer Minute (beim
+  // Ueberbruecken aelter): inzwischen abgefahrene Zuege ausblenden
+  *countRef = dropDeparted(list, *countRef, time(nullptr));
+  int count = *countRef;
 
   // Stoerungszeile (nur Station 1): Seite 1 zeigt dann den Text und drei
   // Abfahrten, Seite 2 beginnt mit der vierten

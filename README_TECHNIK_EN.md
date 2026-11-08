@@ -172,7 +172,7 @@ folder, the Arduino IDE only compiles this folder.
 | `src/debug_log.h` | additional diagnostics in the serial monitor (`DEBUG_LOG` in `config.h`) |
 | `src/display.h/.cpp` | everything that is drawn |
 | `src/line_icons.h` | line symbols and generator for bus/train symbols |
-| `src/buttons.h/.cpp` | button handling (debouncing, short/long press) |
+| `src/buttons.h/.cpp` | button handling (debouncing, short/long press; a press only counts on the change released → pressed) |
 | `src/stats.h/.cpp` | API disruption statistics, Wi-Fi signal rating |
 | `src/time_utils.h/.cpp` | uptime, time formats |
 | `src/text_utils.h/.cpp` | conversion UTF-8 → Latin-1 for real umlauts |
@@ -208,12 +208,22 @@ folder, the Arduino IDE only compiles this folder.
   to the URL. Without this parameter the API only returns S-Bahn, U-Bahn,
   tram and city bus (observed).
 - **API requests:** departures are fetched in `fetchStation()` (.ino,
-  section Update-Steuerung) – on the minute update, at startup, after Wi-Fi
-  returns, when returning from QR/info in a new minute and during a
-  disruption. If stop 2 is assigned to a button, `attemptUpdate()` first
-  fetches and draws the displayed stop, then the other one
-  (`fetchOtherStation()`); buttons and auto-reset only draw from the cache
-  (data up to 2 minutes old, otherwise a new request).
+  section Update-Steuerung). Since 2.6.1 the display fetches every minute
+  at a random second between `FETCH_WINDOW_START` and `FETCH_WINDOW_END`
+  (:30–:50, re-rolled every minute) (`prefetchDepartures()`, only fills
+  the cache) and draws from the cache on the full minute
+  (`UPDATE_TARGET_SECOND`) – so not all devices hit the MVG at the same
+  time, and the clock changes on time. When drawing, `dropDeparted()` hides
+  trains that have left in the meantime. Stop 2 (if assigned to a button)
+  is fetched right after the displayed stop, but only up to second
+  `FETCH_OTHER_LATEST` (48), otherwise in the next minute. If the data is
+  older than `FETCH_MAX_AGE_MS` when drawing (request missed, e.g. because
+  QR/info was open), `attemptUpdate()` fetches right before drawing as
+  before; not while the quiet retry after a failure is already running.
+  Departures are also fetched at startup, after Wi-Fi returns, when
+  returning from QR/info in a new minute and during a disruption. Buttons
+  and auto-reset only draw from the cache (data up to 2 minutes old,
+  otherwise a new request).
 - **Buttons:** functions `keyLeft`/`keyMid` (constants `BTN_...` in
   `settings.h`). `keyPressed()` in the .ino: show the button's view
   (`activeKey`); the same button (or one without a function) again returns
