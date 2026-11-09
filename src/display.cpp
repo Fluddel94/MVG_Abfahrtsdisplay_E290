@@ -15,6 +15,7 @@
 // den Originalen. Texte vorher mit utf8ToLatin1() umwandeln (text_utils.h).
 #include "FreeSansBold9pt8b.h"
 #include "FreeSans9pt8b.h"
+#include "FreeSansBold8pt8b.h"   // nur Stoerungszeile (eine Groesse kleiner)
 #include "text_utils.h"
 #include "line_icons.h"   // nach heltec-eink-modules (braucht BLACK/WHITE)
 #include "time_utils.h"
@@ -79,8 +80,8 @@ static_assert(WARNING_ICON_X + WARNING_ICON_WIDTH / 2 < COL_PIPE2,
               "Warndreieck ueberlappt den Trennstrich");
 
 // --- Stoerungszeile (erste Zeile: Dreieck, "S2:", Stoerungstext) ---
-#define INCIDENT_ICON_X       9   // Mitte des Dreiecks (3..15)
-#define INCIDENT_TEXT_X      20   // Linie fett ab hier
+#define INCIDENT_ICON_X      10   // Mitte des Dreiecks (2..18)
+#define INCIDENT_TEXT_X      23   // Linie fett ab hier
 #define INCIDENT_LABEL_GAP    4   // Abstand Linie -> Text
 #define INCIDENT_RIGHT_MARGIN 3   // Text endet so weit vor dem rechten Rand
 
@@ -196,6 +197,17 @@ static void drawWarningTriangle(int x, int yBaseline) {
   display.fillTriangle(x, topY, x - halfWidth, bottomY, x + halfWidth, bottomY, BLACK);
   display.drawLine(x, topY + 3, x, bottomY - 3, WHITE);
   display.drawPixel(x, bottomY - 1, WHITE);
+}
+
+// Grosses Warndreieck fuer die Stoerungszeile (14 px hoch, 17 px breit,
+// Ausrufezeichen 2 px dick). x = Mitte, yBaseline = untere Kante.
+static void drawIncidentTriangle(int x, int yBaseline) {
+  int height = 14;
+  int halfWidth = 8;
+  display.fillTriangle(x, yBaseline - height, x - halfWidth, yBaseline,
+                       x + halfWidth, yBaseline, BLACK);
+  display.fillRect(x - 1, yBaseline - 9, 2, 5, WHITE);   // Strich
+  display.fillRect(x - 1, yBaseline - 3, 2, 2, WHITE);   // Punkt
 }
 
 // ============================================================
@@ -338,17 +350,16 @@ static void drawContent(const Departure departures[], int found,
     if (now > 1700000000) nowMinute = (long)(now / 60);
   }
 
-  // Stoerungszeile: Dreieck, Linie fett mit Doppelpunkt, Text (mit "..."
+  // Stoerungszeile: Dreieck, Linie und Text in Fett 8 pt (Text mit "..."
   // gekuerzt). Die Abfahrten ruecken eine Zeile nach unten.
   int firstRow = 0;
   if (incidentDep != nullptr && found > 0) {
     int y = yStart;
-    drawWarningTriangle(INCIDENT_ICON_X, y);
-    display.setFont(&FreeSansBold9pt8b);
+    drawIncidentTriangle(INCIDENT_ICON_X, y);
+    display.setFont(&FreeSansBold8pt8b);
     display.setCursor(INCIDENT_TEXT_X, y);
     display.print(incidentDep->line + ":");
     int textX = display.getCursorX() + INCIDENT_LABEL_GAP;
-    display.setFont(&FreeSans9pt8b);
     display.setCursor(textX, y);
     display.print(fitEllipsis(incidentDep->incident,
                               display.width() - INCIDENT_RIGHT_MARGIN - textX));

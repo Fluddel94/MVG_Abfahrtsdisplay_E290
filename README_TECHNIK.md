@@ -180,6 +180,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `src/wifi_conn.h/.cpp` | WLAN verbinden und nach Abbrüchen wiederherstellen |
 | `src/extras.h/.cpp` | Andockstellen für eigene Zusatzfunktionen – in dieser Version leer, ohne Funktion (siehe [Technische Hinweise](#technische-hinweise-für-änderungen-am-code)) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | Display-Schriften mit Umlauten |
+| `src/FreeSansBold8pt8b.h` | fette Schrift eine Größe kleiner, nur für die Störungszeile |
 | `docs/` | Web-Installer (GitHub Pages): Seite, `manifest.json`, Firmware in `docs/firmware/` |
 | `werkzeuge/` | Skript, das die exportierte Firmware für den Web-Installer bereitstellt |
 | `haltestellen/` | Haltestellenliste des MVV mit globalen IDs (eigene Lizenz, siehe dort) |
@@ -201,9 +202,10 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
   `INCIDENT_TEXT_MAX` Zeichen); zusammengefasste Fahrten und Ersatzzüge
   übernehmen ihn. `incidentRowIndex()` (.ino) wählt die früheste der ersten
   drei Abfahrten mit Text (nur Station 1, `showIncidents` und
-  `incidentText`); `drawContent()` zeichnet dann Dreieck, Linie fett, Text
+  `incidentText`); `drawContent()` zeichnet dann Dreieck, Linie und Text fett
   (`fitEllipsis()`) in Zeile 1 und drei Abfahrten darunter. Seite 2 beginnt
-  in dem Fall mit der vierten Abfahrt.
+  in dem Fall mit der vierten Abfahrt. Die Zeile hat ein größeres Dreieck
+  (`drawIncidentTriangle()`) und nutzt die fette 8-pt-Schrift.
 - **Verkehrsmittel-Filter:** `downloadDepartures()` hängt
   `&transportTypes=…` an die URL. Ohne diesen Parameter liefert die API nur
   S-Bahn, U-Bahn, Tram und Stadtbus (beobachtet).

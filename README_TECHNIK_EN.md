@@ -180,6 +180,7 @@ folder, the Arduino IDE only compiles this folder.
 | `src/wifi_conn.h/.cpp` | connect to Wi-Fi and reconnect after drops |
 | `src/extras.h/.cpp` | hooks for your own add-ons – empty in this version, no function (see [Technical notes](#technical-notes-for-code-changes)) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | display fonts with umlauts |
+| `src/FreeSansBold8pt8b.h` | bold font one size smaller, only for the disruption row |
 | `docs/` | web installer (GitHub Pages): page, `manifest.json`, firmware in `docs/firmware/` |
 | `werkzeuge/` | script that prepares the exported firmware for the web installer |
 | `haltestellen/` | MVV stop list with global IDs (own license, see there) |
@@ -201,9 +202,10 @@ folder, the Arduino IDE only compiles this folder.
   `INCIDENT_TEXT_MAX` characters); merged trips and replacement trains
   take it over. `incidentRowIndex()` (.ino) picks the earliest of the
   first three departures with a text (stop 1 only, `showIncidents` and
-  `incidentText`); `drawContent()` then draws the triangle, the line in
-  bold and the text (`fitEllipsis()`) in row 1 and three departures below.
-  Page 2 then starts with the fourth departure.
+  `incidentText`); `drawContent()` then draws the triangle, the line and
+  the text in bold (`fitEllipsis()`) in row 1 and three departures below.
+  Page 2 then starts with the fourth departure. The row has a larger
+  triangle (`drawIncidentTriangle()`) and uses the bold 8 pt font.
 - **Transport filter:** `downloadDepartures()` appends `&transportTypes=…`
   to the URL. Without this parameter the API only returns S-Bahn, U-Bahn,
   tram and city bus (observed).

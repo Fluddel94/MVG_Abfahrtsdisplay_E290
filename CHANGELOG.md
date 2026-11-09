@@ -6,6 +6,16 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.6.2] – 09.11.2026
+
+### Geändert
+- **Störungszeile übersichtlicher:** Das Warndreieck in der ersten Zeile
+  ist größer (14 statt 10 Pixel hoch, mit kräftigerem Ausrufezeichen),
+  die Linie („S2:“) und der Störungstext sind jetzt beide fett und eine
+  Schriftgröße kleiner (8 statt 9 pt).
+- Technik: neue Schrift `FreeSansBold8pt8b.h` (nur Störungszeile), neue Funktion `drawIncidentTriangle()` in `display.cpp`;
+  `INCIDENT_ICON_X` 10, `INCIDENT_TEXT_X` 23.
+
 ## [2.6.1] – 08.11.2026
 
 ### Behoben
