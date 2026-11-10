@@ -181,6 +181,7 @@ kompiliert außer dem Hauptordner nur diesen Ordner.
 | `src/extras.h/.cpp` | Andockstellen für eigene Zusatzfunktionen – in dieser Version leer, ohne Funktion (siehe [Technische Hinweise](#technische-hinweise-für-änderungen-am-code)) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | Display-Schriften mit Umlauten |
 | `src/FreeSansBold8pt8b.h` | fette Schrift eine Größe kleiner, nur für die Störungszeile |
+| `src/FreeSans8pt8b.h` | reguläre Schrift 8 pt, derzeit ungenutzt (Reserve) |
 | `docs/` | Web-Installer (GitHub Pages): Seite, `manifest.json`, Firmware in `docs/firmware/` |
 | `werkzeuge/` | Skript, das die exportierte Firmware für den Web-Installer bereitstellt |
 | `haltestellen/` | Haltestellenliste des MVV mit globalen IDs (eigene Lizenz, siehe dort) |

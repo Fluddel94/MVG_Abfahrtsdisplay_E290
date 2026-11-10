@@ -6,6 +6,23 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+## [2.6.3] – 10.11.2026
+
+### Behoben
+- **Störungsdreieck in der ersten Zeile:** Das Ausrufezeichen saß einen
+  halben Pixel links von der Mitte. Das Dreieck ist jetzt 16 statt 17 Pixel
+  breit (Spitze 2 Pixel), das Ausrufezeichen bleibt 2 Pixel dick und
+  sitzt genau mittig. Das kleine Dreieck hinter den Abfahrten wurde
+  geprüft und ist bereits mittig, es bleibt unverändert.
+- Technik: `drawIncidentTriangle()` zeichnet das Dreieck zeilenweise mit
+  `fillRect()` statt mit `fillTriangle()`; Mittelachse zwischen den
+  Spalten `INCIDENT_ICON_X` - 1 und `INCIDENT_ICON_X`.
+- Doku: Der Lizenzabschnitt der READMEs (deutsch und englisch) nennt jetzt
+  auch die 8-pt-Schriften `FreeSans8pt8b.h` und `FreeSansBold8pt8b.h`
+  (GNU FreeFont, GPL-3.0-or-later mit Font-Ausnahme). Die Dateitabelle in
+  `README_TECHNIK` (deutsch und englisch) führt `FreeSans8pt8b.h` jetzt
+  ebenfalls auf.
+
 ## [2.6.2] – 09.11.2026
 
 ### Geändert

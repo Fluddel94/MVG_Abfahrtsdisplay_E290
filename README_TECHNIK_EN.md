@@ -181,6 +181,7 @@ folder, the Arduino IDE only compiles this folder.
 | `src/extras.h/.cpp` | hooks for your own add-ons – empty in this version, no function (see [Technical notes](#technical-notes-for-code-changes)) |
 | `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h` | display fonts with umlauts |
 | `src/FreeSansBold8pt8b.h` | bold font one size smaller, only for the disruption row |
+| `src/FreeSans8pt8b.h` | regular 8 pt font, currently unused (spare) |
 | `docs/` | web installer (GitHub Pages): page, `manifest.json`, firmware in `docs/firmware/` |
 | `werkzeuge/` | script that prepares the exported firmware for the web installer |
 | `haltestellen/` | MVV stop list with global IDs (own license, see there) |

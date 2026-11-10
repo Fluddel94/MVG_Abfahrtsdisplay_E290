@@ -80,7 +80,7 @@ static_assert(WARNING_ICON_X + WARNING_ICON_WIDTH / 2 < COL_PIPE2,
               "Warndreieck ueberlappt den Trennstrich");
 
 // --- Stoerungszeile (erste Zeile: Dreieck, "S2:", Stoerungstext) ---
-#define INCIDENT_ICON_X      10   // Mitte des Dreiecks (2..18)
+#define INCIDENT_ICON_X      10   // Mittelachse zwischen Spalte 9 und 10 (Dreieck 2..17)
 #define INCIDENT_TEXT_X      23   // Linie fett ab hier
 #define INCIDENT_LABEL_GAP    4   // Abstand Linie -> Text
 #define INCIDENT_RIGHT_MARGIN 3   // Text endet so weit vor dem rechten Rand
@@ -199,13 +199,17 @@ static void drawWarningTriangle(int x, int yBaseline) {
   display.drawPixel(x, bottomY - 1, WHITE);
 }
 
-// Grosses Warndreieck fuer die Stoerungszeile (14 px hoch, 17 px breit,
-// Ausrufezeichen 2 px dick). x = Mitte, yBaseline = untere Kante.
+// Grosses Warndreieck fuer die Stoerungszeile (15 Zeilen hoch, 16 px breit,
+// Ausrufezeichen 2 px dick). Gerade Breite, damit das Ausrufezeichen genau
+// mittig sitzt: die Mittelachse liegt zwischen den Spalten x-1 und x, das
+// Dreieck belegt x-8..x+7. yBaseline = untere Kante. (fillTriangle kann
+// nur eine ungerade Breite mit 1-px-Spitze zeichnen, daher Zeile fuer Zeile.)
 static void drawIncidentTriangle(int x, int yBaseline) {
-  int height = 14;
-  int halfWidth = 8;
-  display.fillTriangle(x, yBaseline - height, x - halfWidth, yBaseline,
-                       x + halfWidth, yBaseline, BLACK);
+  const int height = 15;
+  for (int r = 0; r < height; r++) {
+    int w = 2 * (r / 2 + 1);   // 2, 2, 4, 4, ... 14, 14, 16
+    display.fillRect(x - w / 2, yBaseline - (height - 1) + r, w, 1, BLACK);
+  }
   display.fillRect(x - 1, yBaseline - 9, 2, 5, WHITE);   // Strich
   display.fillRect(x - 1, yBaseline - 3, 2, 2, WHITE);   // Punkt
 }

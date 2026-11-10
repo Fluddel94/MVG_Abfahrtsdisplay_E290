@@ -333,7 +333,8 @@ The print files are also available on
 
 - **Code:** [GNU General Public License v3.0 or later](LICENSE)
   (GPL-3.0-or-later).
-- **Fonts** `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h`: derived from
+- **Fonts** `src/FreeSans8pt8b.h`, `src/FreeSans9pt8b.h`,
+  `src/FreeSansBold8pt8b.h`, `src/FreeSansBold9pt8b.h`: derived from
   the Adafruit GFX fonts and
   [GNU FreeFont](https://www.gnu.org/software/freefont/) (GPL-3.0-or-later
   with font exception).

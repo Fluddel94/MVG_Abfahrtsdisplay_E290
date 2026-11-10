@@ -329,7 +329,8 @@ Die Druckdateien gibt es auch auf
 
 - **Code:** [GNU General Public License v3.0 oder später](LICENSE)
   (GPL-3.0-or-later).
-- **Schriften** `src/FreeSans9pt8b.h`, `src/FreeSansBold9pt8b.h`: abgeleitet
+- **Schriften** `src/FreeSans8pt8b.h`, `src/FreeSans9pt8b.h`,
+  `src/FreeSansBold8pt8b.h`, `src/FreeSansBold9pt8b.h`: abgeleitet
   aus den Adafruit-GFX-Schriften bzw. aus
   [GNU FreeFont](https://www.gnu.org/software/freefont/) (GPL-3.0-or-later
   mit Font-Ausnahme).
