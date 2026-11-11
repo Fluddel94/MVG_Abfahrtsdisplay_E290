@@ -5,7 +5,7 @@
 <p align="center">
   <img src="bilder/marienplatz.jpg" width="32%" alt="Display showing departures at Marienplatz (U-Bahn and S-Bahn with delays)">
   <img src="bilder/pasing.jpg" width="32%" alt="Display in its case on a shelf, departures at Pasing with delays">
-  <img src="bilder/wlan_qr_code.jpg" width="32%" alt="QR code for the guest Wi-Fi">
+  <img src="bilder/gehaeuse_slim.jpg" width="32%" alt="Display in the slim case, departures at Pasing with disruption line and delays">
 </p>
 
 A small e-ink display for your home that shows the next departures at your

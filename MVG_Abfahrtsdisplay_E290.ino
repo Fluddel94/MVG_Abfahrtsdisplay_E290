@@ -1,5 +1,5 @@
 // Version: 2.6.3
-// Letzte Änderung: 10.11.2026 16:01
+// Letzte Änderung: 11.11.2026 18:45
 #define FW_VERSION "2.6.3"
 
 // ------------------------------------------------------------
@@ -110,17 +110,17 @@ String station2Name = "Station 2";    // Station 2
 // QR-/Info-Anzeige und Retries bei Stoerung).
 // Station 1: umschaltbare Richtung (dir1 'U') je Richtung ein Speicher,
 // sonst cacheAll - jeweils Seite 1 + Seite 2.
-Departure cacheDirH[MAX_DEPARTURES_SHOWN * 2];
-Departure cacheDirR[MAX_DEPARTURES_SHOWN * 2];
+Departure cacheDirH[DEPARTURE_CACHE_SIZE];
+Departure cacheDirR[DEPARTURE_CACHE_SIZE];
 int cacheDirHCount = 0;
 int cacheDirRCount = 0;
-Departure cacheAll[MAX_DEPARTURES_SHOWN * 2];
+Departure cacheAll[DEPARTURE_CACHE_SIZE];
 int cacheAllCount = 0;
-// Station 2 (mit ihrer Richtung, ohne Seite 2). Ist sie einer Taste
+// Station 2 (mit ihrer Richtung, ohne Seite 2, Vorrat wie oben). Ist sie einer Taste
 // zugeordnet, werden beide Stationen jede Minute abgerufen, damit das
 // Umschalten ohne Abruf auskommt. lastSuccess: Zeitpunkt des letzten erfolgreichen Abrufs je
 // Station (hasData: ueberhaupt schon einer), siehe cacheFresh().
-Departure cacheStation2[MAX_DEPARTURES_SHOWN];
+Departure cacheStation2[DEPARTURE_CACHE_SIZE / 2];
 int cacheStation2Count = 0;
 unsigned long lastSuccess[2] = { 0, 0 };
 bool hasData[2] = { false, false };
@@ -649,15 +649,15 @@ bool fetchStation(int index) {
   if (station.dir == 'R') filter = DIR_FILTER_R;
 
   if (index == 1) {
-    cacheStation2Count = parseDepartures(doc, filter, lines, cacheStation2, MAX_DEPARTURES_SHOWN);
+    cacheStation2Count = parseDepartures(doc, filter, lines, cacheStation2, DEPARTURE_CACHE_SIZE / 2);
   } else if (station.dir == 'U') {
     // Umschaltbare Richtung: beide Richtungen aus denselben Daten (je Seite
     // 1 + 2), damit das Umschalten ohne neuen Abruf auskommt
-    cacheDirHCount = parseDepartures(doc, DIR_FILTER_H, lines, cacheDirH, MAX_DEPARTURES_SHOWN * 2);
-    cacheDirRCount = parseDepartures(doc, DIR_FILTER_R, lines, cacheDirR, MAX_DEPARTURES_SHOWN * 2);
+    cacheDirHCount = parseDepartures(doc, DIR_FILTER_H, lines, cacheDirH, DEPARTURE_CACHE_SIZE);
+    cacheDirRCount = parseDepartures(doc, DIR_FILTER_R, lines, cacheDirR, DEPARTURE_CACHE_SIZE);
   } else {
-    // 8 Abfahrten fuer Seite 1 (1-4) und Seite 2 (5-8)
-    cacheAllCount = parseDepartures(doc, filter, lines, cacheAll, MAX_DEPARTURES_SHOWN * 2);
+    // Seite 1 (1-4) und Seite 2 (5-8) plus Vorrat (DEPARTURE_CACHE_SIZE)
+    cacheAllCount = parseDepartures(doc, filter, lines, cacheAll, DEPARTURE_CACHE_SIZE);
   }
   lastSuccess[index] = millis();
   hasData[index] = true;

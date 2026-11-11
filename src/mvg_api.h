@@ -75,7 +75,8 @@ bool listStationLines(const char* globalId, uint8_t typeBits, String& jsonOut);
 // Richtung (oder alle) und Linienauswahl (leer = alle Linien), gleicht
 // Stoerungs-Duplikate ab, fasst Fluegelzuege zusammen und fuellt result.
 // Kein Netzwerkzugriff - kann fuer mehrere Filter auf dieselben Daten
-// angewendet werden.
+// angewendet werden. Bereits abgefahrene Fahrten (wie dropDeparted)
+// werden uebersprungen.
 // Rueckgabe: Anzahl Eintraege in result.
 int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
                     const LineSelection& lines, Departure result[], int maxResults);

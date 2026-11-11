@@ -8,7 +8,24 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [2.6.3] – 10.11.2026
 
+### Neu
+- **Gehäuse Slim:** zweites, flacheres Gehäuse zum 3D-Drucken in
+  `gehaeuse/slim/` (Display 50° geneigt, Deckel mit L-Fuß, Tasten-
+  beschriftung „1 · 2 · R“, Druck ohne Stützen). Das bisherige Gehäuse
+  liegt jetzt in `gehaeuse/klassisch/`; Mittelrahmen und Tasten sind für
+  beide gleich und bleiben in `gehaeuse/`.
+
 ### Behoben
+- **Zu wenige Abfahrten an großen Stationen:** An Stationen mit dichtem
+  Takt (z.B. Pasing) zeigte das Display oft nur drei oder weniger
+  Abfahrten. Der Zwischenspeicher fasste nur 8 Fahrten (rund 4 Minuten in
+  Pasing), und die API liefert zusätzlich Fahrten der letzten Minuten, die
+  beim Zeichnen wegfielen. Jetzt werden abgefahrene Fahrten schon beim
+  Auswerten übersprungen, und der Zwischenspeicher fasst 16 Fahrten (Station
+  2: 8), sodass auch Seite 2 voll bleibt.
+- Technik: neue Konstante `DEPARTURE_CACHE_SIZE` (16) in `config.h`,
+  `MAX_RAW_ENTRIES` 20 → 24; `parseDepartures()` überspringt Fahrten vor
+  der aktuellen Minute (gleiche Regel wie `dropDeparted()`).
 - **Störungsdreieck in der ersten Zeile:** Das Ausrufezeichen saß einen
   halben Pixel links von der Mitte. Das Dreieck ist jetzt 16 statt 17 Pixel
   breit (Spitze 2 Pixel), das Ausrufezeichen bleibt 2 Pixel dick und

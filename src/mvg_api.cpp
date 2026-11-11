@@ -542,9 +542,20 @@ int parseDepartures(const JsonDocument& doc, DirectionFilter filter,
   RawEntry raw[MAX_RAW_ENTRIES];
   int rawCount = 0;
 
+  // Die API liefert auch Fahrten der letzten Minuten (abgefahren oder
+  // ausgefallen, beobachtet 11.11.2026 in Pasing). Sie wuerden Plaetze im
+  // Zwischenspeicher belegen und beim Zeichnen ohnehin wegfallen
+  // (dropDeparted) - daher gleich hier ueberspringen, gleiche Regel.
+  time_t now = time(nullptr);
+  long nowMinute = now >= 1700000000 ? (long)(now / 60) : 0;
+
   JsonArrayConst departures = doc.as<JsonArrayConst>();
   for (JsonObjectConst dep : departures) {
     if (rawCount >= MAX_RAW_ENTRIES) break;
+
+    long long planned = dep["plannedDepartureTime"] | 0LL;
+    int delay = dep["delayInMinutes"] | 0;
+    if (nowMinute > 0 && (long)((planned / 1000 + (long long)delay * 60) / 60) < nowMinute) continue;
 
     // Richtung aus der lineId (":H:" / ":R:") - bei DIR_FILTER_H/_R wird
     // danach gefiltert, bei DIR_FILTER_ALL nur fuer die Abgleiche gemerkt

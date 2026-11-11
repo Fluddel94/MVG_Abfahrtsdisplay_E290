@@ -5,7 +5,7 @@
 <p align="center">
   <img src="bilder/marienplatz.jpg" width="32%" alt="Display mit Abfahrten am Marienplatz (U-Bahn und S-Bahn mit Verspätungen)">
   <img src="bilder/pasing.jpg" width="32%" alt="Display im Gehäuse auf dem Regal, Abfahrten Pasing mit Verspätungen">
-  <img src="bilder/wlan_qr_code.jpg" width="32%" alt="QR-Code für das Gäste-WLAN">
+  <img src="bilder/gehaeuse_slim.jpg" width="32%" alt="Display im Gehäuse Slim, Abfahrten Pasing mit Störungszeile und Verspätungen">
 </p>
 
 Ein kleines E-Ink-Display für zu Hause, das die nächsten Abfahrten an deiner

@@ -117,7 +117,13 @@
 
 // --- Abfahrten ---
 #define MAX_DEPARTURES_SHOWN 4
-#define MAX_RAW_ENTRIES 20      // ausgewertete Fahrten je Liste (Richtung bzw. gemischt)
+// Zwischenspeicher je Ansicht: Seite 1 + Seite 2 (8 Zeilen) plus Vorrat.
+// Gezeichnet wird mit Daten aus dem Abruf der Vorminute (beim Ueberbruecken
+// von Stoerungen aelter), abgefahrene Fahrten fallen vorher heraus. An
+// grossen Stationen (Pasing: 8 Fahrten = rund 4 Minuten) blieben bei nur
+// 8 Plaetzen oft nur 3 Zeilen uebrig (beobachtet 11.11.2026).
+#define DEPARTURE_CACHE_SIZE 16
+#define MAX_RAW_ENTRIES 24      // ausgewertete Fahrten je Liste (Richtung bzw. gemischt)
 // So viele Abfahrten werden bei der MVG abgefragt. Die API zaehlt das Limit
 // ueber ALLE Verkehrsmittel der Station und filtert erst danach (beobachtet
 // 01.10.2026, Moosach: Limit 20 nur S-Bahn -> 5 Fahrten, Limit 60 -> 14).
