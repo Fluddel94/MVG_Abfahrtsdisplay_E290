@@ -6,6 +6,11 @@ Korrektur, MINOR = neue Funktion, MAJOR = grundlegender Umbau.
 
 ## [Unveröffentlicht]
 
+### Geändert
+- Doku: README (deutsch und englisch) zeigt links oben ein Foto des
+  Gehäuses Slim statt des Marienplatz-Bildes und verlinkt das Gehäuse
+  Slim zusätzlich auf MakerWorld.
+
 ## [2.6.3] – 10.11.2026
 
 ### Neu

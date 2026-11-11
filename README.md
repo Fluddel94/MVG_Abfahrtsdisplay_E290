@@ -3,7 +3,7 @@
 **Deutsch** | [English](README_EN.md)
 
 <p align="center">
-  <img src="bilder/marienplatz.jpg" width="32%" alt="Display mit Abfahrten am Marienplatz (U-Bahn und S-Bahn mit Verspätungen)">
+  <img src="bilder/gehaeuse_slim_foto.jpg" width="32%" alt="Gehäuse Slim in Olivgrün, Display mit Abfahrten Pasing und Störungszeile">
   <img src="bilder/pasing.jpg" width="32%" alt="Display im Gehäuse auf dem Regal, Abfahrten Pasing mit Verspätungen">
   <img src="bilder/gehaeuse_slim.jpg" width="32%" alt="Display im Gehäuse Slim, Abfahrten Pasing mit Störungszeile und Verspätungen">
 </p>
@@ -316,14 +316,17 @@ Mehr Details: [README_TECHNIK.md](README_TECHNIK.md#einschränkungen-im-detail).
 
 ## Gehäuse
 
-Im Ordner [`gehaeuse/`](gehaeuse/) liegt ein Gehäuse zum 3D-Drucken. Es ist
-ein Remix von **„Vision Master E290 V0.3.1 case for Meshtastic“** von
+Im Ordner [`gehaeuse/`](gehaeuse/) liegen zwei Gehäuse zum 3D-Drucken:
+**Slim** ([`gehaeuse/slim/`](gehaeuse/slim/), flacher, Deckel mit L-Fuß) und
+**Klassisch** ([`gehaeuse/klassisch/`](gehaeuse/klassisch/)). Beide sind ein
+Remix von **„Vision Master E290 V0.3.1 case for Meshtastic“** von
 **HarukiToreda** ([Printables 974647](https://www.printables.com/model/974647)),
 lizenziert unter [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 Änderungen: Antennenanschluss entfernt, Schrift- und Logovertiefungen
 entfernt, das Gehäuse steht geneigt auf dem Tisch. Der Remix steht ebenfalls unter CC BY 4.0.
-Die Druckdateien gibt es auch auf
-[MakerWorld](https://makerworld.com/de/models/3385427-heltec-e290-munich-departure-display-mvg-mvv).
+Die Druckdateien gibt es auch auf MakerWorld:
+[Slim](https://makerworld.com/de/models/3591974-slim-case-for-heltec-e290-mvg-departure-display) und
+[Klassisch](https://makerworld.com/de/models/3385427-heltec-e290-munich-departure-display-mvg-mvv).
 
 ## Lizenz
 

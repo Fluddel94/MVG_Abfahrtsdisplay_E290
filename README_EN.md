@@ -3,7 +3,7 @@
 [Deutsch](README.md) | **English**
 
 <p align="center">
-  <img src="bilder/marienplatz.jpg" width="32%" alt="Display showing departures at Marienplatz (U-Bahn and S-Bahn with delays)">
+  <img src="bilder/gehaeuse_slim_foto.jpg" width="32%" alt="Slim case in olive green, display showing departures at Pasing with a disruption line">
   <img src="bilder/pasing.jpg" width="32%" alt="Display in its case on a shelf, departures at Pasing with delays">
   <img src="bilder/gehaeuse_slim.jpg" width="32%" alt="Display in the slim case, departures at Pasing with disruption line and delays">
 </p>
@@ -320,14 +320,17 @@ More details: [README_TECHNIK_EN.md](README_TECHNIK_EN.md#limitations-in-detail)
 
 ## Case
 
-The folder [`gehaeuse/`](gehaeuse/) contains a 3D-printable case. It is a
+The folder [`gehaeuse/`](gehaeuse/) contains two 3D-printable cases:
+**Slim** ([`gehaeuse/slim/`](gehaeuse/slim/), flatter, lid with L-shaped foot)
+and **Classic** ([`gehaeuse/klassisch/`](gehaeuse/klassisch/)). Both are a
 remix of **"Vision Master E290 V0.3.1 case for Meshtastic"** by
 **HarukiToreda** ([Printables 974647](https://www.printables.com/model/974647)),
 licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 Changes: antenna connector removed, text and logo recesses removed, the case
 stands tilted on the table. The remix is also licensed under CC BY 4.0.
-The print files are also available on
-[MakerWorld](https://makerworld.com/de/models/3385427-heltec-e290-munich-departure-display-mvg-mvv).
+The print files are also available on MakerWorld:
+[Slim](https://makerworld.com/de/models/3591974-slim-case-for-heltec-e290-mvg-departure-display) and
+[Classic](https://makerworld.com/de/models/3385427-heltec-e290-munich-departure-display-mvg-mvv).
 
 ## License
 
